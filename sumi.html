@@ -417,14 +417,20 @@ function makePaper(w, h, dpr) {
 function layout() {
   const oldW = W, oldH = H;
   const oldInk = inkC, oldPaper = paperC;
-  DPR = Math.min(window.devicePixelRatio || 1, IS_TOUCH ? 1.5 : 2);
-  const vv = window.visualViewport;
-  W = vv ? Math.round(vv.width) : window.innerWidth;
-  H = vv ? Math.round(vv.height) : window.innerHeight;
+  const newDPR = Math.min(window.devicePixelRatio || 1, IS_TOUCH ? 1.5 : 2);
+  // layout-viewport units: pointer clientX/Y live in this coordinate
+  // space, so canvas CSS size and bitmap must both be derived from it
+  const newW = window.innerWidth, newH = window.innerHeight;
+  if (newW === W && newH === H && newDPR === DPR && inkC) return;
+  DPR = newDPR;
+  W = newW;
+  H = newH;
   DIAG = Math.hypot(W, H);
   U = Math.min(W, H);
   canvas.width = Math.round(W * DPR);
   canvas.height = Math.round(H * DPR);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
   paperC = makePaper(W, H, DPR);
