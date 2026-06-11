@@ -332,6 +332,66 @@ html, body {
 }
 .replay-link:hover { color: #2b2620; }
 
+/* ---- gallery ---- */
+#gallery-screen { background: rgba(28,24,20,0.92); }
+.gallery-box {
+  width: min(92vw, 980px);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+.g-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #e8dfcc;
+  font-size: clamp(18px, 2.6vw, 26px);
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  margin-bottom: 16px;
+}
+.g-grid {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+  padding-bottom: 20px;
+}
+.g-card { position: relative; text-align: center; }
+.g-card img {
+  width: 100%;
+  display: block;
+  box-shadow: 0 8px 26px rgba(0,0,0,0.5);
+}
+.g-cap {
+  margin-top: 7px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: rgba(232,223,204,0.75);
+  line-height: 1.6;
+}
+.g-del {
+  position: absolute;
+  top: 5px; right: 5px;
+  width: 26px; height: 26px;
+  line-height: 24px;
+  font-size: 13px;
+  color: #e8dfcc;
+  background: rgba(28,24,20,0.65);
+  border: 1px solid rgba(232,223,204,0.4);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.g-empty {
+  color: rgba(232,223,204,0.5);
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  text-align: center;
+  padding: 60px 0;
+  grid-column: 1 / -1;
+}
+
 .foot-credit {
   position: fixed;
   bottom: max(10px, env(safe-area-inset-bottom));
@@ -387,6 +447,7 @@ html, body {
         <button class="mode-btn meguri" id="btn-meguri">夜巡り<span id="meguri-sub">第一夜から</span></button>
       </div>
       <div class="replay-link" id="btn-night1" style="display:none">はじめの夜から遊び直す</div>
+      <div class="replay-link" id="btn-gallery" style="display:none">ギャラリー — 飾った絵を見る</div>
       <div class="endless-label">無限の夜 — どこまで生き延びるか</div>
       <div class="mode-row" style="margin-top:6px">
         <button class="mode-btn" data-mode="yoi">宵<span>よい — やさしい</span></button>
@@ -409,9 +470,21 @@ html, body {
       <div class="over-btns">
         <button class="btn primary" id="btn-retry">もう一度</button>
         <button class="btn" id="btn-save">絵を保存</button>
+        <button class="btn" id="btn-share">共有</button>
+        <button class="btn" id="btn-keep">ギャラリーに飾る</button>
         <button class="btn" id="btn-mode">夜を変える</button>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="gallery-screen">
+  <div class="gallery-box">
+    <div class="g-head">
+      <span>ギャラリー</span>
+      <button class="btn" id="btn-gclose">閉じる</button>
+    </div>
+    <div class="g-grid" id="g-grid"></div>
   </div>
 </div>
 
@@ -439,7 +512,7 @@ const ui = {
   title: $('title-screen'), over: $('over-screen'),
   overTitle: $('over-title'), overSub: $('over-sub'), meguriSub: $('meguri-sub'),
   overStats: $('over-stats'), scrollimg: $('scrollimg'),
-  retry: $('btn-retry'), save: $('btn-save'),
+  retry: $('btn-retry'), save: $('btn-save'), keep: $('btn-keep'),
 };
 
 const rand = (a = 1, b) => b === undefined ? Math.random() * a : a + Math.random() * (b - a);
@@ -561,7 +634,9 @@ document.addEventListener('fullscreenchange', () => layout());
 document.addEventListener('webkitfullscreenchange', () => layout());
 // Safari interprets drawing gestures as scrolling and rubber-bands the
 // whole page; CSS touch-action alone is not enough on iOS
-document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove', e => {
+  if (!(e.target.closest && e.target.closest('#gallery-screen'))) e.preventDefault();
+}, { passive: false });
 
 // ============================================================
 // Audio — koto plucks (Karplus-Strong), drips, wind, fire
@@ -689,6 +764,28 @@ let gameMode = 'meguri'; // 'meguri' | 'endless'
 let nightN = 1;
 let nightGoal = 3;
 let nightClearPending = 0;
+let fracSum = 0; // sum of remaining-time fractions per collected star
+let scrollC = null;     // last composed scroll canvas (save / share / keep)
+let galleryCaption = '';
+
+function ratingFor() {
+  const avg = stars > 0 ? fracSum / stars : 0;
+  return avg >= 0.5 ? 3 : avg >= 0.28 ? 2 : 1;
+}
+const RATING_TXT = ['', '一筆', '二筆', '三筆'];
+
+function loadRatings() {
+  try { return JSON.parse(localStorage.getItem('sumihotaru_rating') || '{}'); } catch (e) { return {}; }
+}
+function loadGallery() {
+  try { return JSON.parse(localStorage.getItem('sumihotaru_gallery') || '[]'); } catch (e) { return []; }
+}
+function saveGallery(g) {
+  for (;;) {
+    try { localStorage.setItem('sumihotaru_gallery', JSON.stringify(g)); return; }
+    catch (e) { if (g.length === 0) return; g.shift(); } // storage full: drop oldest
+  }
+}
 let bestNight = Math.max(1, +(localStorage.getItem('sumihotaru_night') || 1));
 
 function nightGoalFor(n) { return Math.min(3 + Math.floor((n - 1) / 2), 9); }
@@ -1090,6 +1187,7 @@ function spawnStar() {
 
 function collectStar() {
   if (tut < 2) { tut = 2; hintHide(); }
+  fracSum += clamp(countT / countMax, 0, 1); // for the night rating
   const muboku = !usedInkThisStar && stars > 0;
   combo = (countT / countMax > 0.45) ? combo + 1 : 1;
   maxCombo = Math.max(maxCombo, combo);
@@ -1259,6 +1357,7 @@ function startGame() {
     nightGoal = nightGoalFor(nightN);
   }
   nightClearPending = 0;
+  fracSum = 0;
   score = 0; stars = 0; combo = 0; maxCombo = 0;
   playT = 0; inkUsedTotal = 0;
   segs = []; strokes = []; grid = new Map();
@@ -1300,14 +1399,18 @@ function nightClear() {
     const t = AC.currentTime;
     [62, 67, 70, 74, 79].forEach((m, i) => pluck(m, 0.26, t + i * 0.16));
   }
-  ui.scrollimg.src = makeScroll();
+  composeScroll();
+  const r = ratingFor();
+  const ratings = loadRatings();
+  if (r > (ratings[nightN] || 0)) { ratings[nightN] = r; localStorage.setItem('sumihotaru_rating', JSON.stringify(ratings)); }
+  galleryCaption = '第' + nightN + '夜 ' + RATING_TXT[r];
   ui.overTitle.textContent = '夜明け';
   ui.overTitle.style.color = '#e0b84e';
   ui.overTitle.style.textShadow = '0 0 26px rgba(224,184,78,0.55)';
   ui.overSub.textContent = 'NIGHT ' + nightN + ' — CLEAR';
   ui.retry.textContent = '次の夜へ';
   ui.overStats.innerHTML =
-    '<span class="v">第' + nightN + '夜</span>、明けた<br>' +
+    '<span class="v">第' + nightN + '夜</span>、明けた　評価 <span class="v">' + RATING_TXT[r] + '</span><br>' +
     'スコア <span class="v">' + Math.floor(score).toLocaleString() + '</span>　コンボ <span class="v">×' + maxCombo + '</span><br>' +
     '時間 <span class="v">' + Math.floor(playT / 60) + '分' + Math.floor(playT % 60) + '秒</span>';
   ui.over.classList.remove('hidden');
@@ -1330,7 +1433,10 @@ function finishGameOver() {
   ui.overSub.textContent = 'THE LIGHT HAS FADED';
   ui.retry.textContent = 'もう一度';
   const s = Math.floor(score);
-  ui.scrollimg.src = makeScroll();
+  composeScroll();
+  galleryCaption = gameMode === 'meguri'
+    ? '第' + nightN + '夜 道半ば'
+    : M.name + ' スコア ' + s.toLocaleString();
   if (gameMode === 'meguri') {
     ui.overStats.innerHTML =
       '<span class="v">第' + nightN + '夜</span>にて　星 <span class="v">' + stars + '/' + nightGoal + '</span><br>' +
@@ -1412,7 +1518,21 @@ function makeScroll() {
     ? '第' + nightN + '夜　星 ' + stars + '/' + nightGoal + '　スコア ' + Math.floor(score).toLocaleString()
     : M.name + '　スコア ' + Math.floor(score).toLocaleString() + '　星 ' + stars;
   g.fillText(caption, sw / 2, py0 + ph + 52);
-  return c.toDataURL('image/png');
+  return c;
+}
+
+function composeScroll() {
+  scrollC = makeScroll();
+  ui.scrollimg.src = scrollC.toDataURL('image/png');
+  ui.keep.disabled = false;
+  ui.keep.textContent = 'ギャラリーに飾る';
+}
+
+function galleryJpeg() {
+  const c = document.createElement('canvas');
+  c.width = 480; c.height = 720;
+  c.getContext('2d').drawImage(scrollC, 0, 0, 480, 720);
+  return c.toDataURL('image/jpeg', 0.8);
 }
 
 // ============================================================
@@ -1450,6 +1570,7 @@ function nightLabel(n) {
 function refreshTitle() {
   ui.meguriSub.textContent = 'よめぐり — ' + nightLabel(bestNight) + 'から';
   $('btn-night1').style.display = bestNight > 1 ? '' : 'none';
+  $('btn-gallery').style.display = loadGallery().length > 0 ? '' : 'none';
 }
 refreshTitle();
 
@@ -1497,6 +1618,69 @@ ui.save.addEventListener('click', () => {
   a.download = 'sumihotaru_' + Math.floor(score) + '.png';
   document.body.appendChild(a); a.click(); a.remove();
 });
+
+// ---- share (Web Share API; hidden where unsupported) ----
+if (!navigator.share) $('btn-share').style.display = 'none';
+$('btn-share').addEventListener('click', async () => {
+  if (!scrollC) return;
+  const text = '墨蛍 — ' + galleryCaption;
+  try {
+    const blob = await new Promise(res => scrollC.toBlob(res, 'image/png'));
+    const file = new File([blob], 'sumihotaru.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: '墨蛍', text });
+    } else {
+      await navigator.share({ title: '墨蛍', text, url: location.href });
+    }
+  } catch (e) { /* share sheet dismissed */ }
+});
+
+// ---- keep: hang this painting in the gallery ----
+ui.keep.addEventListener('click', () => {
+  if (!scrollC || ui.keep.disabled) return;
+  const g = loadGallery();
+  g.push({ img: galleryJpeg(), cap: galleryCaption, d: new Date().toISOString().slice(0, 10) });
+  while (g.length > 12) g.shift(); // the wall only fits so many
+  saveGallery(g);
+  ui.keep.disabled = true;
+  ui.keep.textContent = '飾った ✓';
+});
+
+// ---- gallery screen ----
+function openGallery() {
+  const grid = $('g-grid');
+  grid.innerHTML = '';
+  const g = loadGallery();
+  if (g.length === 0) {
+    grid.innerHTML = '<div class="g-empty">まだ何も飾られていない</div>';
+  }
+  for (let i = g.length - 1; i >= 0; i--) {
+    const it = g[i];
+    const card = document.createElement('div');
+    card.className = 'g-card';
+    const img = document.createElement('img');
+    img.src = it.img;
+    img.alt = it.cap;
+    const cap = document.createElement('div');
+    cap.className = 'g-cap';
+    cap.textContent = it.cap + ' — ' + it.d;
+    const del = document.createElement('button');
+    del.className = 'g-del';
+    del.textContent = '✕';
+    del.addEventListener('click', () => {
+      const g2 = loadGallery();
+      g2.splice(i, 1);
+      saveGallery(g2);
+      openGallery();
+    });
+    card.appendChild(img); card.appendChild(cap); card.appendChild(del);
+    grid.appendChild(card);
+  }
+  $('gallery-screen').classList.remove('hidden');
+}
+$('btn-gallery').addEventListener('pointerdown', e => e.stopPropagation());
+$('btn-gallery').addEventListener('click', e => { e.stopPropagation(); openGallery(); });
+$('btn-gclose').addEventListener('click', () => $('gallery-screen').classList.add('hidden'));
 function setMuted(v) {
   muted = v;
   const btn = $('btn-mute');
