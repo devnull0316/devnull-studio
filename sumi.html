@@ -619,7 +619,8 @@ let burns = [];   // {x,y,R,t}
 let popups = [];
 
 // ---- ink data ----
-let segs = [];      // {ax,ay,bx,by,r,dead}
+let segs = [];      // {ax,ay,bx,by,r,dead,dry,stroke}
+let strokes = [];   // {segIdxs:[], dots:[], len, state:'live'|'fading', fadeT}
 let grid = new Map();
 const CELL = 80;
 
@@ -669,11 +670,12 @@ function segClosest(s, px, py) {
 // ============================================================
 // Ink economy & brush
 // ============================================================
-let inkMax = 1, ink = 1, inkRegen = 1, brushDried = false;
+let inkMax = 1, ink = 1, inkRegen = 1, brushDried = false, inkCap = 1;
 
 function inkParams() {
-  inkMax = U * 1.55;
-  inkRegen = inkMax * 0.13;
+  inkMax = U * 1.7;
+  inkRegen = inkMax * 0.18;
+  inkCap = inkMax * 3.0; // how much ink the paper can hold before old strokes dissolve
   fly.r = Math.max(6, U * 0.012);
 }
 
@@ -681,7 +683,8 @@ let stroke = null; // {pts:[{x,y}], lastW}
 
 function strokeStart(x, y) {
   if (ink < inkMax * 0.06) { brushDried = true; sfx.dry(); return; }
-  stroke = { px: x, py: y, lastW: 0, n: 0 };
+  stroke = { px: x, py: y, lastW: 0, n: 0, obj: { segIdxs: [], dots: [], len: 0, state: 'live', fadeT: 0 } };
+  strokes.push(stroke.obj);
   sfx.brush();
 }
 
@@ -714,10 +717,19 @@ function strokeMove(x, y, pressure) {
     Math.hypot(nx - fly.x, ny - fly.y) < fly.r + w / 2 + 10;
 
   if (!tooClose) {
-    const s = { ax: stroke.px, ay: stroke.py, bx: nx, by: ny, r: w / 2, dead: false };
+    const s = { ax: stroke.px, ay: stroke.py, bx: nx, by: ny, r: w / 2, dead: false, dry, stroke: stroke.obj };
     segs.push(s);
+    stroke.obj.segIdxs.push(segs.length - 1);
+    stroke.obj.len += d;
     addToGrid(segs.length - 1);
     drawBrushSeg(inkX, s, dry);
+    // permanent splatter belongs to the stroke so re-renders keep it
+    if (!dry && d > 14 && Math.random() < 0.12) {
+      const dot = { x: nx + rand(-9, 9), y: ny + rand(-9, 9), r: rand(0.6, 1.8) };
+      stroke.obj.dots.push(dot);
+      inkX.fillStyle = 'rgba(30,26,22,0.5)';
+      inkX.beginPath(); inkX.arc(dot.x, dot.y, dot.r, 0, TAU); inkX.fill();
+    }
   } else {
     for (let i = 0; i < 2; i++) {
       particles.push({ x: nx + rand(-4, 4), y: ny + rand(-4, 4), vx: rand(-20, 20), vy: rand(-30, -5), life: rand(0.2, 0.4), maxLife: 0.4, size: rand(1, 2.5), col: '255,180,80', grav: 0 });
@@ -728,7 +740,13 @@ function strokeMove(x, y, pressure) {
   stroke.n++;
 }
 
-function strokeEnd() { stroke = null; }
+function strokeEnd() {
+  if (stroke && stroke.obj.segIdxs.length === 0) {
+    const i = strokes.indexOf(stroke.obj);
+    if (i >= 0) strokes.splice(i, 1);
+  }
+  stroke = null;
+}
 
 function drawBrushSeg(g, s, dry) {
   g.strokeStyle = dry ? 'rgba(30,26,22,0.55)' : 'rgba(30,26,22,0.92)';
@@ -750,8 +768,8 @@ function drawBrushSeg(g, s, dry) {
     g.lineTo(s.bx + px * s.r * off * 1.45, s.by + py * s.r * off * 1.45);
     g.stroke();
   }
-  // dry brush gaps
-  if (dry && Math.random() < 0.5) {
+  // dry brush gaps (only safe on the ink layer — it erases pixels)
+  if (dry && g === inkX && Math.random() < 0.5) {
     g.save();
     g.globalCompositeOperation = 'destination-out';
     g.fillStyle = 'rgba(0,0,0,0.5)';
@@ -761,12 +779,60 @@ function drawBrushSeg(g, s, dry) {
     }
     g.restore();
   }
-  // splatter
-  if (!dry && len > 14 && Math.random() < 0.12) {
-    g.fillStyle = 'rgba(30,26,22,0.5)';
-    g.beginPath();
-    g.arc(s.bx + rand(-9, 9), s.by + rand(-9, 9), rand(0.6, 1.8), 0, TAU);
-    g.fill();
+}
+
+function renderInkLayer() {
+  inkX.save();
+  inkX.setTransform(1, 0, 0, 1, 0, 0);
+  inkX.clearRect(0, 0, inkC.width, inkC.height);
+  inkX.restore();
+  for (const st of strokes) {
+    if (st.state !== 'live') continue;
+    for (const i of st.segIdxs) {
+      const s = segs[i];
+      if (!s.dead) drawBrushSeg(inkX, s, s.dry);
+    }
+    inkX.fillStyle = 'rgba(30,26,22,0.5)';
+    for (const dot of st.dots) {
+      inkX.beginPath(); inkX.arc(dot.x, dot.y, dot.r, 0, TAU); inkX.fill();
+    }
+  }
+}
+
+// the paper holds only so much ink — beyond that, the oldest strokes
+// shimmer in warning, lose their solidity, then dissolve to mist
+function enforceInkBudget(dt) {
+  let total = 0;
+  for (const st of strokes) if (st.state === 'live') total += st.len;
+  if (total > inkCap) {
+    for (const st of strokes) {
+      if (st.state === 'live' && st.len > 0) {
+        st.state = 'fading';
+        st.fadeT = 0;
+        renderInkLayer(); // off the static layer; drawn dynamically while it fades
+        break;
+      }
+    }
+  }
+  for (let i = strokes.length - 1; i >= 0; i--) {
+    const st = strokes[i];
+    if (st.state !== 'fading') continue;
+    const was = st.fadeT;
+    st.fadeT += dt;
+    if (was < 0.55 && st.fadeT >= 0.55) {
+      // solidity ends here: the firefly passes through from now on
+      for (const k of st.segIdxs) segs[k].dead = true;
+      rebuildGrid();
+    }
+    if (st.fadeT < 0.55) continue;
+    if (st.fadeT >= 1.35) {
+      // ink mist
+      for (const k of st.segIdxs) {
+        const s = segs[k];
+        if (Math.random() < 0.4) particles.push({ x: (s.ax + s.bx) / 2, y: (s.ay + s.by) / 2, vx: rand(-12, 12), vy: rand(-26, -6), life: rand(0.4, 0.9), maxLife: 0.9, size: rand(1.5, 3.5), col: '90,84,74', grav: -14 });
+      }
+      strokes.splice(i, 1);
+    }
   }
 }
 
@@ -792,7 +858,7 @@ function spawnStar() {
   }
   if (!bestPt) bestPt = { x: W / 2, y: H / 2 };
   star = { x: bestPt.x, y: bestPt.y, r: Math.max(9, fly.r * 1.5), born: playT };
-  countMax = Math.max(6, 13 - stars * 0.4);
+  countMax = Math.max(8, 15 - stars * 0.25);
   countT = countMax;
   usedInkThisStar = false;
   lastTickSec = -1;
@@ -850,15 +916,20 @@ function updateBurns(dt) {
       }
     }
     if (p >= 1) {
-      // kill segments fully inside
+      // any stroke touching the flame loses that part
       let killed = false;
       for (const s of segs) {
         if (s.dead) continue;
-        const c1 = Math.hypot(s.ax - b.x, s.ay - b.y) < b.R;
-        const c2 = Math.hypot(s.bx - b.x, s.by - b.y) < b.R;
-        if (c1 && c2) { s.dead = true; killed = true; }
+        const mx = (s.ax + s.bx) / 2, my = (s.ay + s.by) / 2;
+        if (Math.hypot(s.ax - b.x, s.ay - b.y) < b.R ||
+            Math.hypot(s.bx - b.x, s.by - b.y) < b.R ||
+            Math.hypot(mx - b.x, my - b.y) < b.R) {
+          s.dead = true;
+          killed = true;
+          if (s.stroke) s.stroke.len -= Math.hypot(s.bx - s.ax, s.by - s.ay);
+        }
       }
-      if (killed) rebuildGrid();
+      if (killed) { rebuildGrid(); renderInkLayer(); }
       // permanent scorch ghost on the paper itself
       if (!b.scorched) {
         b.scorched = true;
@@ -878,7 +949,7 @@ function updateBurns(dt) {
 // ============================================================
 // Firefly physics
 // ============================================================
-function flySpeed() { return U * 0.34 * Math.min(1.55, 1 + stars * 0.016); }
+function flySpeed() { return U * 0.31 * Math.min(1.35, 1 + stars * 0.010); }
 
 function updateFly(dt) {
   const sp = flySpeed();
@@ -940,7 +1011,7 @@ function startGame() {
   state = 'play';
   score = 0; stars = 0; combo = 0; maxCombo = 0;
   playT = 0; inkUsedTotal = 0;
-  segs = []; grid = new Map();
+  segs = []; strokes = []; grid = new Map();
   particles = []; burns = []; popups = []; trail = [];
   paperC = makePaper(W, H, DPR);
   paperX = paperC.getContext('2d');
@@ -955,7 +1026,7 @@ function startGame() {
   fly.vx = Math.cos(a); fly.vy = Math.sin(a);
   fly.glow = 1;
   spawnStar();
-  countT = countMax = 16; // generous first star; frozen until the first stroke
+  countT = countMax = 18; // generous first star; frozen until the first stroke
   tut = 0;
   titleStar = null;
   hintShow('指で線を描いてみよう');
@@ -1142,6 +1213,7 @@ function update(dt) {
   }
 
   updateBurns(dt);
+  if (state === 'play' || state === 'dying') enforceInkBudget(dt);
 
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
@@ -1163,6 +1235,22 @@ function update(dt) {
 function render(now) {
   ctx.drawImage(paperC, 0, 0, W, H);
   ctx.drawImage(inkC, 0, 0, W, H);
+
+  // fading strokes: warning shimmer, then dissolve
+  for (const st of strokes) {
+    if (st.state !== 'fading') continue;
+    const a = st.fadeT < 0.55
+      ? 0.6 + Math.sin(st.fadeT * 22) * 0.35
+      : Math.max(0, 1 - (st.fadeT - 0.55) / 0.8) * 0.6;
+    if (a <= 0.01) continue;
+    ctx.save();
+    ctx.globalAlpha = a;
+    for (const k of st.segIdxs) {
+      const s = segs[k];
+      drawBrushSeg(ctx, s, s.dry);
+    }
+    ctx.restore();
+  }
 
   // star
   if (star && (state === 'play')) {
@@ -1355,6 +1443,8 @@ function decorateTitle() {
   for (const [p0, p1, p2] of curves) {
     const N = 14;
     let prev = null;
+    const obj = { segIdxs: [], dots: [], len: 0, state: 'live', fadeT: 0 };
+    strokes.push(obj);
     for (let i = 0; i <= N; i++) {
       const t = i / N;
       const x = (1 - t) * (1 - t) * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0];
@@ -1362,9 +1452,12 @@ function decorateTitle() {
       const pt = { x: x * W, y: y * H };
       if (prev) {
         const taper = Math.sin(t * Math.PI);   // thick middle, tapered ends
-        const s = { ax: prev.x, ay: prev.y, bx: pt.x, by: pt.y, r: 2 + taper * 5.5, dead: false };
+        const dry = t > 0.78;
+        const s = { ax: prev.x, ay: prev.y, bx: pt.x, by: pt.y, r: 2 + taper * 5.5, dead: false, dry, stroke: obj };
         segs.push(s);
-        drawBrushSeg(inkX, s, t > 0.78);
+        obj.segIdxs.push(segs.length - 1);
+        obj.len += Math.hypot(pt.x - prev.x, pt.y - prev.y);
+        drawBrushSeg(inkX, s, dry);
       }
       prev = pt;
     }
