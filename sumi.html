@@ -611,7 +611,7 @@ let titleStar = null;
 function hintShow(txt) { ui.hint.textContent = txt; ui.hint.classList.add('show'); }
 function hintHide() { ui.hint.classList.remove('show'); }
 
-const fly = { x: 200, y: 200, vx: 1, vy: 0.4, speed: 0, r: 7, glow: 1, wob: rand(TAU) };
+const fly = { x: 200, y: 200, vx: 1, vy: 0.4, sp: 0, r: 7, glow: 1, wob: rand(TAU), lastFx: 0 };
 let star = null; // {x,y,r}
 let trail = [];
 let particles = [];
@@ -950,11 +950,31 @@ function updateBurns(dt) {
 // Firefly physics
 // ============================================================
 function flySpeed() { return U * 0.31 * Math.min(1.35, 1 + stars * 0.010); }
+// phototaxis, two-tiered: far away only 0.12 rad/s (turn radius wider
+// than the screen — just enough to break reflection loops, never enough
+// to home in by itself), ramping up close to the star so near-misses
+// get gently drawn in
+const PHOTO_FAR = 0.12, PHOTO_NEAR = 0.55;
 
 function updateFly(dt) {
-  const sp = flySpeed();
+  // smooth acceleration instead of stepping when a star is collected
+  fly.sp = fly.sp ? fly.sp + (flySpeed() - fly.sp) * Math.min(1, dt * 1.5) : flySpeed();
+  const sp = fly.sp;
   const sub = 4, h = dt / sub;
   for (let s = 0; s < sub; s++) {
+    if (star) {
+      const d2s = Math.hypot(star.x - fly.x, star.y - fly.y);
+      const nearR = U * 0.22;
+      const w = d2s < nearR ? lerp(PHOTO_NEAR, PHOTO_FAR, d2s / nearR) : PHOTO_FAR;
+      const want = Math.atan2(star.y - fly.y, star.x - fly.x);
+      const cur = Math.atan2(fly.vy, fly.vx);
+      let dAng = want - cur;
+      while (dAng > Math.PI) dAng -= TAU;
+      while (dAng < -Math.PI) dAng += TAU;
+      const turn = clamp(dAng, -w * h, w * h);
+      const na = cur + turn;
+      fly.vx = Math.cos(na); fly.vy = Math.sin(na);
+    }
     fly.x += fly.vx * sp * h;
     fly.y += fly.vy * sp * h;
     // walls
@@ -982,15 +1002,15 @@ function updateFly(dt) {
       fly.y = hc.y + ny * (R + 0.5);
       const dot = fly.vx * nx + fly.vy * ny;
       if (dot < 0) {
+        // perfectly deterministic reflection — planned banks always land;
+        // phototaxis (not randomness) is what breaks repeating loops
         fly.vx -= 2 * dot * nx;
         fly.vy -= 2 * dot * ny;
-        // tiny scatter keeps motion organic and avoids loops
-        const a = Math.atan2(fly.vy, fly.vx) + rand(-0.05, 0.05);
-        fly.vx = Math.cos(a); fly.vy = Math.sin(a);
         bounced = true;
       }
     }
-    if (bounced) {
+    if (bounced && performance.now() - fly.lastFx > 80) {
+      fly.lastFx = performance.now();
       sfx.bounce(fly.y, sp);
       for (let k = 0; k < 3; k++)
         particles.push({ x: fly.x, y: fly.y, vx: rand(-40, 40), vy: rand(-40, 40), life: rand(0.15, 0.4), maxLife: 0.4, size: rand(0.8, 2), col: '255,205,90', grav: 0 });
@@ -1025,6 +1045,7 @@ function startGame() {
   const a = rand(TAU);
   fly.vx = Math.cos(a); fly.vy = Math.sin(a);
   fly.glow = 1;
+  fly.sp = 0;
   spawnStar();
   countT = countMax = 18; // generous first star; frozen until the first stroke
   tut = 0;
@@ -1500,6 +1521,15 @@ function frame(now) {
 
 function updateFlyAmbient(dt) {
   const sp = U * 0.18;
+  if (titleStar) { // the demo firefly seeks the demo star too
+    const want = Math.atan2(titleStar.y - fly.y, titleStar.x - fly.x);
+    const cur = Math.atan2(fly.vy, fly.vx);
+    let dAng = want - cur;
+    while (dAng > Math.PI) dAng -= TAU;
+    while (dAng < -Math.PI) dAng += TAU;
+    const na = cur + clamp(dAng, -0.6 * dt, 0.6 * dt);
+    fly.vx = Math.cos(na); fly.vy = Math.sin(na);
+  }
   fly.x += fly.vx * sp * dt;
   fly.y += fly.vy * sp * dt;
   const m = 30;
