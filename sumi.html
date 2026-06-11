@@ -441,6 +441,7 @@ html, body {
         <b>①</b> 指で線を描く — それが墨の壁<br>
         <b>②</b> 蛍は墨の壁で跳ね返る<br>
         <b>③</b> 時間が切れる前に、光る<b>星</b>へ導く<br>
+        <b>④</b> 指を<b>止めて押さえる</b>と、蛍は星へ引かれる<br>
         <b>墨は消えない。</b>星を取ると、まわりの墨だけ燃えて消える。
       </div>
       <div class="mode-row" style="margin-top:24px">
@@ -1287,16 +1288,21 @@ function updateFly(dt) {
   for (let s = 0; s < sub; s++) {
     if (star) {
       const d2s = Math.hypot(star.x - fly.x, star.y - fly.y);
-      const nearR = U * 0.22;
-      const w = d2s < nearR ? lerp(M.photoNear, M.photoFar, d2s / nearR) : M.photoFar;
-      const want = Math.atan2(star.y - fly.y, star.x - fly.x);
-      const cur = Math.atan2(fly.vy, fly.vx);
-      let dAng = want - cur;
-      while (dAng > Math.PI) dAng -= TAU;
-      while (dAng < -Math.PI) dAng += TAU;
-      const turn = clamp(dAng, -w * h, w * h);
-      const na = cur + turn;
-      fly.vx = Math.cos(na); fly.vy = Math.sin(na);
+      // no passive far-field pull anymore: planned banks fly true.
+      // attraction is a tool — hold a still finger to call the firefly
+      const nearR = U * 0.12;
+      let w = d2s < nearR ? lerp(0.35, 0.1, d2s / nearR) : 0;
+      if (praying) w = Math.max(w, M.photoNear * 1.4);
+      if (w > 0) {
+        const want = Math.atan2(star.y - fly.y, star.x - fly.x);
+        const cur = Math.atan2(fly.vy, fly.vx);
+        let dAng = want - cur;
+        while (dAng > Math.PI) dAng -= TAU;
+        while (dAng < -Math.PI) dAng += TAU;
+        const turn = clamp(dAng, -w * h, w * h);
+        const na = cur + turn;
+        fly.vx = Math.cos(na); fly.vy = Math.sin(na);
+      }
     }
     fly.x += fly.vx * sp * h;
     fly.y += fly.vy * sp * h;
@@ -1539,6 +1545,8 @@ function galleryJpeg() {
 // Input
 // ============================================================
 let drawingId = null;
+let pressStart = 0, pressX = 0, pressY = 0, pressMoved = false;
+let praying = false;
 
 canvas.addEventListener('pointerdown', e => {
   e.preventDefault();
@@ -1546,10 +1554,14 @@ canvas.addEventListener('pointerdown', e => {
   if (state !== 'play') return;
   if (drawingId !== null) return;
   drawingId = e.pointerId;
+  pressStart = performance.now();
+  pressX = e.clientX; pressY = e.clientY;
+  pressMoved = false;
   strokeStart(e.clientX, e.clientY);
 });
 canvas.addEventListener('pointermove', e => {
   if (state !== 'play' || e.pointerId !== drawingId) return;
+  if (Math.hypot(e.clientX - pressX, e.clientY - pressY) > 9) pressMoved = true;
   if (e.getCoalescedEvents) {
     for (const ce of e.getCoalescedEvents()) strokeMove(ce.clientX, ce.clientY, ce.pressure);
   } else {
@@ -1721,6 +1733,8 @@ if (!(document.documentElement.requestFullscreen || document.documentElement.web
 // Update
 // ============================================================
 function update(dt) {
+  praying = state === 'play' && drawingId !== null && !pressMoved &&
+            performance.now() - pressStart > 250 && !!star;
   if (state === 'play') {
     playT += dt;
     if (armed) countT -= dt; // the night holds its breath until the first stroke
@@ -1886,6 +1900,22 @@ function render(now) {
       ctx.lineTo(Math.cos(a2) * titleStar.r * 0.5, Math.sin(a2) * titleStar.r * 0.5);
     }
     ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  // prayer: a golden thread binds the firefly to the star
+  if (praying && star && state === 'play') {
+    const dx = star.x - fly.x, dy = star.y - fly.y;
+    const d = Math.hypot(dx, dy) || 1;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(216,174,62,' + (0.3 + Math.sin(now * 0.012) * 0.12) + ')';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 9]);
+    ctx.lineDashOffset = -now * 0.04;
+    ctx.beginPath();
+    ctx.moveTo(fly.x + dx / d * fly.r * 2, fly.y + dy / d * fly.r * 2);
+    ctx.lineTo(star.x - dx / d * star.hitR, star.y - dy / d * star.hitR);
+    ctx.stroke();
     ctx.restore();
   }
 
