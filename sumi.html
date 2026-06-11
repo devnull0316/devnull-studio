@@ -305,6 +305,32 @@ html, body {
   cursor: pointer;
 }
 #btn-fs:active { background: rgba(43,38,32,0.12); }
+#btn-mute {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  right: 62px;
+  z-index: 8;
+  font-size: 18px;
+  line-height: 1;
+  width: 40px;
+  color: rgba(43,38,32,0.55);
+  background: rgba(255,253,245,0.6);
+  border: 1px solid rgba(43,38,32,0.25);
+  border-radius: 8px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+#btn-mute.off { color: rgba(179,52,46,0.8); }
+.replay-link {
+  margin-top: 10px;
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  color: rgba(43,38,32,0.55);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.replay-link:hover { color: #2b2620; }
 
 .foot-credit {
   position: fixed;
@@ -327,11 +353,12 @@ html, body {
 <div id="hud">
   <div id="score">0</div>
   <div id="sub">星 0</div>
-  <div id="mubokuFx">無墨</div>
+  <div id="mubokuFx">墨いらず!</div>
   <div id="hint"></div>
 </div>
 
 <button id="btn-fs" title="全画面">⛶</button>
+<button id="btn-mute" title="音を消す/出す">♪</button>
 
 <div class="overlay" id="title-screen">
   <div class="title-inner">
@@ -353,17 +380,18 @@ html, body {
       <div class="title-rule">
         <b>①</b> 指で線を描く — それが墨の壁<br>
         <b>②</b> 蛍は墨の壁で跳ね返る<br>
-        <b>③</b> 刻が尽きる前に、光る<b>星</b>へ導く<br>
-        <b>墨は消えない。</b>星の焔だけが浄める。
+        <b>③</b> 時間が切れる前に、光る<b>星</b>へ導く<br>
+        <b>墨は消えない。</b>星を取ると、まわりの墨だけ燃えて消える。
       </div>
       <div class="mode-row" style="margin-top:24px">
         <button class="mode-btn meguri" id="btn-meguri">夜巡り<span id="meguri-sub">第一夜から</span></button>
       </div>
+      <div class="replay-link" id="btn-night1" style="display:none">はじめの夜から遊び直す</div>
       <div class="endless-label">無限の夜 — どこまで生き延びるか</div>
       <div class="mode-row" style="margin-top:6px">
-        <button class="mode-btn" data-mode="yoi">宵<span>やさしい</span></button>
-        <button class="mode-btn" data-mode="yowa">夜半<span>ふつう</span></button>
-        <button class="mode-btn" data-mode="aka">暁<span>きびしい</span></button>
+        <button class="mode-btn" data-mode="yoi">宵<span>よい — やさしい</span></button>
+        <button class="mode-btn" data-mode="yowa">夜半<span>よわ — ふつう</span></button>
+        <button class="mode-btn" data-mode="aka">暁<span>あかつき — きびしい</span></button>
       </div>
       <div class="title-hint">— 夜を選ぶと、始まる —</div>
       <div class="title-keys">[R] やり直す&nbsp;&nbsp;[M] 音</div>
@@ -375,7 +403,7 @@ html, body {
   <div id="scrollwrap">
     <img id="scrollimg" alt="あなたの墨絵">
     <div class="over-side">
-      <div class="over-title" id="over-title">灯、消ゆ</div>
+      <div class="over-title" id="over-title">灯が、消えた</div>
       <div class="over-sub" id="over-sub">THE LIGHT HAS FADED</div>
       <div class="over-stats" id="over-stats"></div>
       <div class="over-btns">
@@ -1280,8 +1308,8 @@ function nightClear() {
   ui.retry.textContent = '次の夜へ';
   ui.overStats.innerHTML =
     '<span class="v">第' + nightN + '夜</span>、明けた<br>' +
-    '銘 <span class="v">' + Math.floor(score).toLocaleString() + '</span>　連 <span class="v">×' + maxCombo + '</span><br>' +
-    '巡り <span class="v">' + Math.floor(playT / 60) + '分' + Math.floor(playT % 60) + '秒</span>';
+    'スコア <span class="v">' + Math.floor(score).toLocaleString() + '</span>　コンボ <span class="v">×' + maxCombo + '</span><br>' +
+    '時間 <span class="v">' + Math.floor(playT / 60) + '分' + Math.floor(playT % 60) + '秒</span>';
   ui.over.classList.remove('hidden');
   ui.hud.classList.remove('on');
 }
@@ -1296,7 +1324,7 @@ function die() {
 function finishGameOver() {
   state = 'over';
   overAt = performance.now();
-  ui.overTitle.textContent = '灯、消ゆ';
+  ui.overTitle.textContent = '灯が、消えた';
   ui.overTitle.style.color = '';
   ui.overTitle.style.textShadow = '';
   ui.overSub.textContent = 'THE LIGHT HAS FADED';
@@ -1306,16 +1334,16 @@ function finishGameOver() {
   if (gameMode === 'meguri') {
     ui.overStats.innerHTML =
       '<span class="v">第' + nightN + '夜</span>にて　星 <span class="v">' + stars + '/' + nightGoal + '</span><br>' +
-      '銘 <span class="v">' + s.toLocaleString() + '</span>　連 <span class="v">×' + maxCombo + '</span><br>' +
-      '到達 <span class="v">第' + bestNight + '夜</span>';
+      'スコア <span class="v">' + s.toLocaleString() + '</span>　コンボ <span class="v">×' + maxCombo + '</span><br>' +
+      '最高 <span class="v">第' + bestNight + '夜</span>';
   } else {
     const newBest = s > best;
     if (newBest) { best = s; localStorage.setItem('sumihotaru_best_' + modeKey, s); }
     ui.overStats.innerHTML =
-      '銘 <span class="v">' + s.toLocaleString() + '</span>' +
+      'スコア <span class="v">' + s.toLocaleString() + '</span>' +
       (newBest ? '<span class="new">新記録</span>' : '') + '<br>' +
       '夜 <span class="v">' + M.name + '</span>　星 <span class="v">' + stars + '</span>　連 <span class="v">×' + maxCombo + '</span><br>' +
-      '巡り <span class="v">' + Math.floor(playT / 60) + '分' + Math.floor(playT % 60) + '秒</span><br>' +
+      '時間 <span class="v">' + Math.floor(playT / 60) + '分' + Math.floor(playT % 60) + '秒</span><br>' +
       '過去最高 <span class="v">' + best.toLocaleString() + '</span>';
   }
   ui.over.classList.remove('hidden');
@@ -1381,8 +1409,8 @@ function makeScroll() {
   g.font = '600 22px "Hiragino Mincho ProN",serif';
   g.textAlign = 'center';
   const caption = gameMode === 'meguri'
-    ? '第' + nightN + '夜　星 ' + stars + '/' + nightGoal + '　銘 ' + Math.floor(score).toLocaleString()
-    : M.name + '　銘 ' + Math.floor(score).toLocaleString() + '　星 ' + stars;
+    ? '第' + nightN + '夜　星 ' + stars + '/' + nightGoal + '　スコア ' + Math.floor(score).toLocaleString()
+    : M.name + '　スコア ' + Math.floor(score).toLocaleString() + '　星 ' + stars;
   g.fillText(caption, sw / 2, py0 + ph + 52);
   return c.toDataURL('image/png');
 }
@@ -1420,7 +1448,8 @@ function nightLabel(n) {
   return n <= 10 ? '第' + KANJI_N[n] + '夜' : '第' + n + '夜';
 }
 function refreshTitle() {
-  ui.meguriSub.textContent = nightLabel(bestNight) + 'から';
+  ui.meguriSub.textContent = 'よめぐり — ' + nightLabel(bestNight) + 'から';
+  $('btn-night1').style.display = bestNight > 1 ? '' : 'none';
 }
 refreshTitle();
 
@@ -1430,6 +1459,14 @@ $('btn-meguri').addEventListener('click', e => {
   initAudio();
   gameMode = 'meguri';
   nightN = bestNight;
+  startGame();
+});
+$('btn-night1').addEventListener('pointerdown', e => e.stopPropagation());
+$('btn-night1').addEventListener('click', e => {
+  e.stopPropagation();
+  initAudio();
+  gameMode = 'meguri';
+  nightN = 1; // replay; saved progress is kept
   startGame();
 });
 for (const btn of document.querySelectorAll('.mode-btn[data-mode]')) {
@@ -1460,8 +1497,17 @@ ui.save.addEventListener('click', () => {
   a.download = 'sumihotaru_' + Math.floor(score) + '.png';
   document.body.appendChild(a); a.click(); a.remove();
 });
+function setMuted(v) {
+  muted = v;
+  const btn = $('btn-mute');
+  btn.textContent = muted ? '−' : '♪';
+  btn.classList.toggle('off', muted);
+}
+$('btn-mute').addEventListener('pointerdown', e => e.stopPropagation());
+$('btn-mute').addEventListener('click', e => { e.stopPropagation(); initAudio(); setMuted(!muted); });
+
 window.addEventListener('keydown', e => {
-  if (e.key === 'm' || e.key === 'M') muted = !muted;
+  if (e.key === 'm' || e.key === 'M') setMuted(!muted);
   if (e.key === 'r' || e.key === 'R') { initAudio(); startGame(); }
   if (e.code === 'Enter' && state === 'title') { initAudio(); gameMode = 'meguri'; nightN = bestNight; startGame(); }
   if (e.key === 'f' || e.key === 'F') toggleFullscreen();
@@ -1742,9 +1788,9 @@ function updateHud(now) {
   ui.score.textContent = Math.floor(score).toLocaleString();
   ui.sub.innerHTML = gameMode === 'meguri'
     ? M.name + '　星 ' + stars + '/' + nightGoal +
-      (combo >= 2 ? '　<span class="ren">連 ×' + combo + '</span>' : '')
+      (combo >= 2 ? '　<span class="ren">コンボ ×' + combo + '</span>' : '')
     : M.name + '　星 ' + stars +
-      (combo >= 2 ? '　<span class="ren">連 ×' + combo + '</span>' : '') +
+      (combo >= 2 ? '　<span class="ren">コンボ ×' + combo + '</span>' : '') +
       '　<span style="opacity:0.6">最高 ' + best.toLocaleString() + '</span>';
 }
 
