@@ -489,6 +489,8 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden && state === 'play') state = 'paused';
 });
 document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
 
 // ============================================================
 // Bullet sprites (pre-rendered glow)

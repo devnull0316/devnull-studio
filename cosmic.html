@@ -506,6 +506,8 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Enter' && state !== 'play') { initAudio(); startGame(); }
 });
 document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+if (window.visualViewport) window.visualViewport.addEventListener('resize', layout);
 
 function drop() {
   balls.push(newBall(curLvl, aimX, dropY, 0, u * 2));
