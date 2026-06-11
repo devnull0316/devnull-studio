@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#efe8d8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>墨蛍 — SUMI HOTARU | DevNull Studio</title>
+<meta name="description" content="墨蛍 — 筆で壁を描き、蛍を星へ導く。描いた墨は消えない。あなたの一局が一幅の墨絵になる。">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #efe8d8;
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
+  color: #2b2620;
+  touch-action: none;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+#game { position: fixed; inset: 0; display: block; cursor: crosshair; }
+
+/* ================= HUD ================= */
+#hud {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+#hud.on { opacity: 1; }
+
+#score {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  left: 0; right: 0;
+  text-align: center;
+  font-size: clamp(26px, 4vw, 40px);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #2b2620;
+}
+#sub {
+  position: absolute;
+  top: calc(max(14px, env(safe-area-inset-top)) + clamp(34px, 5vw, 50px));
+  left: 0; right: 0;
+  text-align: center;
+  font-size: clamp(11px, 1.6vw, 14px);
+  letter-spacing: 0.3em;
+  color: rgba(43,38,32,0.55);
+}
+#sub .ren { color: #b3342e; font-weight: 600; }
+
+#mubokuFx {
+  position: absolute;
+  top: 30%;
+  left: 0; right: 0;
+  text-align: center;
+  font-size: clamp(34px, 7vw, 70px);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #b3342e;
+  opacity: 0;
+  transform: scale(1.3);
+}
+#mubokuFx.show {
+  animation: muboku 1.4s ease-out forwards;
+}
+@keyframes muboku {
+  0% { opacity: 0; transform: scale(1.5); }
+  15% { opacity: 1; transform: scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: scale(0.96); }
+}
+
+/* ================= Overlays ================= */
+.overlay {
+  position: fixed; inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.45s;
+}
+.overlay.hidden { opacity: 0; pointer-events: none; }
+
+/* ---- Title ---- */
+#title-screen { background: rgba(239,232,216,0.45); }
+.title-inner {
+  display: flex;
+  align-items: center;
+  gap: clamp(28px, 6vw, 80px);
+  padding: 24px;
+}
+.title-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: clamp(64px, 13vw, 140px);
+  font-weight: 700;
+  color: #1d1a16;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+  line-height: 1.08;
+}
+.title-side { max-width: 380px; }
+.title-sub {
+  font-size: clamp(11px, 1.6vw, 14px);
+  letter-spacing: 0.55em;
+  color: rgba(43,38,32,0.6);
+  margin-bottom: 22px;
+}
+.title-rule {
+  font-size: clamp(14px, 2.2vw, 18px);
+  line-height: 2.3;
+  color: #2b2620;
+}
+.title-rule b { color: #b3342e; font-weight: 700; }
+.title-hint {
+  margin-top: 30px;
+  font-size: clamp(13px, 2vw, 16px);
+  letter-spacing: 0.3em;
+  color: #2b2620;
+  animation: fade 1.6s infinite;
+}
+@keyframes fade { 50% { opacity: 0.25; } }
+.title-keys {
+  margin-top: 14px;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: rgba(43,38,32,0.4);
+}
+.seal {
+  display: inline-block;
+  background: #b3342e;
+  color: #efe8d8;
+  writing-mode: vertical-rl;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.15em;
+  padding: 8px 5px;
+  border-radius: 3px;
+  transform: rotate(2deg);
+  box-shadow: 0 1px 4px rgba(80,30,20,0.3);
+  margin-top: 18px;
+}
+
+/* ---- Game over: hanging scroll ---- */
+#over-screen { background: rgba(28,24,20,0.88); flex-direction: column; }
+#scrollwrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 4vw, 56px);
+  width: 100%;
+  padding: 12px;
+}
+#scrollimg {
+  max-height: min(72vh, 760px);
+  max-width: 58vw;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+}
+.over-side {
+  text-align: left;
+  color: #e8dfcc;
+  max-width: 270px;
+}
+.over-title {
+  font-size: clamp(22px, 3.4vw, 34px);
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  margin-bottom: 4px;
+}
+.over-sub {
+  font-size: 10px;
+  letter-spacing: 0.4em;
+  color: rgba(232,223,204,0.45);
+  margin-bottom: 22px;
+}
+.over-stats {
+  font-size: clamp(13px, 1.9vw, 16px);
+  line-height: 2.3;
+  letter-spacing: 0.1em;
+}
+.over-stats .v { color: #e0b84e; font-weight: 700; }
+.over-stats .new {
+  color: #1c1814; background: #e0b84e;
+  border-radius: 3px;
+  font-size: 0.8em;
+  padding: 1px 7px; margin-left: 8px;
+}
+.over-btns { margin-top: 26px; }
+.btn {
+  display: inline-block;
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: 0.25em;
+  color: #e8dfcc;
+  background: none;
+  border: 1px solid rgba(232,223,204,0.5);
+  border-radius: 4px;
+  padding: 10px 22px 10px 26px;
+  margin: 0 10px 10px 0;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.btn:hover { background: #e8dfcc; color: #1c1814; }
+.btn.primary { background: #b3342e; border-color: #b3342e; color: #f5efe2; }
+.btn.primary:hover { background: #c9453e; }
+
+@media (max-width: 700px), (max-height: 500px) {
+  .title-inner { gap: 24px; }
+  #scrollwrap { flex-direction: column; gap: 16px; }
+  #scrollimg { max-width: 80vw; max-height: 52vh; }
+  .over-side { text-align: center; max-width: none; }
+}
+
+.foot-credit {
+  position: fixed;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  left: 0; right: 0;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  color: rgba(43,38,32,0.35);
+  z-index: 7;
+  pointer-events: none;
+}
+#over-screen ~ .foot-credit { color: rgba(43,38,32,0.35); }
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div id="score">0</div>
+  <div id="sub">星 0</div>
+  <div id="mubokuFx">無墨</div>
+</div>
+
+<div class="overlay" id="title-screen">
+  <div class="title-inner">
+    <div style="text-align:center">
+      <div class="title-logo"><span>墨</span><span>蛍</span></div>
+      <div class="seal">墨</div>
+    </div>
+    <div class="title-side">
+      <div class="title-sub">SUMI — HOTARU</div>
+      <div class="title-rule">
+        筆で壁を描き、跳ねる蛍を<b>星</b>へ導く。<br>
+        <b>描いた墨は、消えない。</b><br>
+        やがて己の墨が、己を阻む。<br>
+        星を取れば、その焔が周りの墨を浄める。<br>
+        刻が尽きれば、蛍の光は消える。
+      </div>
+      <div class="title-hint">— 触れて、始める —</div>
+      <div class="title-keys">[R] やり直す&nbsp;&nbsp;[M] 音</div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="over-screen">
+  <div id="scrollwrap">
+    <img id="scrollimg" alt="あなたの墨絵">
+    <div class="over-side">
+      <div class="over-title">灯、消ゆ</div>
+      <div class="over-sub">THE LIGHT HAS FADED</div>
+      <div class="over-stats" id="over-stats"></div>
+      <div class="over-btns">
+        <button class="btn primary" id="btn-retry">もう一度</button>
+        <button class="btn" id="btn-save">絵を保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="foot-credit">墨蛍 — <a href="/" style="color:inherit;text-decoration:none">DEVNULL STUDIO</a></div>
+
+<script>
+'use strict';
+(() => {
+
+// ============================================================
+// Canvas & layers
+// ============================================================
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+let W = 0, H = 0, DPR = 1, DIAG = 1, U = 1;
+
+let paperC = null, paperX = null; // washi paper (persistent, scorch marks accumulate)
+let inkC = null, inkX = null;     // permanent ink layer
+
+const $ = id => document.getElementById(id);
+const ui = {
+  hud: $('hud'), score: $('score'), sub: $('sub'), muboku: $('mubokuFx'),
+  title: $('title-screen'), over: $('over-screen'),
+  overStats: $('over-stats'), scrollimg: $('scrollimg'),
+  retry: $('btn-retry'), save: $('btn-save'),
+};
+
+const rand = (a = 1, b) => b === undefined ? Math.random() * a : a + Math.random() * (b - a);
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// ============================================================
+// Washi paper generation
+// ============================================================
+function makePaper(w, h, dpr) {
+  const c = document.createElement('canvas');
+  c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+  const g = c.getContext('2d');
+  g.scale(dpr, dpr);
+  // base
+  const base = g.createLinearGradient(0, 0, w, h);
+  base.addColorStop(0, '#f2ecdc');
+  base.addColorStop(0.5, '#ede5d2');
+  base.addColorStop(1, '#e9e0ca');
+  g.fillStyle = base;
+  g.fillRect(0, 0, w, h);
+  // mottling
+  for (let i = 0; i < 90; i++) {
+    const x = rand(w), y = rand(h), r = rand(20, Math.max(w, h) * 0.18);
+    const grad = g.createRadialGradient(x, y, 0, x, y, r);
+    const dark = Math.random() < 0.5;
+    grad.addColorStop(0, dark ? 'rgba(180,165,135,0.05)' : 'rgba(255,252,240,0.06)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grad;
+    g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  // fibers
+  g.lineWidth = 0.7;
+  for (let i = 0; i < 160; i++) {
+    const x = rand(w), y = rand(h), len = rand(8, 50), a = rand(TAU);
+    g.strokeStyle = Math.random() < 0.5 ? 'rgba(170,150,120,0.10)' : 'rgba(255,255,248,0.14)';
+    g.beginPath();
+    g.moveTo(x, y);
+    g.quadraticCurveTo(
+      x + Math.cos(a) * len * 0.5 + rand(-4, 4),
+      y + Math.sin(a) * len * 0.5 + rand(-4, 4),
+      x + Math.cos(a) * len, y + Math.sin(a) * len);
+    g.stroke();
+  }
+  // speckles
+  for (let i = 0; i < 260; i++) {
+    g.fillStyle = 'rgba(140,120,90,' + rand(0.03, 0.1) + ')';
+    g.fillRect(rand(w), rand(h), rand(0.5, 1.6), rand(0.5, 1.6));
+  }
+  // edge vignette
+  const v = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.42, w / 2, h / 2, Math.max(w, h) * 0.74);
+  v.addColorStop(0, 'rgba(0,0,0,0)');
+  v.addColorStop(1, 'rgba(120,95,60,0.13)');
+  g.fillStyle = v;
+  g.fillRect(0, 0, w, h);
+  return c;
+}
+
+// ============================================================
+// Layout / resize
+// ============================================================
+function layout() {
+  const oldW = W, oldH = H;
+  const oldInk = inkC, oldPaper = paperC;
+  DPR = Math.min(window.devicePixelRatio || 1, IS_TOUCH ? 1.5 : 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  DIAG = Math.hypot(W, H);
+  U = Math.min(W, H);
+  canvas.width = Math.round(W * DPR);
+  canvas.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+  paperC = makePaper(W, H, DPR);
+  paperX = paperC.getContext('2d');
+
+  inkC = document.createElement('canvas');
+  inkC.width = canvas.width; inkC.height = canvas.height;
+  inkX = inkC.getContext('2d');
+  inkX.scale(DPR, DPR);
+
+  if (oldInk && oldW > 0) {
+    // preserve existing ink & scorches, stretched to the new size
+    inkX.save(); inkX.setTransform(1, 0, 0, 1, 0, 0);
+    inkX.drawImage(oldInk, 0, 0, inkC.width, inkC.height);
+    inkX.restore();
+    const sx = W / oldW, sy = H / oldH;
+    for (const s of segs) { s.ax *= sx; s.ay *= sy; s.bx *= sx; s.by *= sy; }
+    fly.x *= sx; fly.y *= sy;
+    if (star) { star.x *= sx; star.y *= sy; }
+    rebuildGrid();
+  }
+}
+window.addEventListener('resize', () => layout());
+
+// ============================================================
+// Audio — koto plucks (Karplus-Strong), drips, wind, fire
+// ============================================================
+let AC = null, master = null, noiseBuf = null;
+const ksCache = new Map();
+
+function initAudio() {
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+  master = AC.createGain();
+  master.gain.value = 0.6;
+  master.connect(AC.destination);
+  const len = AC.sampleRate;
+  noiseBuf = AC.createBuffer(1, len, AC.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  // distant wind
+  const wind = AC.createBufferSource();
+  wind.buffer = noiseBuf; wind.loop = true;
+  const wf = AC.createBiquadFilter();
+  wf.type = 'lowpass'; wf.frequency.value = 220; wf.Q.value = 0.4;
+  const wg = AC.createGain(); wg.gain.value = 0.018;
+  wind.connect(wf); wf.connect(wg); wg.connect(master);
+  wind.start();
+  scheduleDrip();
+}
+
+function ksPluck(midi) {
+  const freq = 440 * Math.pow(2, (midi - 69) / 12);
+  let buf = ksCache.get(midi);
+  if (!buf) {
+    const sr = AC.sampleRate;
+    const N = Math.round(sr / freq);
+    const dur = 1.6, len = Math.floor(sr * dur);
+    buf = AC.createBuffer(1, len, sr);
+    const out = buf.getChannelData(0);
+    const ring = new Float32Array(N);
+    for (let i = 0; i < N; i++) ring[i] = Math.random() * 2 - 1;
+    let idx = 0;
+    for (let i = 0; i < len; i++) {
+      const cur = ring[idx];
+      const nxt = ring[(idx + 1) % N];
+      out[i] = cur;
+      ring[idx] = (cur + nxt) * 0.5 * 0.9965;
+      idx = (idx + 1) % N;
+    }
+    ksCache.set(midi, buf);
+  }
+  return buf;
+}
+
+function pluck(midi, vol, when) {
+  if (!AC || muted) return;
+  const s = AC.createBufferSource();
+  s.buffer = ksPluck(midi);
+  const g = AC.createGain();
+  g.gain.value = vol;
+  s.connect(g); g.connect(master);
+  s.start(when || AC.currentTime);
+}
+
+function noiseHit(peak, dec, freq, hp) {
+  if (!AC || muted) return;
+  const t = AC.currentTime;
+  const s = AC.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+  const f = AC.createBiquadFilter();
+  f.type = hp ? 'highpass' : 'lowpass';
+  f.frequency.value = freq;
+  const g = AC.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+  s.connect(f); f.connect(g); g.connect(master);
+  s.start(t); s.stop(t + dec + 0.1);
+}
+
+function sine(f0, f1, peak, dec, type) {
+  if (!AC || muted) return;
+  const t = AC.currentTime;
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(f0, t);
+  if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(f1, 1), t + dec);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t + dec + 0.1);
+}
+
+function scheduleDrip() {
+  if (!AC) return;
+  setTimeout(() => {
+    if (!muted && state !== 'over') sine(rand(900, 1400), rand(400, 600), 0.04, 0.5);
+    scheduleDrip();
+  }, rand(6000, 14000));
+}
+
+// 都節音階 (miyako-bushi) on D
+const SCALE = [50, 51, 55, 57, 58, 62, 63, 67, 69, 70, 74];
+let lastPluckT = 0;
+
+const sfx = {
+  bounce(y, speed) {
+    const now = performance.now();
+    if (now - lastPluckT < 95) return;
+    lastPluckT = now;
+    const idx = clamp(Math.floor((1 - y / H) * SCALE.length), 0, SCALE.length - 1);
+    pluck(SCALE[idx], clamp(speed / (U * 2.4), 0.05, 0.22));
+  },
+  brush() { noiseHit(0.035, 0.18, 2400, true); },
+  star() {
+    if (!AC || muted) return;
+    const t = AC.currentTime;
+    pluck(67, 0.3, t); pluck(70, 0.28, t + 0.09); pluck(74, 0.32, t + 0.18);
+    sine(1800, 2400, 0.05, 0.5);
+  },
+  burn() { noiseHit(0.16, 0.7, 700, false); sine(180, 60, 0.1, 0.6); },
+  tick() { sine(1750, 1750, 0.05, 0.04); noiseHit(0.02, 0.03, 4000, true); },
+  dry() { noiseHit(0.05, 0.1, 3000, true); },
+  over() {
+    if (!AC || muted) return;
+    const t = AC.currentTime;
+    [70, 67, 63, 62, 58].forEach((m, i) => pluck(m, 0.26, t + i * 0.45));
+    noiseHit(0.05, 2.5, 300, false);
+  },
+};
+
+// ============================================================
+// Game state
+// ============================================================
+let state = 'title'; // title | play | dying | over
+let muted = false;
+let score = 0, stars = 0, combo = 0, maxCombo = 0;
+let best = +(localStorage.getItem('sumihotaru_best') || 0);
+let playT = 0, dieT = 0, overAt = 0;
+let inkUsedTotal = 0;
+let usedInkThisStar = false;
+let countMax = 13, countT = 13;
+let lastTickSec = -1;
+let starPulse = 0;
+
+const fly = { x: 200, y: 200, vx: 1, vy: 0.4, speed: 0, r: 7, glow: 1, wob: rand(TAU) };
+let star = null; // {x,y,r}
+let trail = [];
+let particles = [];
+let burns = [];   // {x,y,R,t}
+let popups = [];
+
+// ---- ink data ----
+let segs = [];      // {ax,ay,bx,by,r,dead}
+let grid = new Map();
+const CELL = 80;
+
+function gridKey(cx, cy) { return cy * 8192 + cx; }
+function addToGrid(i) {
+  const s = segs[i];
+  const x0 = Math.floor((Math.min(s.ax, s.bx) - s.r) / CELL);
+  const x1 = Math.floor((Math.max(s.ax, s.bx) + s.r) / CELL);
+  const y0 = Math.floor((Math.min(s.ay, s.by) - s.r) / CELL);
+  const y1 = Math.floor((Math.max(s.ay, s.by) + s.r) / CELL);
+  for (let cy = y0; cy <= y1; cy++)
+    for (let cx = x0; cx <= x1; cx++) {
+      const k = gridKey(cx, cy);
+      let arr = grid.get(k);
+      if (!arr) { arr = []; grid.set(k, arr); }
+      arr.push(i);
+    }
+}
+function rebuildGrid() {
+  grid = new Map();
+  for (let i = 0; i < segs.length; i++) if (!segs[i].dead) addToGrid(i);
+}
+function nearbySegs(x, y, R) {
+  const found = [];
+  const x0 = Math.floor((x - R) / CELL), x1 = Math.floor((x + R) / CELL);
+  const y0 = Math.floor((y - R) / CELL), y1 = Math.floor((y + R) / CELL);
+  const seen = new Set();
+  for (let cy = y0; cy <= y1; cy++)
+    for (let cx = x0; cx <= x1; cx++) {
+      const arr = grid.get(gridKey(cx, cy));
+      if (!arr) continue;
+      for (const i of arr) {
+        if (seen.has(i)) continue;
+        seen.add(i);
+        if (!segs[i].dead) found.push(segs[i]);
+      }
+    }
+  return found;
+}
+function segClosest(s, px, py) {
+  const dx = s.bx - s.ax, dy = s.by - s.ay;
+  const l2 = dx * dx + dy * dy;
+  const t = l2 === 0 ? 0 : clamp(((px - s.ax) * dx + (py - s.ay) * dy) / l2, 0, 1);
+  return { x: s.ax + dx * t, y: s.ay + dy * t };
+}
+
+// ============================================================
+// Ink economy & brush
+// ============================================================
+let inkMax = 1, ink = 1, inkRegen = 1, brushDried = false;
+
+function inkParams() {
+  inkMax = U * 1.55;
+  inkRegen = inkMax * 0.13;
+  fly.r = Math.max(6, U * 0.012);
+}
+
+let stroke = null; // {pts:[{x,y}], lastW}
+
+function strokeStart(x, y) {
+  if (ink < inkMax * 0.06) { brushDried = true; sfx.dry(); return; }
+  stroke = { px: x, py: y, lastW: 0, n: 0 };
+  sfx.brush();
+}
+
+function strokeMove(x, y, pressure) {
+  if (!stroke) return;
+  const dx = x - stroke.px, dy = y - stroke.py;
+  const d = Math.hypot(dx, dy);
+  if (d < 3.5) return;
+  if (ink <= 0) { strokeEnd(); brushDried = true; sfx.dry(); return; }
+
+  const cost = Math.min(d, ink);
+  ink -= cost;
+  inkUsedTotal += cost;
+  usedInkThisStar = true;
+
+  // brush width: slower = fatter; taper-in; pressure from Apple Pencil
+  let w = clamp(11 - d * 0.28, 4.2, 11) * (U / 700 + 0.45);
+  if (pressure && pressure > 0 && pressure !== 0.5) w *= 0.55 + pressure * 0.9;
+  if (stroke.n < 3) w *= 0.45 + stroke.n * 0.2;
+  const dry = ink < inkMax * 0.18;
+  stroke.lastW = stroke.lastW ? lerp(stroke.lastW, w, 0.4) : w;
+  w = stroke.lastW;
+
+  const nx = x, ny = y;
+  // never deposit ink on top of the firefly — it burns off
+  const mid = { x: (stroke.px + nx) / 2, y: (stroke.py + ny) / 2 };
+  const tooClose =
+    Math.hypot(mid.x - fly.x, mid.y - fly.y) < fly.r + w / 2 + 10 ||
+    Math.hypot(nx - fly.x, ny - fly.y) < fly.r + w / 2 + 10;
+
+  if (!tooClose) {
+    const s = { ax: stroke.px, ay: stroke.py, bx: nx, by: ny, r: w / 2, dead: false };
+    segs.push(s);
+    addToGrid(segs.length - 1);
+    drawBrushSeg(inkX, s, dry);
+  } else {
+    for (let i = 0; i < 2; i++) {
+      particles.push({ x: nx + rand(-4, 4), y: ny + rand(-4, 4), vx: rand(-20, 20), vy: rand(-30, -5), life: rand(0.2, 0.4), maxLife: 0.4, size: rand(1, 2.5), col: '255,180,80', grav: 0 });
+    }
+  }
+
+  stroke.px = nx; stroke.py = ny;
+  stroke.n++;
+}
+
+function strokeEnd() { stroke = null; }
+
+function drawBrushSeg(g, s, dry) {
+  g.strokeStyle = dry ? 'rgba(30,26,22,0.55)' : 'rgba(30,26,22,0.92)';
+  g.lineCap = 'round';
+  g.lineWidth = s.r * 2;
+  g.beginPath();
+  g.moveTo(s.ax, s.ay);
+  g.lineTo(s.bx, s.by);
+  g.stroke();
+  // bristle streaks
+  const dx = s.bx - s.ax, dy = s.by - s.ay;
+  const len = Math.hypot(dx, dy) || 1;
+  const px = -dy / len, py = dx / len;
+  g.lineWidth = Math.max(0.6, s.r * 0.32);
+  for (const off of [-0.62, 0.55]) {
+    g.strokeStyle = 'rgba(30,26,22,' + (dry ? 0.18 : 0.3) + ')';
+    g.beginPath();
+    g.moveTo(s.ax + px * s.r * off * 1.45, s.ay + py * s.r * off * 1.45);
+    g.lineTo(s.bx + px * s.r * off * 1.45, s.by + py * s.r * off * 1.45);
+    g.stroke();
+  }
+  // dry brush gaps
+  if (dry && Math.random() < 0.5) {
+    g.save();
+    g.globalCompositeOperation = 'destination-out';
+    g.fillStyle = 'rgba(0,0,0,0.5)';
+    for (let i = 0; i < 3; i++) {
+      const t = rand();
+      g.fillRect(s.ax + dx * t + rand(-s.r, s.r), s.ay + dy * t + rand(-s.r, s.r), rand(1, 3), rand(1, 3));
+    }
+    g.restore();
+  }
+  // splatter
+  if (!dry && len > 14 && Math.random() < 0.12) {
+    g.fillStyle = 'rgba(30,26,22,0.5)';
+    g.beginPath();
+    g.arc(s.bx + rand(-9, 9), s.by + rand(-9, 9), rand(0.6, 1.8), 0, TAU);
+    g.fill();
+  }
+}
+
+// ============================================================
+// Star
+// ============================================================
+function spawnStar() {
+  const m = U * 0.1;
+  let bestPt = null, bestScore = -1;
+  for (let i = 0; i < 26; i++) {
+    const x = rand(m, W - m), y = rand(m + H * 0.06, H - m);
+    const dFly = Math.hypot(x - fly.x, y - fly.y);
+    if (dFly < DIAG * 0.3 && i < 20) continue;
+    const near = nearbySegs(x, y, 90);
+    let clutter = 0;
+    for (const s of near) {
+      const c = segClosest(s, x, y);
+      const d = Math.hypot(c.x - x, c.y - y);
+      if (d < 90) clutter += (90 - d);
+    }
+    const sc = dFly * 0.5 - clutter * 2.5;
+    if (sc > bestScore) { bestScore = sc; bestPt = { x, y }; }
+  }
+  if (!bestPt) bestPt = { x: W / 2, y: H / 2 };
+  star = { x: bestPt.x, y: bestPt.y, r: Math.max(9, fly.r * 1.5), born: playT };
+  countMax = Math.max(6, 13 - stars * 0.4);
+  countT = countMax;
+  usedInkThisStar = false;
+  lastTickSec = -1;
+}
+
+function collectStar() {
+  const muboku = !usedInkThisStar && stars > 0;
+  combo = (countT / countMax > 0.45) ? combo + 1 : 1;
+  maxCombo = Math.max(maxCombo, combo);
+  const mult = 1 + (combo - 1) * 0.25;
+  let gain = Math.round((100 + countT * 20) * mult);
+  if (muboku) gain *= 2;
+  score += gain;
+  stars++;
+
+  popups.push({ x: star.x, y: star.y - 30, txt: '+' + gain, t: 0, col: '#9a7b22' });
+  if (muboku) {
+    ui.muboku.classList.remove('show');
+    void ui.muboku.offsetWidth;
+    ui.muboku.classList.add('show');
+  }
+  // gold burst
+  for (let i = 0; i < 36; i++) {
+    const a = rand(TAU), sp = rand(30, U * 0.4);
+    particles.push({ x: star.x, y: star.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30, life: rand(0.4, 1.1), maxLife: 1.1, size: rand(1.5, 4), col: '224,184,78', grav: 60 });
+  }
+  burns.push({ x: star.x, y: star.y, R: U * 0.17, t: 0, scorched: false });
+  sfx.star();
+  setTimeout(() => { if (state === 'play') sfx.burn(); }, 140);
+  spawnStar();
+}
+
+// burn: erase ink in an expanding circle, leave a scorch ghost on paper
+function updateBurns(dt) {
+  for (let i = burns.length - 1; i >= 0; i--) {
+    const b = burns[i];
+    b.t += dt;
+    const p = Math.min(1, b.t / 0.55);
+    const r = b.R * (0.2 + 0.8 * (1 - Math.pow(1 - p, 2)));
+    // erase ink
+    inkX.save();
+    inkX.globalCompositeOperation = 'destination-out';
+    const g = inkX.createRadialGradient(b.x, b.y, r * 0.5, b.x, b.y, r);
+    g.addColorStop(0, 'rgba(0,0,0,1)');
+    g.addColorStop(1, 'rgba(0,0,0,0.25)');
+    inkX.fillStyle = g;
+    inkX.beginPath(); inkX.arc(b.x, b.y, r, 0, TAU); inkX.fill();
+    inkX.restore();
+    // embers on the rim
+    if (p < 0.9) {
+      for (let k = 0; k < 3; k++) {
+        const a = rand(TAU);
+        particles.push({ x: b.x + Math.cos(a) * r, y: b.y + Math.sin(a) * r, vx: rand(-15, 15), vy: rand(-45, -10), life: rand(0.25, 0.6), maxLife: 0.6, size: rand(1, 2.4), col: '255,150,60', grav: -20 });
+      }
+    }
+    if (p >= 1) {
+      // kill segments fully inside
+      let killed = false;
+      for (const s of segs) {
+        if (s.dead) continue;
+        const c1 = Math.hypot(s.ax - b.x, s.ay - b.y) < b.R;
+        const c2 = Math.hypot(s.bx - b.x, s.by - b.y) < b.R;
+        if (c1 && c2) { s.dead = true; killed = true; }
+      }
+      if (killed) rebuildGrid();
+      // permanent scorch ghost on the paper itself
+      if (!b.scorched) {
+        b.scorched = true;
+        paperX.save();
+        paperX.strokeStyle = 'rgba(150,100,50,0.10)';
+        paperX.lineWidth = 5;
+        paperX.beginPath(); paperX.arc(b.x, b.y, b.R * 0.96, 0, TAU); paperX.stroke();
+        paperX.fillStyle = 'rgba(190,150,90,0.05)';
+        paperX.beginPath(); paperX.arc(b.x, b.y, b.R * 0.9, 0, TAU); paperX.fill();
+        paperX.restore();
+      }
+      burns.splice(i, 1);
+    }
+  }
+}
+
+// ============================================================
+// Firefly physics
+// ============================================================
+function flySpeed() { return U * 0.34 * Math.min(1.55, 1 + stars * 0.016); }
+
+function updateFly(dt) {
+  const sp = flySpeed();
+  const sub = 4, h = dt / sub;
+  for (let s = 0; s < sub; s++) {
+    fly.x += fly.vx * sp * h;
+    fly.y += fly.vy * sp * h;
+    // walls
+    const m = 5 + fly.r;
+    let bounced = false;
+    if (fly.x < m) { fly.x = m; if (fly.vx < 0) { fly.vx *= -1; bounced = true; } }
+    if (fly.x > W - m) { fly.x = W - m; if (fly.vx > 0) { fly.vx *= -1; bounced = true; } }
+    if (fly.y < m) { fly.y = m; if (fly.vy < 0) { fly.vy *= -1; bounced = true; } }
+    if (fly.y > H - m) { fly.y = H - m; if (fly.vy > 0) { fly.vy *= -1; bounced = true; } }
+    // ink collision (2 iterations for corners)
+    for (let it = 0; it < 2; it++) {
+      const near = nearbySegs(fly.x, fly.y, fly.r + 14);
+      let hit = null, hitD = 1e9, hc = null;
+      for (const sg of near) {
+        const c = segClosest(sg, fly.x, fly.y);
+        const d = Math.hypot(c.x - fly.x, c.y - fly.y);
+        const R = sg.r + fly.r;
+        if (d < R && d < hitD) { hit = sg; hitD = d; hc = c; }
+      }
+      if (!hit) break;
+      const d = hitD || 0.001;
+      const nx = (fly.x - hc.x) / d, ny = (fly.y - hc.y) / d;
+      const R = hit.r + fly.r;
+      fly.x = hc.x + nx * (R + 0.5);
+      fly.y = hc.y + ny * (R + 0.5);
+      const dot = fly.vx * nx + fly.vy * ny;
+      if (dot < 0) {
+        fly.vx -= 2 * dot * nx;
+        fly.vy -= 2 * dot * ny;
+        // tiny scatter keeps motion organic and avoids loops
+        const a = Math.atan2(fly.vy, fly.vx) + rand(-0.05, 0.05);
+        fly.vx = Math.cos(a); fly.vy = Math.sin(a);
+        bounced = true;
+      }
+    }
+    if (bounced) {
+      sfx.bounce(fly.y, sp);
+      for (let k = 0; k < 3; k++)
+        particles.push({ x: fly.x, y: fly.y, vx: rand(-40, 40), vy: rand(-40, 40), life: rand(0.15, 0.4), maxLife: 0.4, size: rand(0.8, 2), col: '255,205,90', grav: 0 });
+    }
+  }
+  fly.wob += dt * 7;
+  trail.unshift({ x: fly.x, y: fly.y });
+  if (trail.length > 26) trail.pop();
+
+  // star collection
+  if (star && Math.hypot(fly.x - star.x, fly.y - star.y) < fly.r + star.r) collectStar();
+}
+
+// ============================================================
+// Flow
+// ============================================================
+function startGame() {
+  state = 'play';
+  score = 0; stars = 0; combo = 0; maxCombo = 0;
+  playT = 0; inkUsedTotal = 0;
+  segs = []; grid = new Map();
+  particles = []; burns = []; popups = []; trail = [];
+  paperC = makePaper(W, H, DPR);
+  paperX = paperC.getContext('2d');
+  inkX.save(); inkX.setTransform(1, 0, 0, 1, 0, 0);
+  inkX.clearRect(0, 0, inkC.width, inkC.height);
+  inkX.restore();
+  inkParams();
+  ink = inkMax;
+  brushDried = false;
+  fly.x = W * 0.5; fly.y = H * 0.62;
+  const a = rand(TAU);
+  fly.vx = Math.cos(a); fly.vy = Math.sin(a);
+  fly.glow = 1;
+  spawnStar();
+  countT = countMax = 13;
+  ui.title.classList.add('hidden');
+  ui.over.classList.add('hidden');
+  ui.hud.classList.add('on');
+}
+
+function die() {
+  state = 'dying';
+  dieT = 0;
+  strokeEnd();
+  sfx.over();
+}
+
+function finishGameOver() {
+  state = 'over';
+  overAt = performance.now();
+  const s = Math.floor(score);
+  const newBest = s > best;
+  if (newBest) { best = s; localStorage.setItem('sumihotaru_best', s); }
+  ui.scrollimg.src = makeScroll();
+  ui.overStats.innerHTML =
+    '銘 <span class="v">' + s.toLocaleString() + '</span>' +
+    (newBest ? '<span class="new">新記録</span>' : '') + '<br>' +
+    '星 <span class="v">' + stars + '</span>　連 <span class="v">×' + maxCombo + '</span><br>' +
+    '巡り <span class="v">' + Math.floor(playT / 60) + '分' + Math.floor(playT % 60) + '秒</span><br>' +
+    '過去最高 <span class="v">' + best.toLocaleString() + '</span>';
+  ui.over.classList.remove('hidden');
+  ui.hud.classList.remove('on');
+}
+
+// ---- 掛け軸 (hanging scroll) compositor ----
+function makeScroll() {
+  const sw = 640, sh = 960;
+  const c = document.createElement('canvas');
+  c.width = sw; c.height = sh;
+  const g = c.getContext('2d');
+  // cloth mount
+  const cloth = g.createLinearGradient(0, 0, sw, 0);
+  cloth.addColorStop(0, '#2c3046');
+  cloth.addColorStop(0.5, '#3a3f5c');
+  cloth.addColorStop(1, '#2c3046');
+  g.fillStyle = cloth;
+  g.fillRect(0, 0, sw, sh);
+  g.fillStyle = 'rgba(224,184,78,0.12)';
+  for (let y = 0; y < sh; y += 7) g.fillRect(0, y, sw, 1);
+  // rollers
+  const roller = g.createLinearGradient(0, 0, 0, 26);
+  roller.addColorStop(0, '#241d16');
+  roller.addColorStop(0.5, '#4a3b2a');
+  roller.addColorStop(1, '#241d16');
+  g.save();
+  g.fillStyle = roller; g.fillRect(-12, 4, sw + 24, 26);
+  g.translate(0, sh - 30);
+  g.fillRect(-12, 0, sw + 24, 26);
+  g.restore();
+  // painting window
+  const pw = sw - 120, px0 = 60;
+  const ph = sh - 220, py0 = 100;
+  g.fillStyle = '#efe8d8';
+  g.fillRect(px0 - 8, py0 - 8, pw + 16, ph + 16);
+  // fit the play canvas (cover)
+  const srcAR = W / H, dstAR = pw / ph;
+  let sx = 0, sy = 0, sW2 = W, sH2 = H;
+  if (srcAR > dstAR) { sW2 = H * dstAR; sx = (W - sW2) / 2; }
+  else { sH2 = W / dstAR; sy = (H - sH2) / 2; }
+  g.drawImage(paperC, sx * DPR, sy * DPR, sW2 * DPR, sH2 * DPR, px0, py0, pw, ph);
+  g.drawImage(inkC, sx * DPR, sy * DPR, sW2 * DPR, sH2 * DPR, px0, py0, pw, ph);
+  // title (vertical) & seal
+  g.fillStyle = '#1d1a16';
+  g.font = '700 34px "Hiragino Mincho ProN","Yu Mincho",serif';
+  g.textAlign = 'center';
+  g.fillText('墨', px0 + pw - 30, py0 + 44);
+  g.fillText('蛍', px0 + pw - 30, py0 + 82);
+  g.save();
+  g.translate(px0 + 38, py0 + ph - 64);
+  g.rotate(0.04);
+  g.fillStyle = '#b3342e';
+  g.fillRect(-17, -17, 36, 52);
+  g.fillStyle = '#efe8d8';
+  g.font = '700 20px "Hiragino Mincho ProN",serif';
+  g.fillText('墨', 1, 0);
+  g.fillText('蛍', 1, 24);
+  g.restore();
+  // score line
+  g.fillStyle = '#3a332b';
+  g.font = '600 22px "Hiragino Mincho ProN",serif';
+  g.textAlign = 'center';
+  g.fillText('銘 ' + Math.floor(score).toLocaleString() + '　星 ' + stars, sw / 2, py0 + ph + 52);
+  return c.toDataURL('image/png');
+}
+
+// ============================================================
+// Input
+// ============================================================
+let drawingId = null;
+
+canvas.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  initAudio();
+  if (state !== 'play') return;
+  if (drawingId !== null) return;
+  drawingId = e.pointerId;
+  strokeStart(e.clientX, e.clientY);
+});
+canvas.addEventListener('pointermove', e => {
+  if (state !== 'play' || e.pointerId !== drawingId) return;
+  if (e.getCoalescedEvents) {
+    for (const ce of e.getCoalescedEvents()) strokeMove(ce.clientX, ce.clientY, ce.pressure);
+  } else {
+    strokeMove(e.clientX, e.clientY, e.pressure);
+  }
+});
+function endPointer(e) {
+  if (e.pointerId === drawingId) { drawingId = null; strokeEnd(); }
+}
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+
+ui.title.addEventListener('pointerdown', e => {
+  e.preventDefault(); initAudio(); startGame();
+});
+ui.retry.addEventListener('click', () => {
+  if (performance.now() - overAt > 400) { initAudio(); startGame(); }
+});
+ui.save.addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = ui.scrollimg.src;
+  a.download = 'sumihotaru_' + Math.floor(score) + '.png';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+window.addEventListener('keydown', e => {
+  if (e.key === 'm' || e.key === 'M') muted = !muted;
+  if (e.key === 'r' || e.key === 'R') { initAudio(); startGame(); }
+  if (e.code === 'Enter' && state === 'title') { initAudio(); startGame(); }
+});
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+// ============================================================
+// Update
+// ============================================================
+function update(dt) {
+  if (state === 'play') {
+    playT += dt;
+    countT -= dt;
+    starPulse += dt * (countT < 3 ? 9 : 4);
+    ink = Math.min(inkMax, ink + inkRegen * dt);
+    if (brushDried && ink > inkMax * 0.12) brushDried = false;
+
+    if (countT < 3.2 && countT > 0) {
+      const sec = Math.ceil(countT);
+      if (sec !== lastTickSec) { lastTickSec = sec; sfx.tick(); }
+    }
+    if (countT <= 0) { die(); }
+    else updateFly(dt);
+  }
+  if (state === 'dying') {
+    dieT += dt;
+    fly.glow = Math.max(0, 1 - dieT / 1.6) * (Math.sin(dieT * 26) * 0.5 + 0.5);
+    fly.y += dt * 26;        // drifts down like a falling leaf
+    fly.x += Math.sin(dieT * 3.2) * dt * 30;
+    if (dieT > 2.0) finishGameOver();
+  }
+
+  updateBurns(dt);
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= dt;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vy += (p.grav || 0) * dt;
+    p.vx *= 0.985; p.vy *= 0.985;
+  }
+  for (let i = popups.length - 1; i >= 0; i--) {
+    popups[i].t += dt;
+    if (popups[i].t > 1.1) popups.splice(i, 1);
+  }
+}
+
+// ============================================================
+// Render
+// ============================================================
+function render(now) {
+  ctx.drawImage(paperC, 0, 0, W, H);
+  ctx.drawImage(inkC, 0, 0, W, H);
+
+  // star
+  if (star && (state === 'play')) {
+    const pulse = 1 + Math.sin(starPulse) * 0.1;
+    const frac = clamp(countT / countMax, 0, 1);
+    const urgent = countT < 3;
+    // halo
+    const hg = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, star.r * 4.4);
+    hg.addColorStop(0, urgent ? 'rgba(214,120,40,0.34)' : 'rgba(224,184,78,0.3)');
+    hg.addColorStop(1, 'rgba(224,184,78,0)');
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.arc(star.x, star.y, star.r * 4.4, 0, TAU); ctx.fill();
+    // gold-leaf flake
+    ctx.save();
+    ctx.translate(star.x, star.y);
+    ctx.rotate(now * 0.0006);
+    ctx.fillStyle = urgent ? '#cf7a2a' : '#d8ae3e';
+    ctx.beginPath();
+    const rr = star.r * pulse;
+    for (let i = 0; i < 5; i++) {
+      const a1 = i / 5 * TAU - Math.PI / 2;
+      const a2 = a1 + TAU / 10;
+      ctx.lineTo(Math.cos(a1) * rr, Math.sin(a1) * rr);
+      ctx.lineTo(Math.cos(a2) * rr * 0.5, Math.sin(a2) * rr * 0.5);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,240,190,0.85)';
+    ctx.beginPath(); ctx.arc(0, 0, rr * 0.22, 0, TAU); ctx.fill();
+    ctx.restore();
+    // countdown ring
+    ctx.strokeStyle = urgent
+      ? 'rgba(190,70,40,' + (Math.sin(now * 0.02) > 0 ? 0.95 : 0.45) + ')'
+      : 'rgba(160,120,40,0.75)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.r * 2.1, -Math.PI / 2, -Math.PI / 2 + frac * TAU);
+    ctx.stroke();
+    // seconds
+    ctx.fillStyle = urgent ? 'rgba(170,60,30,0.9)' : 'rgba(120,95,40,0.8)';
+    ctx.font = '600 ' + Math.max(12, U * 0.022) + 'px "Hiragino Mincho ProN",serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(Math.ceil(countT), star.x, star.y - star.r * 2.1 - 8);
+  }
+
+  // firefly trail
+  for (let i = trail.length - 1; i >= 1; i--) {
+    const t = trail[i];
+    const a = (1 - i / trail.length);
+    ctx.fillStyle = 'rgba(255,196,70,' + (a * 0.22 * fly.glow) + ')';
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, fly.r * (0.25 + a * 0.8), 0, TAU);
+    ctx.fill();
+  }
+
+  // firefly
+  if (state === 'play' || state === 'dying' || state === 'title') {
+    const wx = fly.x + Math.cos(fly.wob) * 1.6;
+    const wy = fly.y + Math.sin(fly.wob * 1.3) * 1.6;
+    const glow = fly.glow;
+    if (glow > 0.02) {
+      const fg = ctx.createRadialGradient(wx, wy, 0, wx, wy, fly.r * 5);
+      fg.addColorStop(0, 'rgba(255,214,90,' + 0.5 * glow + ')');
+      fg.addColorStop(0.4, 'rgba(255,180,60,' + 0.16 * glow + ')');
+      fg.addColorStop(1, 'rgba(255,180,60,0)');
+      ctx.fillStyle = fg;
+      ctx.beginPath(); ctx.arc(wx, wy, fly.r * 5, 0, TAU); ctx.fill();
+    }
+    ctx.fillStyle = glow > 0.05 ? '#ffe9a8' : '#6b6358';
+    ctx.beginPath(); ctx.arc(wx, wy, fly.r * 0.62, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'rgba(60,48,30,' + (0.55 + glow * 0.2) + ')';
+    ctx.beginPath(); ctx.ellipse(wx, wy - fly.r * 0.42, fly.r * 0.4, fly.r * 0.26, 0, 0, TAU); ctx.fill();
+  }
+
+  // particles
+  for (const p of particles) {
+    const a = p.life / p.maxLife;
+    ctx.fillStyle = 'rgba(' + p.col + ',' + a.toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * (0.4 + a * 0.6), 0, TAU);
+    ctx.fill();
+  }
+
+  // popups
+  ctx.textAlign = 'center';
+  ctx.font = '600 ' + Math.max(15, U * 0.026) + 'px "Hiragino Mincho ProN",serif';
+  for (const p of popups) {
+    ctx.fillStyle = 'rgba(154,123,34,' + (1 - p.t / 1.1).toFixed(3) + ')';
+    ctx.fillText(p.txt, p.x, p.y - p.t * 34);
+  }
+
+  // ink meter — a brush line in the corner
+  if (state === 'play') {
+    const mw = Math.min(190, W * 0.3), mx = 22, my = H - 26;
+    ctx.font = '600 15px "Hiragino Mincho ProN",serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = brushDried ? 'rgba(179,52,46,0.85)' : 'rgba(43,38,32,0.7)';
+    ctx.fillText('墨', mx, my + 5);
+    ctx.strokeStyle = 'rgba(43,38,32,0.18)';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.moveTo(mx + 24, my); ctx.lineTo(mx + 24 + mw, my); ctx.stroke();
+    const f = ink / inkMax;
+    if (f > 0.01) {
+      ctx.strokeStyle = brushDried ? 'rgba(179,52,46,0.8)' : 'rgba(30,26,22,0.85)';
+      ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.moveTo(mx + 24, my); ctx.lineTo(mx + 24 + mw * f, my); ctx.stroke();
+      // brush tip taper
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(mx + 24 + mw * f, my); ctx.lineTo(mx + 24 + Math.min(mw, mw * f + 9), my); ctx.stroke();
+    }
+  }
+
+  // dying veil — warm dusk falling over the paper
+  if (state === 'dying') {
+    ctx.fillStyle = 'rgba(62,44,24,' + (Math.min(0.42, dieT * 0.26)) + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+// HUD
+let lastHud = 0;
+function updateHud(now) {
+  if (now - lastHud < 80) return;
+  lastHud = now;
+  ui.score.textContent = Math.floor(score).toLocaleString();
+  ui.sub.innerHTML = '星 ' + stars +
+    (combo >= 2 ? '　<span class="ren">連 ×' + combo + '</span>' : '') +
+    '　<span style="opacity:0.6">最高 ' + best.toLocaleString() + '</span>';
+}
+
+// ============================================================
+// Title ambience: decorative strokes + wandering firefly
+// ============================================================
+function decorateTitle() {
+  // organic curved strokes, sampled from quadratic beziers
+  const curves = [
+    [[0.06, 0.85], [0.22, 0.55], [0.38, 0.4]],
+    [[0.66, 0.12], [0.8, 0.3], [0.94, 0.3]],
+    [[0.58, 0.9], [0.74, 0.74], [0.92, 0.82]],
+  ];
+  for (const [p0, p1, p2] of curves) {
+    const N = 14;
+    let prev = null;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const x = (1 - t) * (1 - t) * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0];
+      const y = (1 - t) * (1 - t) * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1];
+      const pt = { x: x * W, y: y * H };
+      if (prev) {
+        const taper = Math.sin(t * Math.PI);   // thick middle, tapered ends
+        const s = { ax: prev.x, ay: prev.y, bx: pt.x, by: pt.y, r: 2 + taper * 5.5, dead: false };
+        segs.push(s);
+        drawBrushSeg(inkX, s, t > 0.78);
+      }
+      prev = pt;
+    }
+  }
+  rebuildGrid();
+  fly.x = W * 0.5; fly.y = H * 0.3;
+  fly.vx = 0.8; fly.vy = 0.6;
+  inkParams();
+}
+
+// ============================================================
+// Main loop
+// ============================================================
+layout();
+decorateTitle();
+
+let lastT = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  let dt = (now - lastT) / 1000;
+  lastT = now;
+  if (dt > 0.08) dt = 0.08;
+  if (state === 'title') {
+    // ambient flight, no rules
+    updateFlyAmbient(dt);
+    updateBurns(dt);
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life -= dt;
+      if (p.life <= 0) particles.splice(i, 1);
+      else { p.x += p.vx * dt; p.y += p.vy * dt; }
+    }
+  } else {
+    update(dt);
+  }
+  render(now);
+  updateHud(now);
+}
+
+function updateFlyAmbient(dt) {
+  const sp = U * 0.18;
+  fly.x += fly.vx * sp * dt;
+  fly.y += fly.vy * sp * dt;
+  const m = 30;
+  if (fly.x < m || fly.x > W - m) fly.vx *= -1;
+  if (fly.y < m || fly.y > H - m) fly.vy *= -1;
+  const near = nearbySegs(fly.x, fly.y, fly.r + 12);
+  for (const sg of near) {
+    const c = segClosest(sg, fly.x, fly.y);
+    const d = Math.hypot(c.x - fly.x, c.y - fly.y) || 0.001;
+    const R = sg.r + fly.r;
+    if (d < R) {
+      const nx = (fly.x - c.x) / d, ny = (fly.y - c.y) / d;
+      fly.x = c.x + nx * (R + 0.5); fly.y = c.y + ny * (R + 0.5);
+      const dot = fly.vx * nx + fly.vy * ny;
+      if (dot < 0) { fly.vx -= 2 * dot * nx; fly.vy -= 2 * dot * ny; }
+    }
+  }
+  fly.wob += dt * 7;
+  trail.unshift({ x: fly.x, y: fly.y });
+  if (trail.length > 26) trail.pop();
+  fly.glow = 1;
+}
+
+document.addEventListener('visibilitychange', () => {});
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
