@@ -182,6 +182,22 @@ html, body {
 .mode-btn:active { transform: scale(0.96); }
 .mode-btn[data-mode="aka"] { border-color: rgba(179,52,46,0.6); }
 .mode-btn[data-mode="aka"], .mode-btn[data-mode="aka"] span { color: #8e2b26; }
+.mode-btn.meguri {
+  background: #b3342e;
+  border-color: #b3342e;
+  color: #f5efe2;
+  font-size: clamp(22px, 3.4vw, 32px);
+  letter-spacing: 0.3em;
+  padding-left: 0.3em;
+}
+.mode-btn.meguri span { color: rgba(245,239,226,0.8); }
+.mode-btn.meguri:hover { background: #c9453e; }
+.endless-label {
+  margin-top: 18px;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: rgba(43,38,32,0.5);
+}
 @keyframes fade { 50% { opacity: 0.25; } }
 .title-keys {
   margin-top: 14px;
@@ -340,12 +356,16 @@ html, body {
         <b>③</b> 刻が尽きる前に、光る<b>星</b>へ導く<br>
         <b>墨は消えない。</b>星の焔だけが浄める。
       </div>
-      <div class="mode-row">
+      <div class="mode-row" style="margin-top:24px">
+        <button class="mode-btn meguri" id="btn-meguri">夜巡り<span id="meguri-sub">第一夜から</span></button>
+      </div>
+      <div class="endless-label">無限の夜 — どこまで生き延びるか</div>
+      <div class="mode-row" style="margin-top:6px">
         <button class="mode-btn" data-mode="yoi">宵<span>やさしい</span></button>
         <button class="mode-btn" data-mode="yowa">夜半<span>ふつう</span></button>
         <button class="mode-btn" data-mode="aka">暁<span>きびしい</span></button>
       </div>
-      <div class="title-hint">— 夜の深さを選ぶと、始まる —</div>
+      <div class="title-hint">— 夜を選ぶと、始まる —</div>
       <div class="title-keys">[R] やり直す&nbsp;&nbsp;[M] 音</div>
     </div>
   </div>
@@ -355,8 +375,8 @@ html, body {
   <div id="scrollwrap">
     <img id="scrollimg" alt="あなたの墨絵">
     <div class="over-side">
-      <div class="over-title">灯、消ゆ</div>
-      <div class="over-sub">THE LIGHT HAS FADED</div>
+      <div class="over-title" id="over-title">灯、消ゆ</div>
+      <div class="over-sub" id="over-sub">THE LIGHT HAS FADED</div>
       <div class="over-stats" id="over-stats"></div>
       <div class="over-btns">
         <button class="btn primary" id="btn-retry">もう一度</button>
@@ -382,12 +402,14 @@ const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 let W = 0, H = 0, DPR = 1, DIAG = 1, U = 1;
 
 let paperC = null, paperX = null; // washi paper (persistent, scorch marks accumulate)
-let inkC = null, inkX = null;     // permanent ink layer
+let inkC = null, inkX = null;     // player ink layer
+let obsC = null, obsX = null;     // printed stage strokes (fixed terrain, never burns)
 
 const $ = id => document.getElementById(id);
 const ui = {
   hud: $('hud'), score: $('score'), sub: $('sub'), muboku: $('mubokuFx'), hint: $('hint'),
   title: $('title-screen'), over: $('over-screen'),
+  overTitle: $('over-title'), overSub: $('over-sub'), meguriSub: $('meguri-sub'),
   overStats: $('over-stats'), scrollimg: $('scrollimg'),
   retry: $('btn-retry'), save: $('btn-save'),
 };
@@ -479,11 +501,22 @@ function layout() {
   inkX = inkC.getContext('2d');
   inkX.scale(DPR, DPR);
 
+  const oldObs = obsC;
+  obsC = document.createElement('canvas');
+  obsC.width = canvas.width; obsC.height = canvas.height;
+  obsX = obsC.getContext('2d');
+  obsX.scale(DPR, DPR);
+
   if (oldInk && oldW > 0) {
     // preserve existing ink & scorches, stretched to the new size
     inkX.save(); inkX.setTransform(1, 0, 0, 1, 0, 0);
     inkX.drawImage(oldInk, 0, 0, inkC.width, inkC.height);
     inkX.restore();
+    if (oldObs) {
+      obsX.save(); obsX.setTransform(1, 0, 0, 1, 0, 0);
+      obsX.drawImage(oldObs, 0, 0, obsC.width, obsC.height);
+      obsX.restore();
+    }
     const sx = W / oldW, sy = H / oldH;
     for (const s of segs) { s.ax *= sx; s.ay *= sy; s.bx *= sx; s.by *= sy; }
     fly.x *= sx; fly.y *= sy;
@@ -623,6 +656,37 @@ function setMode(k) {
   best = loadBest();
 }
 
+// ---- 夜巡り (night pilgrimage): the stage mode ----
+let gameMode = 'meguri'; // 'meguri' | 'endless'
+let nightN = 1;
+let nightGoal = 3;
+let nightClearPending = 0;
+let bestNight = Math.max(1, +(localStorage.getItem('sumihotaru_night') || 1));
+
+function nightGoalFor(n) { return Math.min(3 + Math.floor((n - 1) / 2), 9); }
+
+function makeNightParams(n) {
+  return {
+    name: '第' + n + '夜',
+    t0: Math.max(8, 15 - n * 0.12),
+    tFloor: 8, tDec: 0,                                 // constant within one night
+    spd: 0.26 + Math.min(0.10, (n - 1) * 0.004),
+    accel: 0, accelCap: 1,
+    hit0: Math.max(1.6, 3.0 - (n - 1) * 0.05), hitDec: 0, hitFloor: 1.6,
+    regen: 0.20, cap: 3.2,
+    photoFar: 0.14, photoNear: 0.6,
+  };
+}
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
 // 都節音階 (miyako-bushi) on D
 const SCALE = [50, 51, 55, 57, 58, 62, 63, 67, 69, 70, 74];
 let lastPluckT = 0;
@@ -667,6 +731,7 @@ let countMax = 13, countT = 13;
 let lastTickSec = -1;
 let starPulse = 0;
 let tut = 0; // 0: draw a line  1: reach the star  2: done
+let armed = false; // the first star waits until the first stroke is drawn
 let titleStar = null;
 
 function hintShow(txt) { ui.hint.textContent = txt; ui.hint.classList.add('show'); }
@@ -760,6 +825,7 @@ function strokeMove(x, y, pressure) {
   ink -= cost;
   inkUsedTotal += cost;
   usedInkThisStar = true;
+  armed = true;
   if (tut === 0) { tut = 1; hintShow('蛍を ★ まで導こう'); }
 
   // brush width: slower = fatter; taper-in; pressure from Apple Pencil
@@ -809,8 +875,9 @@ function strokeEnd() {
   stroke = null;
 }
 
-function drawBrushSeg(g, s, dry) {
-  g.strokeStyle = dry ? 'rgba(30,26,22,0.55)' : 'rgba(30,26,22,0.92)';
+function drawBrushSeg(g, s, dry, col) {
+  col = col || '30,26,22';
+  g.strokeStyle = dry ? 'rgba(' + col + ',0.55)' : 'rgba(' + col + ',0.92)';
   g.lineCap = 'round';
   g.lineWidth = s.r * 2;
   g.beginPath();
@@ -823,7 +890,7 @@ function drawBrushSeg(g, s, dry) {
   const px = -dy / len, py = dx / len;
   g.lineWidth = Math.max(0.6, s.r * 0.32);
   for (const off of [-0.62, 0.55]) {
-    g.strokeStyle = 'rgba(30,26,22,' + (dry ? 0.18 : 0.3) + ')';
+    g.strokeStyle = 'rgba(' + col + ',' + (dry ? 0.18 : 0.3) + ')';
     g.beginPath();
     g.moveTo(s.ax + px * s.r * off * 1.45, s.ay + py * s.r * off * 1.45);
     g.lineTo(s.bx + px * s.r * off * 1.45, s.by + py * s.r * off * 1.45);
@@ -898,6 +965,69 @@ function enforceInkBudget(dt) {
 }
 
 // ============================================================
+// Stage terrain — printed sumi strokes, generated per night
+// ============================================================
+const OBS_COL = '92,64,40'; // warm sepia: clearly not the player's ink
+
+function genObstacles(n) {
+  const rng = mulberry32(n * 2654435761 + 11);
+  const R = (a, b) => a + rng() * (b - a);
+  const count = Math.min(2 + Math.floor(n / 3), 7);
+  const px0 = W * 0.5, py0 = H * 0.62, protectR = U * 0.24; // firefly start
+  let placed = 0, attempts = 0;
+  while (placed < count && attempts < 50) {
+    attempts++;
+    const kind = Math.floor(R(0, 4));
+    const cx = R(W * 0.14, W * 0.86), cy = R(H * 0.16, H * 0.82);
+    if (Math.hypot(cx - px0, cy - py0) < protectR + U * 0.12) continue;
+    const pts = [];
+    if (kind === 0) {            // 一筆 — a sweeping stroke
+      const len = R(U * 0.2, U * 0.42), a = R(0, Math.PI), bow = R(-U * 0.04, U * 0.04);
+      const n2 = 10;
+      for (let i = 0; i <= n2; i++) {
+        const t = i / n2 - 0.5;
+        pts.push([
+          cx + Math.cos(a) * len * t - Math.sin(a) * bow * Math.sin((t + 0.5) * Math.PI),
+          cy + Math.sin(a) * len * t + Math.cos(a) * bow * Math.sin((t + 0.5) * Math.PI),
+        ]);
+      }
+    } else if (kind === 1) {     // 圓相 — an open circle
+      const r0 = R(U * 0.07, U * 0.15), a0 = R(0, TAU), span = R(TAU * 0.55, TAU * 0.85);
+      const n2 = 16;
+      for (let i = 0; i <= n2; i++) {
+        const a = a0 + span * i / n2;
+        pts.push([cx + Math.cos(a) * r0, cy + Math.sin(a) * r0]);
+      }
+    } else if (kind === 2) {     // 山影 — a mountain ridge
+      const wHalf = R(U * 0.12, U * 0.26), hPk = R(U * 0.06, U * 0.13);
+      pts.push([cx - wHalf, cy]);
+      pts.push([cx - wHalf * 0.3, cy - hPk]);
+      pts.push([cx + wHalf * 0.15, cy - hPk * 0.45]);
+      pts.push([cx + wHalf * 0.55, cy - hPk * 0.8]);
+      pts.push([cx + wHalf, cy]);
+    } else {                     // 竹 — a bamboo stalk
+      const len = R(U * 0.16, U * 0.32), lean = R(-0.12, 0.12);
+      const n2 = 6;
+      for (let i = 0; i <= n2; i++) {
+        const t = i / n2 - 0.5;
+        pts.push([cx + lean * len * t, cy + len * t]);
+      }
+    }
+    for (let i = 0; i < pts.length - 1; i++) {
+      const taper = Math.sin((i + 0.5) / (pts.length - 1) * Math.PI);
+      const s = {
+        ax: pts[i][0], ay: pts[i][1], bx: pts[i + 1][0], by: pts[i + 1][1],
+        r: 3 + taper * 3.5, dead: false, dry: false, fixed: true,
+      };
+      segs.push(s);
+      drawBrushSeg(obsX, s, false, OBS_COL);
+    }
+    placed++;
+  }
+  rebuildGrid();
+}
+
+// ============================================================
 // Star
 // ============================================================
 function spawnStar() {
@@ -955,7 +1085,13 @@ function collectStar() {
   burns.push({ x: star.x, y: star.y, R: U * 0.17, t: 0, scorched: false });
   sfx.star();
   setTimeout(() => { if (state === 'play') sfx.burn(); }, 140);
-  spawnStar();
+  if (gameMode === 'meguri' && stars >= nightGoal) {
+    star = null;
+    countT = 999;                // the night is won; nothing left to time
+    nightClearPending = 0.9;     // let the burn bloom before the dawn
+  } else {
+    spawnStar();
+  }
 }
 
 // burn: erase ink in an expanding circle, leave a scorch ghost on paper
@@ -985,7 +1121,7 @@ function updateBurns(dt) {
       // any stroke touching the flame loses that part
       let killed = false;
       for (const s of segs) {
-        if (s.dead) continue;
+        if (s.dead || s.fixed) continue; // printed terrain never burns
         const mx = (s.ax + s.bx) / 2, my = (s.ay + s.by) / 2;
         if (Math.hypot(s.ax - b.x, s.ay - b.y) < b.R ||
             Math.hypot(s.bx - b.x, s.by - b.y) < b.R ||
@@ -1090,6 +1226,11 @@ function updateFly(dt) {
 // ============================================================
 function startGame() {
   state = 'play';
+  if (gameMode === 'meguri') {
+    M = makeNightParams(nightN);
+    nightGoal = nightGoalFor(nightN);
+  }
+  nightClearPending = 0;
   score = 0; stars = 0; combo = 0; maxCombo = 0;
   playT = 0; inkUsedTotal = 0;
   segs = []; strokes = []; grid = new Map();
@@ -1099,6 +1240,9 @@ function startGame() {
   inkX.save(); inkX.setTransform(1, 0, 0, 1, 0, 0);
   inkX.clearRect(0, 0, inkC.width, inkC.height);
   inkX.restore();
+  obsX.save(); obsX.setTransform(1, 0, 0, 1, 0, 0);
+  obsX.clearRect(0, 0, obsC.width, obsC.height);
+  obsX.restore();
   inkParams();
   ink = inkMax;
   brushDried = false;
@@ -1107,14 +1251,39 @@ function startGame() {
   fly.vx = Math.cos(a); fly.vy = Math.sin(a);
   fly.glow = 1;
   fly.sp = 0;
+  armed = false;
+  if (gameMode === 'meguri') genObstacles(nightN);
   spawnStar();
   countT = countMax = M.t0 + 3; // generous first star; frozen until the first stroke
-  tut = 0;
+  tut = (gameMode === 'meguri' && nightN > 1) ? 1 : 0; // hints only where they help
   titleStar = null;
-  hintShow('指で線を描いてみよう');
+  if (tut === 0) hintShow('指で線を描いてみよう'); else hintHide();
   ui.title.classList.add('hidden');
   ui.over.classList.add('hidden');
   ui.hud.classList.add('on');
+}
+
+function nightClear() {
+  state = 'clear';
+  overAt = performance.now();
+  bestNight = Math.max(bestNight, nightN + 1);
+  localStorage.setItem('sumihotaru_night', bestNight);
+  if (AC && !muted) {
+    const t = AC.currentTime;
+    [62, 67, 70, 74, 79].forEach((m, i) => pluck(m, 0.26, t + i * 0.16));
+  }
+  ui.scrollimg.src = makeScroll();
+  ui.overTitle.textContent = '夜明け';
+  ui.overTitle.style.color = '#e0b84e';
+  ui.overTitle.style.textShadow = '0 0 26px rgba(224,184,78,0.55)';
+  ui.overSub.textContent = 'NIGHT ' + nightN + ' — CLEAR';
+  ui.retry.textContent = '次の夜へ';
+  ui.overStats.innerHTML =
+    '<span class="v">第' + nightN + '夜</span>、明けた<br>' +
+    '銘 <span class="v">' + Math.floor(score).toLocaleString() + '</span>　連 <span class="v">×' + maxCombo + '</span><br>' +
+    '巡り <span class="v">' + Math.floor(playT / 60) + '分' + Math.floor(playT % 60) + '秒</span>';
+  ui.over.classList.remove('hidden');
+  ui.hud.classList.remove('on');
 }
 
 function die() {
@@ -1127,16 +1296,28 @@ function die() {
 function finishGameOver() {
   state = 'over';
   overAt = performance.now();
+  ui.overTitle.textContent = '灯、消ゆ';
+  ui.overTitle.style.color = '';
+  ui.overTitle.style.textShadow = '';
+  ui.overSub.textContent = 'THE LIGHT HAS FADED';
+  ui.retry.textContent = 'もう一度';
   const s = Math.floor(score);
-  const newBest = s > best;
-  if (newBest) { best = s; localStorage.setItem('sumihotaru_best_' + modeKey, s); }
   ui.scrollimg.src = makeScroll();
-  ui.overStats.innerHTML =
-    '銘 <span class="v">' + s.toLocaleString() + '</span>' +
-    (newBest ? '<span class="new">新記録</span>' : '') + '<br>' +
-    '夜 <span class="v">' + M.name + '</span>　星 <span class="v">' + stars + '</span>　連 <span class="v">×' + maxCombo + '</span><br>' +
-    '巡り <span class="v">' + Math.floor(playT / 60) + '分' + Math.floor(playT % 60) + '秒</span><br>' +
-    '過去最高 <span class="v">' + best.toLocaleString() + '</span>';
+  if (gameMode === 'meguri') {
+    ui.overStats.innerHTML =
+      '<span class="v">第' + nightN + '夜</span>にて　星 <span class="v">' + stars + '/' + nightGoal + '</span><br>' +
+      '銘 <span class="v">' + s.toLocaleString() + '</span>　連 <span class="v">×' + maxCombo + '</span><br>' +
+      '到達 <span class="v">第' + bestNight + '夜</span>';
+  } else {
+    const newBest = s > best;
+    if (newBest) { best = s; localStorage.setItem('sumihotaru_best_' + modeKey, s); }
+    ui.overStats.innerHTML =
+      '銘 <span class="v">' + s.toLocaleString() + '</span>' +
+      (newBest ? '<span class="new">新記録</span>' : '') + '<br>' +
+      '夜 <span class="v">' + M.name + '</span>　星 <span class="v">' + stars + '</span>　連 <span class="v">×' + maxCombo + '</span><br>' +
+      '巡り <span class="v">' + Math.floor(playT / 60) + '分' + Math.floor(playT % 60) + '秒</span><br>' +
+      '過去最高 <span class="v">' + best.toLocaleString() + '</span>';
+  }
   ui.over.classList.remove('hidden');
   ui.hud.classList.remove('on');
 }
@@ -1177,6 +1358,7 @@ function makeScroll() {
   if (srcAR > dstAR) { sW2 = H * dstAR; sx = (W - sW2) / 2; }
   else { sH2 = W / dstAR; sy = (H - sH2) / 2; }
   g.drawImage(paperC, sx * DPR, sy * DPR, sW2 * DPR, sH2 * DPR, px0, py0, pw, ph);
+  g.drawImage(obsC, sx * DPR, sy * DPR, sW2 * DPR, sH2 * DPR, px0, py0, pw, ph);
   g.drawImage(inkC, sx * DPR, sy * DPR, sW2 * DPR, sH2 * DPR, px0, py0, pw, ph);
   // title (vertical) & seal
   g.fillStyle = '#1d1a16';
@@ -1198,7 +1380,10 @@ function makeScroll() {
   g.fillStyle = '#3a332b';
   g.font = '600 22px "Hiragino Mincho ProN",serif';
   g.textAlign = 'center';
-  g.fillText(M.name + '　銘 ' + Math.floor(score).toLocaleString() + '　星 ' + stars, sw / 2, py0 + ph + 52);
+  const caption = gameMode === 'meguri'
+    ? '第' + nightN + '夜　星 ' + stars + '/' + nightGoal + '　銘 ' + Math.floor(score).toLocaleString()
+    : M.name + '　銘 ' + Math.floor(score).toLocaleString() + '　星 ' + stars;
+  g.fillText(caption, sw / 2, py0 + ph + 52);
   return c.toDataURL('image/png');
 }
 
@@ -1229,21 +1414,43 @@ function endPointer(e) {
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
 
-// the night-depth buttons both select the mode and start the game
-for (const btn of document.querySelectorAll('.mode-btn')) {
+// the night buttons both select the mode and start the game
+const KANJI_N = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+function nightLabel(n) {
+  return n <= 10 ? '第' + KANJI_N[n] + '夜' : '第' + n + '夜';
+}
+function refreshTitle() {
+  ui.meguriSub.textContent = nightLabel(bestNight) + 'から';
+}
+refreshTitle();
+
+$('btn-meguri').addEventListener('pointerdown', e => e.stopPropagation());
+$('btn-meguri').addEventListener('click', e => {
+  e.stopPropagation();
+  initAudio();
+  gameMode = 'meguri';
+  nightN = bestNight;
+  startGame();
+});
+for (const btn of document.querySelectorAll('.mode-btn[data-mode]')) {
   btn.addEventListener('pointerdown', e => e.stopPropagation());
   btn.addEventListener('click', e => {
     e.stopPropagation();
     initAudio();
+    gameMode = 'endless';
     setMode(btn.dataset.mode);
     startGame();
   });
 }
 ui.retry.addEventListener('click', () => {
-  if (performance.now() - overAt > 400) { initAudio(); startGame(); }
+  if (performance.now() - overAt < 400) return;
+  initAudio();
+  if (state === 'clear') nightN++; // 次の夜へ
+  startGame();
 });
 $('btn-mode').addEventListener('click', () => {
   state = 'title';
+  refreshTitle();
   ui.over.classList.add('hidden');
   ui.title.classList.remove('hidden');
 });
@@ -1256,7 +1463,7 @@ ui.save.addEventListener('click', () => {
 window.addEventListener('keydown', e => {
   if (e.key === 'm' || e.key === 'M') muted = !muted;
   if (e.key === 'r' || e.key === 'R') { initAudio(); startGame(); }
-  if (e.code === 'Enter' && state === 'title') { initAudio(); startGame(); }
+  if (e.code === 'Enter' && state === 'title') { initAudio(); gameMode = 'meguri'; nightN = bestNight; startGame(); }
   if (e.key === 'f' || e.key === 'F') toggleFullscreen();
 });
 document.addEventListener('gesturestart', e => e.preventDefault());
@@ -1286,8 +1493,12 @@ if (!(document.documentElement.requestFullscreen || document.documentElement.web
 function update(dt) {
   if (state === 'play') {
     playT += dt;
-    if (!(stars === 0 && tut === 0)) countT -= dt; // wait for the first stroke
+    if (armed) countT -= dt; // the night holds its breath until the first stroke
     starPulse += dt * (countT < 3 ? 9 : 4);
+    if (nightClearPending > 0) {
+      nightClearPending -= dt;
+      if (nightClearPending <= 0) { nightClear(); return; }
+    }
     ink = Math.min(inkMax, ink + inkRegen * dt);
     if (brushDried && ink > inkMax * 0.12) brushDried = false;
 
@@ -1328,6 +1539,7 @@ function update(dt) {
 // ============================================================
 function render(now) {
   ctx.drawImage(paperC, 0, 0, W, H);
+  ctx.drawImage(obsC, 0, 0, W, H);
   ctx.drawImage(inkC, 0, 0, W, H);
 
   // fading strokes: warning shimmer, then dissolve
@@ -1528,9 +1740,12 @@ function updateHud(now) {
   if (now - lastHud < 80) return;
   lastHud = now;
   ui.score.textContent = Math.floor(score).toLocaleString();
-  ui.sub.innerHTML = M.name + '　星 ' + stars +
-    (combo >= 2 ? '　<span class="ren">連 ×' + combo + '</span>' : '') +
-    '　<span style="opacity:0.6">最高 ' + best.toLocaleString() + '</span>';
+  ui.sub.innerHTML = gameMode === 'meguri'
+    ? M.name + '　星 ' + stars + '/' + nightGoal +
+      (combo >= 2 ? '　<span class="ren">連 ×' + combo + '</span>' : '')
+    : M.name + '　星 ' + stars +
+      (combo >= 2 ? '　<span class="ren">連 ×' + combo + '</span>' : '') +
+      '　<span style="opacity:0.6">最高 ' + best.toLocaleString() + '</span>';
 }
 
 // ============================================================
