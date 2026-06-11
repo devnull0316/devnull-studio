@@ -242,6 +242,22 @@ html, body {
   .over-side { text-align: center; max-width: none; }
 }
 
+#btn-fs {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  right: 12px;
+  z-index: 8;
+  font-size: 20px;
+  line-height: 1;
+  color: rgba(43,38,32,0.55);
+  background: rgba(255,253,245,0.6);
+  border: 1px solid rgba(43,38,32,0.25);
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+#btn-fs:active { background: rgba(43,38,32,0.12); }
+
 .foot-credit {
   position: fixed;
   bottom: max(10px, env(safe-area-inset-bottom));
@@ -266,6 +282,8 @@ html, body {
   <div id="mubokuFx">無墨</div>
   <div id="hint"></div>
 </div>
+
+<button id="btn-fs" title="全画面">⛶</button>
 
 <div class="overlay" id="title-screen">
   <div class="title-inner">
@@ -400,8 +418,9 @@ function layout() {
   const oldW = W, oldH = H;
   const oldInk = inkC, oldPaper = paperC;
   DPR = Math.min(window.devicePixelRatio || 1, IS_TOUCH ? 1.5 : 2);
-  W = window.innerWidth;
-  H = window.innerHeight;
+  const vv = window.visualViewport;
+  W = vv ? Math.round(vv.width) : window.innerWidth;
+  H = vv ? Math.round(vv.height) : window.innerHeight;
   DIAG = Math.hypot(W, H);
   U = Math.min(W, H);
   canvas.width = Math.round(W * DPR);
@@ -429,6 +448,15 @@ function layout() {
   }
 }
 window.addEventListener('resize', () => layout());
+if (window.visualViewport) {
+  // Safari: track toolbar collapse / expansion
+  window.visualViewport.addEventListener('resize', () => layout());
+}
+document.addEventListener('fullscreenchange', () => layout());
+document.addEventListener('webkitfullscreenchange', () => layout());
+// Safari interprets drawing gestures as scrolling and rubber-bands the
+// whole page; CSS touch-action alone is not enough on iOS
+document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
 
 // ============================================================
 // Audio — koto plucks (Karplus-Strong), drips, wind, fire
@@ -1058,8 +1086,28 @@ window.addEventListener('keydown', e => {
   if (e.key === 'm' || e.key === 'M') muted = !muted;
   if (e.key === 'r' || e.key === 'R') { initAudio(); startGame(); }
   if (e.code === 'Enter' && state === 'title') { initAudio(); startGame(); }
+  if (e.key === 'f' || e.key === 'F') toggleFullscreen();
 });
 document.addEventListener('gesturestart', e => e.preventDefault());
+
+// ---- fullscreen (supported by iPad Safari) ----
+const fsBtn = $('btn-fs');
+function fsElement() { return document.fullscreenElement || document.webkitFullscreenElement; }
+function toggleFullscreen() {
+  const el = document.documentElement;
+  if (fsElement()) {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  } else {
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) req.call(el);
+  }
+}
+if (!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)) {
+  fsBtn.style.display = 'none';
+} else {
+  fsBtn.addEventListener('pointerdown', e => e.stopPropagation());
+  fsBtn.addEventListener('click', e => { e.stopPropagation(); toggleFullscreen(); });
+}
 
 // ============================================================
 // Update
