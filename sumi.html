@@ -71,6 +71,23 @@ html, body {
 #mubokuFx.show {
   animation: muboku 1.4s ease-out forwards;
 }
+
+#hint {
+  position: absolute;
+  bottom: 18%;
+  left: 0; right: 0;
+  text-align: center;
+  font-size: clamp(17px, 2.6vw, 24px);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: #2b2620;
+  text-shadow: 0 0 10px rgba(255,253,245,0.95), 0 0 22px rgba(255,253,245,0.9);
+  opacity: 0;
+  transition: opacity 0.5s;
+  animation: none;
+}
+#hint.show { opacity: 1; animation: hintpulse 1.8s infinite; }
+@keyframes hintpulse { 50% { opacity: 0.55; } }
 @keyframes muboku {
   0% { opacity: 0; transform: scale(1.5); }
   15% { opacity: 1; transform: scale(1); }
@@ -113,6 +130,12 @@ html, body {
   letter-spacing: 0.55em;
   color: rgba(43,38,32,0.6);
   margin-bottom: 22px;
+}
+.title-diagram {
+  display: block;
+  margin: 0 0 14px;
+  background: rgba(255,253,245,0.5);
+  border-radius: 10px;
 }
 .title-rule {
   font-size: clamp(14px, 2.2vw, 18px);
@@ -241,6 +264,7 @@ html, body {
   <div id="score">0</div>
   <div id="sub">星 0</div>
   <div id="mubokuFx">無墨</div>
+  <div id="hint"></div>
 </div>
 
 <div class="overlay" id="title-screen">
@@ -251,12 +275,20 @@ html, body {
     </div>
     <div class="title-side">
       <div class="title-sub">SUMI — HOTARU</div>
+      <svg class="title-diagram" width="250" height="96" viewBox="0 0 250 96" aria-hidden="true">
+        <path d="M30 82 Q110 52 190 74" stroke="#1d1a16" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.9"/>
+        <path d="M52 12 L106 58" stroke="#c89b3c" stroke-width="2.5" stroke-dasharray="5 5" fill="none"/>
+        <path d="M106 58 L196 30" stroke="#c89b3c" stroke-width="2.5" stroke-dasharray="5 5" fill="none"/>
+        <path d="M186 38 L196 30 L192 42" stroke="#c89b3c" stroke-width="2.5" fill="none"/>
+        <circle cx="52" cy="12" r="6" fill="#e8b54a"/>
+        <circle cx="52" cy="12" r="11" fill="none" stroke="#e8b54a" stroke-width="1.5" opacity="0.5"/>
+        <text x="206" y="36" font-size="22" fill="#b3342e">★</text>
+      </svg>
       <div class="title-rule">
-        筆で壁を描き、跳ねる蛍を<b>星</b>へ導く。<br>
-        <b>描いた墨は、消えない。</b><br>
-        やがて己の墨が、己を阻む。<br>
-        星を取れば、その焔が周りの墨を浄める。<br>
-        刻が尽きれば、蛍の光は消える。
+        <b>①</b> 指で線を描く — それが墨の壁<br>
+        <b>②</b> 蛍は墨の壁で跳ね返る<br>
+        <b>③</b> 刻が尽きる前に、光る<b>星</b>へ導く<br>
+        <b>墨は消えない。</b>星の焔だけが浄める。
       </div>
       <div class="title-hint">— 触れて、始める —</div>
       <div class="title-keys">[R] やり直す&nbsp;&nbsp;[M] 音</div>
@@ -298,7 +330,7 @@ let inkC = null, inkX = null;     // permanent ink layer
 
 const $ = id => document.getElementById(id);
 const ui = {
-  hud: $('hud'), score: $('score'), sub: $('sub'), muboku: $('mubokuFx'),
+  hud: $('hud'), score: $('score'), sub: $('sub'), muboku: $('mubokuFx'), hint: $('hint'),
   title: $('title-screen'), over: $('over-screen'),
   overStats: $('over-stats'), scrollimg: $('scrollimg'),
   retry: $('btn-retry'), save: $('btn-save'),
@@ -539,6 +571,11 @@ let usedInkThisStar = false;
 let countMax = 13, countT = 13;
 let lastTickSec = -1;
 let starPulse = 0;
+let tut = 0; // 0: draw a line  1: reach the star  2: done
+let titleStar = null;
+
+function hintShow(txt) { ui.hint.textContent = txt; ui.hint.classList.add('show'); }
+function hintHide() { ui.hint.classList.remove('show'); }
 
 const fly = { x: 200, y: 200, vx: 1, vy: 0.4, speed: 0, r: 7, glow: 1, wob: rand(TAU) };
 let star = null; // {x,y,r}
@@ -625,6 +662,7 @@ function strokeMove(x, y, pressure) {
   ink -= cost;
   inkUsedTotal += cost;
   usedInkThisStar = true;
+  if (tut === 0) { tut = 1; hintShow('蛍を ★ まで導こう'); }
 
   // brush width: slower = fatter; taper-in; pressure from Apple Pencil
   let w = clamp(11 - d * 0.28, 4.2, 11) * (U / 700 + 0.45);
@@ -727,6 +765,7 @@ function spawnStar() {
 }
 
 function collectStar() {
+  if (tut < 2) { tut = 2; hintHide(); }
   const muboku = !usedInkThisStar && stars > 0;
   combo = (countT / countMax > 0.45) ? combo + 1 : 1;
   maxCombo = Math.max(maxCombo, combo);
@@ -882,7 +921,10 @@ function startGame() {
   fly.vx = Math.cos(a); fly.vy = Math.sin(a);
   fly.glow = 1;
   spawnStar();
-  countT = countMax = 13;
+  countT = countMax = 16; // generous first star; frozen until the first stroke
+  tut = 0;
+  titleStar = null;
+  hintShow('指で線を描いてみよう');
   ui.title.classList.add('hidden');
   ui.over.classList.add('hidden');
   ui.hud.classList.add('on');
@@ -1025,7 +1067,7 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 function update(dt) {
   if (state === 'play') {
     playT += dt;
-    countT -= dt;
+    if (!(stars === 0 && tut === 0)) countT -= dt; // wait for the first stroke
     starPulse += dt * (countT < 3 ? 9 : 4);
     ink = Math.min(inkMax, ink + inkRegen * dt);
     if (brushDried && ink > inkMax * 0.12) brushDried = false;
@@ -1110,6 +1152,54 @@ function render(now) {
     ctx.font = '600 ' + Math.max(12, U * 0.022) + 'px "Hiragino Mincho ProN",serif';
     ctx.textAlign = 'center';
     ctx.fillText(Math.ceil(countT), star.x, star.y - star.r * 2.1 - 8);
+    // first-star label
+    if (stars === 0) {
+      ctx.fillStyle = 'rgba(120,95,40,0.85)';
+      ctx.font = '600 ' + Math.max(14, U * 0.024) + 'px "Hiragino Mincho ProN",serif';
+      ctx.fillText('この星へ', star.x, star.y + star.r * 2.1 + Math.max(20, U * 0.03));
+    }
+    // guide chevrons: firefly → star
+    const gdx = star.x - fly.x, gdy = star.y - fly.y;
+    const gd = Math.hypot(gdx, gdy);
+    if (gd > U * 0.22) {
+      const nx = gdx / gd, ny = gdy / gd;
+      const px2 = -ny, py2 = nx;
+      const flow = (now * 0.0028) % 1;
+      for (let i = 0; i < 3; i++) {
+        const t = fly.r * 3.4 + i * 16 + flow * 16;
+        const cxp = fly.x + nx * t, cyp = fly.y + ny * t;
+        const a = (0.55 - i * 0.14) * fly.glow * (tut < 2 ? 1 : 0.55);
+        ctx.strokeStyle = 'rgba(200,155,60,' + a.toFixed(3) + ')';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cxp - nx * 8 + px2 * 6.5, cyp - ny * 8 + py2 * 6.5);
+        ctx.lineTo(cxp, cyp);
+        ctx.lineTo(cxp - nx * 8 - px2 * 6.5, cyp - ny * 8 - py2 * 6.5);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // title demo star
+  if (state === 'title' && titleStar) {
+    const hg2 = ctx.createRadialGradient(titleStar.x, titleStar.y, 0, titleStar.x, titleStar.y, titleStar.r * 4);
+    hg2.addColorStop(0, 'rgba(224,184,78,0.3)');
+    hg2.addColorStop(1, 'rgba(224,184,78,0)');
+    ctx.fillStyle = hg2;
+    ctx.beginPath(); ctx.arc(titleStar.x, titleStar.y, titleStar.r * 4, 0, TAU); ctx.fill();
+    ctx.save();
+    ctx.translate(titleStar.x, titleStar.y);
+    ctx.rotate(now * 0.0006);
+    ctx.fillStyle = '#d8ae3e';
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a1 = i / 5 * TAU - Math.PI / 2, a2 = a1 + TAU / 10;
+      ctx.lineTo(Math.cos(a1) * titleStar.r, Math.sin(a1) * titleStar.r);
+      ctx.lineTo(Math.cos(a2) * titleStar.r * 0.5, Math.sin(a2) * titleStar.r * 0.5);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
   }
 
   // firefly trail
@@ -1229,6 +1319,7 @@ function decorateTitle() {
   fly.x = W * 0.5; fly.y = H * 0.3;
   fly.vx = 0.8; fly.vy = 0.6;
   inkParams();
+  titleStar = { x: W * 0.22, y: H * 0.72, r: Math.max(10, U * 0.018) };
 }
 
 // ============================================================
@@ -1283,6 +1374,17 @@ function updateFlyAmbient(dt) {
   trail.unshift({ x: fly.x, y: fly.y });
   if (trail.length > 26) trail.pop();
   fly.glow = 1;
+  // wordless demo: the firefly collects the title star
+  if (titleStar && Math.hypot(fly.x - titleStar.x, fly.y - titleStar.y) < fly.r + titleStar.r) {
+    for (let i = 0; i < 26; i++) {
+      const a = rand(TAU), sp2 = rand(30, U * 0.3);
+      particles.push({ x: titleStar.x, y: titleStar.y, vx: Math.cos(a) * sp2, vy: Math.sin(a) * sp2 - 20, life: rand(0.4, 1), maxLife: 1, size: rand(1.5, 3.5), col: '224,184,78', grav: 50 });
+    }
+    sfx.star();
+    const spots = [[0.22, 0.72], [0.8, 0.18], [0.16, 0.22], [0.84, 0.78], [0.5, 0.85]];
+    const s2 = spots[Math.floor(rand(spots.length))];
+    titleStar.x = s2[0] * W; titleStar.y = s2[1] * H;
+  }
 }
 
 document.addEventListener('visibilitychange', () => {});
