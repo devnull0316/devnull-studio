@@ -25,15 +25,22 @@ html, body {
   cursor: crosshair;
 }
 
+#flash {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  background: #ff1e46;
+  opacity: 0;
+}
+
 /* ---- CRT overlay ---- */
 #crt {
   position: fixed; inset: 0;
   pointer-events: none;
   z-index: 5;
   background:
-    repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0px, rgba(0,0,0,0.16) 1px, transparent 1px, transparent 3px),
-    radial-gradient(ellipse at center, transparent 55%, rgba(0,0,5,0.55) 100%);
-  mix-blend-mode: multiply;
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.14) 0px, rgba(0,0,0,0.14) 1px, transparent 1px, transparent 3px),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0,0,5,0.5) 100%);
 }
 
 /* ---- HUD ---- */
@@ -99,6 +106,10 @@ html, body {
   box-shadow: 0 0 10px rgba(120,100,255,0.8);
   transform-origin: left;
 }
+#focusfill.low {
+  background: linear-gradient(90deg, #ff3b6b, #ff9a3b);
+  box-shadow: 0 0 10px rgba(255,80,80,0.8);
+}
 
 #warn {
   position: absolute; top: 26%; left: 0; right: 0;
@@ -124,9 +135,7 @@ html, body {
   display: flex;
   align-items: center; justify-content: center;
   text-align: center;
-  background: rgba(5,6,10,0.55);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background: rgba(5,6,10,0.62);
   transition: opacity 0.35s;
 }
 #overlay.hidden { opacity: 0; pointer-events: none; }
@@ -238,7 +247,7 @@ html, body {
       被弾は一発でシグナルロスト。
     </div>
     <div class="start-hint">▶ クリック / タップで起動</div>
-    <div class="keys">[P] PAUSE&nbsp;&nbsp;[M] MUTE</div>
+    <div class="keys">[P] PAUSE&nbsp;&nbsp;[M] MUTE&nbsp;&nbsp;[R] RESTART</div>
   </div>
   <div id="screen-over" style="display:none">
     <div class="go-title">SIGNAL LOST</div>
@@ -248,6 +257,7 @@ html, body {
 </div>
 
 <div class="foot-credit">GLITCH//RUNNER — <a href="/">DEVNULL STUDIO</a></div>
+<div id="flash"></div>
 <div id="crt"></div>
 
 <script>
@@ -277,7 +287,7 @@ const ui = {
   hud: $('hud'), score: $('score'), best: $('best'), time: $('time'),
   mult: $('mult'), focusfill: $('focusfill'), warn: $('warn'),
   overlay: $('overlay'), title: $('screen-title'), over: $('screen-over'),
-  goStats: $('go-stats'),
+  goStats: $('go-stats'), flash: $('flash'),
 };
 
 const rand = (a = 1, b) => b === undefined ? Math.random() * a : a + Math.random() * (b - a);
@@ -302,8 +312,10 @@ let focusMeter = 1, focusHeld = false;
 let deathT = 0;
 let nextEventT = 0;
 let muted = false;
+let overAt = 0;
+const DEBUG_SKIP = +(new URLSearchParams(location.search).get('skip') || 0);
 
-const player = { x: 0, y: 0, tx: 0, ty: 0, trail: [], hitR: 4, grazeR: 30 };
+const player = { x: 0, y: 0, tx: 0, ty: 0, trail: [], hitR: 4, grazeR: 34 };
 
 let bullets = [];   // {x,y,vx,vy,r,hue,t,grazed,homing,homeT}
 let emitters = [];  // spiral emitters {x,y,rot,spin,rate,fireT,life,t}
@@ -435,7 +447,7 @@ canvas.addEventListener('pointercancel', pointerEnd);
 ui.overlay.addEventListener('pointerdown', e => {
   e.preventDefault();
   initAudio();
-  if (state === 'title' || state === 'over') startGame();
+  if (canRestart()) startGame();
 });
 
 let focusKey = false;
@@ -443,9 +455,10 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Space' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
     e.preventDefault();
     focusKey = true; focusHeld = true;
-    if (state === 'title' || state === 'over') { initAudio(); startGame(); }
+    if (canRestart()) { initAudio(); startGame(); }
   }
-  if (e.code === 'Enter' && (state === 'title' || state === 'over')) { initAudio(); startGame(); }
+  if (e.code === 'Enter' && canRestart()) { initAudio(); startGame(); }
+  if ((e.key === 'r' || e.key === 'R') && (state === 'play' || state === 'over')) { initAudio(); startGame(); }
   if (e.key === 'm' || e.key === 'M') muted = !muted;
   if ((e.key === 'p' || e.key === 'P' || e.code === 'Escape') && (state === 'play' || state === 'paused')) {
     state = state === 'play' ? 'paused' : 'play';
@@ -475,7 +488,8 @@ function bulletSprite(col, r) {
   const g = c.getContext('2d');
   const grad = g.createRadialGradient(pad, pad, 0, pad, pad, pad);
   grad.addColorStop(0, '#ffffff');
-  grad.addColorStop(0.25, col);
+  grad.addColorStop(0.14, '#ffffff');
+  grad.addColorStop(0.3, col);
   grad.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, pad * 2, pad * 2);
@@ -503,6 +517,16 @@ function edgePoint() {
   return { x: -m, y: rand(H) };
 }
 
+// pick an on-screen point at a fair distance from the player
+function fairPoint(xMin, xMax, yMin, yMax, minDist) {
+  let x = 0, y = 0;
+  for (let i = 0; i < 12; i++) {
+    x = rand(xMin, xMax); y = rand(yMin, yMax);
+    if (Math.hypot(x - player.x, y - player.y) >= minDist) break;
+  }
+  return { x, y };
+}
+
 // ---- patterns ----
 function pAimed() {
   const e = edgePoint();
@@ -517,7 +541,7 @@ function pAimed() {
 }
 
 function pRing() {
-  const x = rand(W * 0.15, W * 0.85), y = rand(H * 0.1, H * 0.5);
+  const { x, y } = fairPoint(W * 0.15, W * 0.85, H * 0.1, H * 0.5, 180);
   const n = 12 + Math.floor(Math.min(intensity * 2, 16));
   const off = rand(TAU);
   const sp = 85 + intensity * 9;
@@ -552,8 +576,9 @@ function pWall() {
 }
 
 function pSpiral() {
+  const pt = fairPoint(W * 0.2, W * 0.8, H * 0.12, H * 0.45, 200);
   emitters.push({
-    x: rand(W * 0.2, W * 0.8), y: rand(H * 0.12, H * 0.45),
+    x: pt.x, y: pt.y,
     rot: rand(TAU), spin: (rand() < 0.5 ? -1 : 1) * rand(1.8, 2.8),
     rate: Math.max(0.07, 0.13 - intensity * 0.004),
     fireT: 0, life: rand(2.8, 4), t: 0,
@@ -607,7 +632,7 @@ function director(dt) {
     let pick = avail[0];
     for (const p of avail) { r -= p.w; if (r <= 0) { pick = p; break; } }
     if (bullets.length < 550) pick.fn();
-    nextEventT = Math.max(0.42, 1.55 - gameT * 0.011) * rand(0.75, 1.25);
+    nextEventT = Math.max(0.4, 1.4 - gameT * 0.012) * rand(0.75, 1.25);
   }
 }
 
@@ -642,9 +667,13 @@ function popup(x, y, txt, col) {
 // ============================================================
 // Game flow
 // ============================================================
+function canRestart() {
+  return state === 'title' || (state === 'over' && performance.now() - overAt > 600);
+}
+
 function startGame() {
   state = 'play';
-  gameT = 0; score = 0; combo = 0; comboTimer = 0; maxMult = 1;
+  gameT = DEBUG_SKIP; score = 0; combo = 0; comboTimer = 0; maxMult = 1;
   bullets = []; emitters = []; lasers = []; particles = []; popups = [];
   announced.clear();
   nextEventT = 1.2;
@@ -671,6 +700,7 @@ function die() {
 
 function showGameOver() {
   state = 'over';
+  overAt = performance.now();
   const s = Math.floor(score);
   const newBest = s > best;
   if (newBest) { best = s; localStorage.setItem('glitchrunner_best', s); }
@@ -726,7 +756,7 @@ function update(rdt) {
     gameT += dt;
     score += dt * 60 * mult();
     comboTimer -= dt;
-    if (comboTimer <= 0 && combo > 0) combo = Math.max(0, combo - rdt * 10);
+    if (comboTimer <= 0 && combo > 0) combo = Math.max(0, combo - rdt * 6);
 
     director(dt);
   }
@@ -894,7 +924,7 @@ function render(now) {
   // bullets
   for (const b of bullets) {
     const spr = bulletSprite(b.col, b.r);
-    const sz = b.r * 6.4;
+    const sz = b.r * 5.2;
     ctx.drawImage(spr, b.x - sz / 2, b.y - sz / 2, sz, sz);
   }
 
@@ -965,12 +995,6 @@ function render(now) {
     ctx.fillRect(-40, -40, W + 80, H + 80);
   }
 
-  // death flash
-  if (flashAmt > 0) {
-    ctx.fillStyle = 'rgba(255,30,70,' + (flashAmt * 0.35) + ')';
-    ctx.fillRect(-40, -40, W + 80, H + 80);
-  }
-
   ctx.restore();
 
   // glitch slices (self-blit) — death & random hiccups
@@ -1002,6 +1026,8 @@ function updateHud(now) {
   ui.mult.classList.toggle('hot', m >= 5);
   ui.mult.style.transform = 'scale(' + (1 + Math.min(combo, 40) * 0.004) + ')';
   ui.focusfill.style.transform = 'scaleX(' + focusMeter.toFixed(3) + ')';
+  ui.focusfill.classList.toggle('low', focusMeter < 0.25);
+  ui.flash.style.opacity = (flashAmt * 0.4).toFixed(3);
 }
 
 // ============================================================
