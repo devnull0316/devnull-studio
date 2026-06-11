@@ -241,7 +241,7 @@ html, body {
     <div class="logo-line">//RUNNER</div>
     <div class="logo-sub">SURVIVE THE SIGNAL STORM</div>
     <div class="howto">
-      <b>移動</b> — マウス / 指でコアを操作<br>
+      <b>移動</b> — マウス / 指でドラッグ(相対移動)<br>
       <b>グレイズ</b> — 弾をかすめると倍率UP (最大 ×10)<br>
       <b>フォーカス</b> — <b>SPACE長押し</b> / 2本指タッチで時間減速<br>
       被弾は一発でシグナルロスト。
@@ -270,9 +270,10 @@ html, body {
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 let W = 0, H = 0, DPR = 1;
+const IS_TOUCH = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 function resize() {
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  DPR = Math.min(window.devicePixelRatio || 1, IS_TOUCH ? 1.25 : 2);
   W = window.innerWidth;
   H = window.innerHeight;
   canvas.width = Math.round(W * DPR);
@@ -417,28 +418,42 @@ const sfx = {
 // Input
 // ============================================================
 let primaryId = null;
+let lastTouch = null;
 const activePointers = new Set();
 
-function setTarget(e) {
-  let ty = e.clientY;
-  if (e.pointerType === 'touch') ty -= 64; // keep ship visible above the finger
+function setTargetMouse(e) {
   player.tx = clamp(e.clientX, 8, W - 8);
-  player.ty = clamp(ty, 8, H - 8);
+  player.ty = clamp(e.clientY, 8, H - 8);
 }
 
 canvas.addEventListener('pointerdown', e => {
   e.preventDefault();
   initAudio();
   activePointers.add(e.pointerId);
-  if (primaryId === null) { primaryId = e.pointerId; setTarget(e); }
-  else focusHeld = true; // second finger = focus
+  if (e.pointerType === 'touch') {
+    // relative drag: the ship moves with the finger's delta, so the
+    // finger can rest anywhere without covering the ship
+    if (primaryId === null) { primaryId = e.pointerId; lastTouch = { x: e.clientX, y: e.clientY }; }
+    else focusHeld = true; // second finger = focus
+  } else {
+    primaryId = e.pointerId;
+    setTargetMouse(e);
+  }
 });
 canvas.addEventListener('pointermove', e => {
-  if (e.pointerId === primaryId || (primaryId === null && e.pointerType === 'mouse')) setTarget(e);
+  if (e.pointerType === 'touch') {
+    if (e.pointerId !== primaryId || !lastTouch) return;
+    const k = 1.25;
+    player.tx = clamp(player.tx + (e.clientX - lastTouch.x) * k, 8, W - 8);
+    player.ty = clamp(player.ty + (e.clientY - lastTouch.y) * k, 8, H - 8);
+    lastTouch = { x: e.clientX, y: e.clientY };
+  } else {
+    setTargetMouse(e);
+  }
 });
 function pointerEnd(e) {
   activePointers.delete(e.pointerId);
-  if (e.pointerId === primaryId) primaryId = null;
+  if (e.pointerId === primaryId) { primaryId = null; lastTouch = null; }
   if (activePointers.size <= 1) focusHeld = focusKey;
 }
 canvas.addEventListener('pointerup', pointerEnd);
@@ -473,6 +488,7 @@ window.addEventListener('keyup', e => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && state === 'play') state = 'paused';
 });
+document.addEventListener('gesturestart', e => e.preventDefault());
 
 // ============================================================
 // Bullet sprites (pre-rendered glow)
