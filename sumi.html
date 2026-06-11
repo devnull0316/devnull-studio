@@ -857,7 +857,12 @@ function spawnStar() {
     if (sc > bestScore) { bestScore = sc; bestPt = { x, y }; }
   }
   if (!bestPt) bestPt = { x: W / 2, y: H / 2 };
-  star = { x: bestPt.x, y: bestPt.y, r: Math.max(9, fly.r * 1.5), born: playT };
+  const r = Math.max(9, fly.r * 1.5);
+  // the gold ring IS the hitbox; it starts generous and tightens as
+  // you improve (fixed per star — a shrinking target mid-flight would
+  // feel unfair)
+  const hitR = r * Math.max(1.7, 2.9 - stars * 0.06);
+  star = { x: bestPt.x, y: bestPt.y, r, hitR, born: playT };
   countMax = Math.max(8, 15 - stars * 0.25);
   countT = countMax;
   usedInkThisStar = false;
@@ -1020,8 +1025,8 @@ function updateFly(dt) {
   trail.unshift({ x: fly.x, y: fly.y });
   if (trail.length > 26) trail.pop();
 
-  // star collection
-  if (star && Math.hypot(fly.x - star.x, fly.y - star.y) < fly.r + star.r) collectStar();
+  // star collection — touching the gold ring counts
+  if (star && Math.hypot(fly.x - star.x, fly.y - star.y) < fly.r + star.hitR) collectStar();
 }
 
 // ============================================================
@@ -1302,24 +1307,33 @@ function render(now) {
     ctx.fillStyle = 'rgba(255,240,190,0.85)';
     ctx.beginPath(); ctx.arc(0, 0, rr * 0.22, 0, TAU); ctx.fill();
     ctx.restore();
-    // countdown ring
+    // catch zone: a faint gold pool inside the ring
+    ctx.fillStyle = 'rgba(216,174,62,' + (urgent ? 0.1 : 0.07) + ')';
+    ctx.beginPath(); ctx.arc(star.x, star.y, star.hitR, 0, TAU); ctx.fill();
+    // countdown ring — this circle IS the hitbox
     ctx.strokeStyle = urgent
       ? 'rgba(190,70,40,' + (Math.sin(now * 0.02) > 0 ? 0.95 : 0.45) + ')'
       : 'rgba(160,120,40,0.75)';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.arc(star.x, star.y, star.r * 2.1, -Math.PI / 2, -Math.PI / 2 + frac * TAU);
+    ctx.arc(star.x, star.y, star.hitR, -Math.PI / 2, -Math.PI / 2 + frac * TAU);
+    ctx.stroke();
+    // the spent part of the ring stays as a ghost so the circle reads as a circle
+    ctx.strokeStyle = 'rgba(160,120,40,0.2)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.hitR, -Math.PI / 2 + frac * TAU, -Math.PI / 2 + TAU);
     ctx.stroke();
     // seconds
     ctx.fillStyle = urgent ? 'rgba(170,60,30,0.9)' : 'rgba(120,95,40,0.8)';
     ctx.font = '600 ' + Math.max(12, U * 0.022) + 'px "Hiragino Mincho ProN",serif';
     ctx.textAlign = 'center';
-    ctx.fillText(Math.ceil(countT), star.x, star.y - star.r * 2.1 - 8);
+    ctx.fillText(Math.ceil(countT), star.x, star.y - star.hitR - 8);
     // first-star label
     if (stars === 0) {
       ctx.fillStyle = 'rgba(120,95,40,0.85)';
       ctx.font = '600 ' + Math.max(14, U * 0.024) + 'px "Hiragino Mincho ProN",serif';
-      ctx.fillText('この星へ', star.x, star.y + star.r * 2.1 + Math.max(20, U * 0.03));
+      ctx.fillText('この星へ', star.x, star.y + star.hitR + Math.max(20, U * 0.03));
     }
     // guide chevrons: firefly → star
     const gdx = star.x - fly.x, gdy = star.y - fly.y;
