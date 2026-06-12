@@ -441,7 +441,7 @@ html, body {
         <b>①</b> 指で線を描く — それが墨の壁<br>
         <b>②</b> 蛍は墨の壁で跳ね返る<br>
         <b>③</b> 時間が切れる前に、光る<b>星</b>へ導く<br>
-        <b>④</b> 指を<b>止めて押さえる</b>と、蛍は星へ引かれる<br>
+        <b>④</b> 指を<b>止めて押さえる</b>と、墨を使って蛍を星へ引き寄せる<br>
         <b>墨は消えない。</b>星を取ると、まわりの墨だけ燃えて消える。
       </div>
       <div class="mode-row" style="margin-top:24px">
@@ -765,6 +765,7 @@ let gameMode = 'meguri'; // 'meguri' | 'endless'
 let nightN = 1;
 let nightGoal = 3;
 let nightClearPending = 0;
+let bells = []; // golden bells on stage terrain: ring one for bonus time
 let fracSum = 0; // sum of remaining-time fractions per collected star
 let scrollC = null;     // last composed scroll canvas (save / share / keep)
 let galleryCaption = '';
@@ -1151,39 +1152,63 @@ function genObstacles(n) {
     placed++;
   }
   rebuildGrid();
+  // hang golden bells on the terrain: ringing one buys time (+2.5s).
+  // This turns obstacles from "things to avoid" into "places worth a detour"
+  bells = [];
+  if (n >= 2) {
+    const obsSegs = segs.filter(sg => sg.fixed);
+    const want = Math.min(1 + Math.floor(n / 6), 2);
+    for (let i = 0; i < want && obsSegs.length > 0; i++) {
+      const sg = obsSegs[Math.floor(rng() * obsSegs.length)];
+      const mx = (sg.ax + sg.bx) / 2, my = (sg.ay + sg.by) / 2;
+      const dx = sg.bx - sg.ax, dy = sg.by - sg.ay;
+      const len = Math.hypot(dx, dy) || 1;
+      const side = rng() < 0.5 ? 1 : -1;
+      const br = Math.max(7, U * 0.013);
+      bells.push({
+        x: mx + (-dy / len) * side * (sg.r + br + 4),
+        y: my + (dx / len) * side * (sg.r + br + 4),
+        r: br, used: false,
+      });
+    }
+  }
 }
 
 // ============================================================
 // Star
 // ============================================================
 function spawnStar() {
-  const m = U * 0.1;
-  let bestPt = null, bestScore = -1;
-  for (let i = 0; i < 26; i++) {
-    const x = rand(m, W - m), y = rand(m + H * 0.06, H - m);
-    const dFly = Math.hypot(x - fly.x, y - fly.y);
-    if (dFly < DIAG * 0.3 && i < 20) continue;
-    const near = nearbySegs(x, y, 90);
-    let clutter = 0;
-    for (const s of near) {
-      const c = segClosest(s, x, y);
-      const d = Math.hypot(c.x - x, c.y - y);
-      if (d < 90) clutter += (90 - d);
-    }
-    const sc = dFly * 0.5 - clutter * 2.5;
-    if (sc > bestScore) { bestScore = sc; bestPt = { x, y }; }
-  }
-  if (!bestPt) bestPt = { x: W / 2, y: H / 2 };
+  const m = U * 0.12;
   const r = Math.max(9, fly.r * 1.5);
   // the gold ring IS the hitbox; it starts generous and tightens as
   // you improve (fixed per star — a shrinking target mid-flight would
   // feel unfair)
   const hitR = r * Math.max(M.hitFloor, M.hit0 - stars * M.hitDec);
+  const clearance = hitR + fly.r + 8; // the whole ring must stay reachable
+  let bestPt = null, bestScore = -1;
+  for (let i = 0; i < 34; i++) {
+    const x = rand(m, W - m), y = rand(m + H * 0.08, H - m);
+    const dFly = Math.hypot(x - fly.x, y - fly.y);
+    if (dFly < DIAG * 0.3 && i < 24) continue;
+    const near = nearbySegs(x, y, clearance + 70);
+    let clutter = 0, minD = 1e9;
+    for (const s of near) {
+      const c = segClosest(s, x, y);
+      const d = Math.hypot(c.x - x, c.y - y) - s.r;
+      minD = Math.min(minD, d);
+      if (d < clearance + 70) clutter += (clearance + 70 - d);
+    }
+    if (minD < clearance && i < 30) continue; // never bury the ring in ink or terrain
+    const sc = dFly * 0.5 - clutter * 2.5 + (minD < clearance ? -5000 : 0);
+    if (sc > bestScore) { bestScore = sc; bestPt = { x, y }; }
+  }
+  if (!bestPt) bestPt = { x: W / 2, y: H / 2 };
   star = { x: bestPt.x, y: bestPt.y, r, hitR, born: playT };
   countMax = Math.max(M.tFloor, M.t0 - stars * M.tDec);
   countT = countMax;
   usedInkThisStar = false;
   lastTickSec = -1;
+  for (const b of bells) b.used = false; // each new star re-arms the bells
 }
 
 function collectStar() {
@@ -1292,7 +1317,7 @@ function updateFly(dt) {
       // attraction is a tool — hold a still finger to call the firefly
       const nearR = U * 0.12;
       let w = d2s < nearR ? lerp(0.35, 0.1, d2s / nearR) : 0;
-      if (praying) w = Math.max(w, M.photoNear * 1.4);
+      if (praying) w = Math.max(w, M.photoNear * 0.85);
       if (w > 0) {
         const want = Math.atan2(star.y - fly.y, star.x - fly.x);
         const cur = Math.atan2(fly.vy, fly.vx);
@@ -1351,6 +1376,21 @@ function updateFly(dt) {
 
   // star collection — touching the gold ring counts
   if (star && Math.hypot(fly.x - star.x, fly.y - star.y) < fly.r + star.hitR) collectStar();
+
+  // bells: a detour that buys time
+  for (const b of bells) {
+    if (b.used) continue;
+    if (Math.hypot(fly.x - b.x, fly.y - b.y) < fly.r + b.r + 2) {
+      b.used = true;
+      countT = Math.min(countMax, countT + 2.5);
+      popups.push({ x: b.x, y: b.y - b.r - 8, txt: '+2.5秒', t: 0, col: '#9a7b22' });
+      for (let k = 0; k < 14; k++) {
+        const a2 = rand(TAU), sp2 = rand(20, U * 0.18);
+        particles.push({ x: b.x, y: b.y, vx: Math.cos(a2) * sp2, vy: Math.sin(a2) * sp2 - 20, life: rand(0.3, 0.7), maxLife: 0.7, size: rand(1, 2.6), col: '224,184,78', grav: 40 });
+      }
+      if (AC && !muted) { pluck(74, 0.3, AC.currentTime); pluck(79, 0.24, AC.currentTime + 0.07); }
+    }
+  }
 }
 
 // ============================================================
@@ -1364,6 +1404,7 @@ function startGame() {
   }
   nightClearPending = 0;
   fracSum = 0;
+  bells = [];
   score = 0; stars = 0; combo = 0; maxCombo = 0;
   playT = 0; inkUsedTotal = 0;
   segs = []; strokes = []; grid = new Map();
@@ -1554,6 +1595,7 @@ canvas.addEventListener('pointerdown', e => {
   if (state !== 'play') return;
   if (drawingId !== null) return;
   drawingId = e.pointerId;
+  armed = true; // the night starts breathing the moment you touch the paper
   pressStart = performance.now();
   pressX = e.clientX; pressY = e.clientY;
   pressMoved = false;
@@ -1734,7 +1776,8 @@ if (!(document.documentElement.requestFullscreen || document.documentElement.web
 // ============================================================
 function update(dt) {
   praying = state === 'play' && drawingId !== null && !pressMoved &&
-            performance.now() - pressStart > 250 && !!star;
+            performance.now() - pressStart > 250 && !!star && ink > inkMax * 0.03;
+  if (praying) ink = Math.max(0, ink - inkMax * 0.055 * dt); // prayer burns ink
   if (state === 'play') {
     playT += dt;
     if (armed) countT -= dt; // the night holds its breath until the first stroke
@@ -1900,6 +1943,32 @@ function render(now) {
       ctx.lineTo(Math.cos(a2) * titleStar.r * 0.5, Math.sin(a2) * titleStar.r * 0.5);
     }
     ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  // bells on the terrain
+  for (const b of bells) {
+    const a2 = b.used ? 0.25 : 0.85;
+    if (!b.used) {
+      const bg2 = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r * 3);
+      bg2.addColorStop(0, 'rgba(224,184,78,0.22)');
+      bg2.addColorStop(1, 'rgba(224,184,78,0)');
+      ctx.fillStyle = bg2;
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 3, 0, TAU); ctx.fill();
+    }
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(Math.sin(now * 0.003 + b.x) * 0.12);
+    ctx.fillStyle = b.used ? 'rgba(140,125,90,0.4)' : '#cda53a';
+    ctx.beginPath();
+    ctx.arc(0, -b.r * 0.1, b.r, Math.PI * 1.1, Math.PI * 1.9);
+    ctx.lineTo(b.r * 0.95, b.r * 0.55);
+    ctx.lineTo(-b.r * 0.95, b.r * 0.55);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = b.used ? 'rgba(120,105,75,0.4)' : '#9a7b22';
+    ctx.beginPath(); ctx.arc(0, b.r * 0.75, b.r * 0.22, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
     ctx.restore();
   }
 
