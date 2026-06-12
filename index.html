@@ -14,6 +14,7 @@
 <meta property="og:url" content="https://devnull-studio.com">
 <meta property="og:image" content="https://devnull-studio.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
+<link rel="alternate" type="application/rss+xml" title="DevNull Studio おしらせ" href="/feed.xml">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Organization","name":"DevNull Studio","url":"https://devnull-studio.com","email":"contact@devnull-studio.com","logo":"https://devnull-studio.com/favicon.svg","address":{"@type":"PostalAddress","addressLocality":"Tokyo","addressCountry":"JP"}}
 </script>
@@ -44,6 +45,7 @@ body {
 ::selection { background: rgba(179,52,46,0.15); }
 
 a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--shu); outline-offset: 3px; border-radius: 4px; }
 
 .serif { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif; }
 
@@ -618,6 +620,12 @@ footer a:hover { color: var(--ink); }
       <p>DevNull Studioは、東京を拠点にWebの企画・設計・開発までを一貫して行う独立系のスタジオです。アプリのような体験をインストールなしで届けられる、ブラウザという場所の可能性を信じています。</p>
       <p>自社作品のゲームづくりで磨いた「触って気持ちいい」の感覚を、配信ツールやWebアプリケーションにも注いでいます。TypeScript / React / モバイルアプリ開発のご相談も承ります。</p>
       <p style="font-size:12.5px; border:1px dashed var(--line); border-radius:10px; padding:10px 14px; transform:rotate(-0.5deg);">スタジオ構成: 開発 1名 / 黒猫(非常勤・出社は気まぐれ)/ 蛍 多数(このサイトに生息)</p>
+      <dl style="margin-top:16px; font-size:12.5px; color:var(--ink-dim); display:grid; grid-template-columns:auto 1fr; gap:4px 18px;">
+        <dt style="color:var(--ink-faint)">名称</dt><dd>DevNull Studio(個人スタジオ)</dd>
+        <dt style="color:var(--ink-faint)">拠点</dt><dd>東京都</dd>
+        <dt style="color:var(--ink-faint)">事業</dt><dd>自社ゲーム・配信ツールの開発 / Web・アプリの受託開発</dd>
+        <dt style="color:var(--ink-faint)">連絡</dt><dd>下のお問い合わせから(返信は人間)</dd>
+      </dl>
     </div>
   </div>
 </section>
@@ -629,7 +637,7 @@ footer a:hover { color: var(--ink); }
         <h2>お問い合わせ</h2>
         <p>制作のご依頼・協業のご相談・作品の感想、なんでもどうぞ。返信は人間が書きます。</p>
       </div>
-      <a class="btn" href="mailto:contact@devnull-studio.com">contact@devnull-studio.com</a>
+      <a class="btn" href="#" id="mail-link" data-u="contact" data-d="devnull-studio.com" rel="nofollow">メールを書く</a>
     </div>
     <div class="flow">
       <div class="step"><div class="n">STEP 1</div><div class="tt">メールで相談</div><div class="dd">ふわっとした内容で大丈夫です。「こういうの作れる?」だけでも</div></div>
@@ -641,10 +649,11 @@ footer a:hover { color: var(--ink); }
 </section>
 
 <footer>
-  <div><span id="copy" style="cursor:pointer" title="?">&copy;</span> 2026 DevNull Studio — Tokyo, Japan<span style="margin-left:14px; opacity:0.6">手書きHTML・外部ライブラリ0個</span></div>
+  <div><span id="copy" style="cursor:pointer" title="?">&copy;</span> 2026 DevNull Studio — Tokyo, Japan<span style="margin-left:14px; opacity:0.6">手書きHTML・外部ライブラリ0個・サイト全体 約255KB(阿部寛のホームページ約25個分)</span></div>
   <div class="links">
     <a href="/guidelines.html">実況・二次創作ガイドライン</a>
     <a href="/privacy.html">プライバシーポリシー</a>
+    <a href="/feed.xml">RSS</a>
   </div>
 </footer>
 
@@ -804,6 +813,14 @@ function toast(msg){
 
 const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// ---- メールアドレスはボット避けに実行時組み立て ----
+const ml = $('mail-link');
+if (ml){
+  const addr = () => ml.dataset.u + '@' + ml.dataset.d;
+  ml.addEventListener('click', e => { e.preventDefault(); location.href = 'mailto:' + addr(); });
+  ml.textContent = addr().replace('@', '[at]');
+}
+
 // ---- 実績システム(ゲームスタジオのサイトには実績がある) ----
 const ACH = [
   { id: 'console', ic: '🖥', tt: 'モニターの裏側', dd: '開発者ツールに気付き、__found() を呼んだ', hidden: true },
@@ -818,6 +835,7 @@ const ACH = [
 const achGet = () => { try { return JSON.parse(localStorage.getItem('dn_ach') || '{}'); } catch (e) { return {}; } };
 const achBtn = document.createElement('button');
 achBtn.id = 'ach-btn';
+achBtn.setAttribute('aria-label', '実績一覧を開く');
 document.body.appendChild(achBtn);
 const achModal = document.createElement('div');
 achModal.id = 'ach-modal';
@@ -884,6 +902,7 @@ const sun = document.createElement('button');
 sun.id = 'sunback';
 sun.textContent = '☀';
 sun.title = '朝に戻る';
+sun.setAttribute('aria-label', '夜モードを解除して朝に戻る');
 document.body.appendChild(sun);
 let nightflies = [];
 function nightfall(){
