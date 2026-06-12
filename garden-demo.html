@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>コメントの庭 — 実証デモ | DevNull Studio</title>
+<meta name="description" content="チャットで育つ配信用の小さな庭。「草」で草が生え、「8888」で花火が上がる。画面の隅に置く常駐演出の実証デモ。">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root { --gold:#ffd24d; }
+html,body { height:100%; }
+body {
+  background:#15161c;
+  font-family:'Hiragino Sans','Noto Sans JP',-apple-system,sans-serif;
+  color:#e8ecff;
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+header {
+  padding:10px 18px;
+  display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid #2a2d3e; flex-wrap:wrap; gap:8px;
+}
+header .t { font-size:15px; font-weight:800; }
+header .t span { color:var(--gold); }
+header .sub { font-size:11px; color:#8a93b8; }
+header .btns { display:flex; gap:8px; }
+
+.wrap { flex:1; display:flex; min-height:0; }
+.stage-wrap { flex:1.7; display:flex; flex-direction:column; min-width:0; padding:14px; }
+.stage-label { font-size:11px; letter-spacing:0.2em; color:#8a93b8; margin-bottom:8px; }
+.stage {
+  position:relative; flex:1;
+  background:#0d0f16;
+  border-radius:12px; border:1px solid #2e3450;
+  overflow:hidden; min-height:300px;
+}
+#fakegame { position:absolute; inset:0; }
+.fake-label {
+  position:absolute; top:46%; left:0; right:0; text-align:center;
+  font-size:13px; color:rgba(255,255,255,0.22); letter-spacing:0.3em;
+}
+#garden { position:absolute; left:10px; bottom:10px; }
+
+button {
+  font-family:inherit; font-size:13px; font-weight:700;
+  background:#2e3450; color:#e8ecff;
+  border:1px solid #444b6e; border-radius:999px;
+  padding:8px 18px; cursor:pointer;
+}
+button:hover { background:#3a4163; }
+button.primary { background:var(--gold); border-color:var(--gold); color:#1d2030; }
+
+.chat {
+  width:min(340px,38vw);
+  border-left:1px solid #2a2d3e;
+  display:flex; flex-direction:column;
+  background:#181818;
+}
+.chat-h { padding:10px 14px; border-bottom:1px solid #2a2d3e; }
+.chat-h .ct { font-size:13px; font-weight:700; }
+.chat-h .cs { font-size:10px; color:#8a93b8; margin-top:2px; line-height:1.6; }
+.demo-row { display:flex; align-items:center; gap:8px; padding:8px 14px; border-bottom:1px solid #2a2d3e; font-size:12px; }
+.demo-row label { display:flex; align-items:center; gap:6px; cursor:pointer; color:#cfd8e3; }
+#msgs { flex:1; overflow-y:auto; padding:8px 12px; display:flex; flex-direction:column; gap:7px; font-size:12.5px; }
+.m { display:flex; gap:7px; align-items:baseline; animation:pop .18s ease; }
+@keyframes pop { from { opacity:0; transform:translateY(5px); } }
+.m .a { width:19px; height:19px; border-radius:50%; flex-shrink:0; align-self:center; }
+.m .n { color:#9e9e9e; font-size:11px; white-space:nowrap; }
+.m .b { color:#eee; word-break:break-all; }
+.m .b.hit { color:#aed581; font-weight:700; }
+.quick { display:flex; gap:6px; padding:0 12px 10px; flex-wrap:wrap; }
+.quick button { font-size:12px; padding:6px 13px; }
+.chat-in { border-top:1px solid #2a2d3e; padding:10px 12px; display:flex; gap:8px; }
+.chat-in input {
+  flex:1; background:#222530; border:1px solid #3a3f55; border-radius:999px;
+  color:#fff; font-size:14px; padding:9px 16px; outline:none; font-family:inherit;
+}
+.chat-in input:focus { border-color:var(--gold); }
+
+.legend {
+  padding:9px 14px; border-top:1px solid #2a2d3e;
+  font-size:10.5px; color:#8a93b8; line-height:1.9;
+}
+.legend b { color:#cfd8e3; }
+
+@media (max-width:680px) {
+  .wrap { flex-direction:column; }
+  .chat { width:100%; border-left:none; border-top:1px solid #2a2d3e; height:45%; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="t">コメントの庭 <span>— 実証デモ</span></div>
+    <div class="sub">画面の隅に置く常駐演出。配信を邪魔せず、たまに見ると育っている</div>
+  </div>
+  <div class="btns">
+    <button id="btn-card" class="primary">📋 今日の庭カードを保存</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="stage-wrap">
+    <div class="stage-label">▼ 配信プレビュー(中央=いつものゲーム画面、左下の庭だけがこのツール)</div>
+    <div class="stage">
+      <canvas id="fakegame"></canvas>
+      <div class="fake-label">— ゲーム画面(配信の本編)—</div>
+      <canvas id="garden"></canvas>
+    </div>
+  </div>
+
+  <div class="chat">
+    <div class="chat-h">
+      <div class="ct">チャット欄(テスト用)</div>
+      <div class="cs">あなたが視聴者です。本番ではYouTubeチャットを読み取ります。</div>
+    </div>
+    <div class="demo-row">
+      <label><input type="checkbox" id="demo-toggle"> 自動デモ(偽視聴者約40人)</label>
+    </div>
+    <div id="msgs"></div>
+    <div class="quick">
+      <button data-say="草">「草」</button>
+      <button data-say="8888">「8888」</button>
+      <button data-say="かわいい">「かわいい」</button>
+      <button data-say="こんにちは!">「こんにちは」</button>
+    </div>
+    <div class="chat-in">
+      <input type="text" id="chat-input" placeholder="コメントを入力(例: 草)" autocomplete="off">
+      <button class="primary" id="btn-send">送信</button>
+    </div>
+    <div class="legend">
+      <b>草・w</b> → 草が生える　<b>8888</b> → 花火<br>
+      <b>かわいい・すき・きれい</b> → 花が咲く<br>
+      <b>はじめてのコメント</b> → 蛍が庭に住み着く(名前付き)
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+(() => {
+
+const $ = id => document.getElementById(id);
+const rand = (a=1,b) => b===undefined ? Math.random()*a : a+Math.random()*(b-a);
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+const TAU = Math.PI*2;
+
+// ============================================================
+// 偽のゲーム画面(配信本編のダミー)
+// ============================================================
+const fg = $('fakegame'), fgx = fg.getContext('2d');
+function sizeFake(){
+  const st = fg.parentElement.getBoundingClientRect();
+  fg.width = st.width; fg.height = st.height;
+}
+function drawFake(t){
+  fgx.fillStyle = '#10131d';
+  fgx.fillRect(0,0,fg.width,fg.height);
+  for (let i=0;i<5;i++){
+    const x = (t*0.02*(i+1)) % (fg.width+200) - 100;
+    fgx.fillStyle = `rgba(70,90,140,${0.05+i*0.012})`;
+    fgx.beginPath();
+    fgx.arc(x, fg.height*(0.2+i*0.13), 40+i*22, 0, TAU);
+    fgx.fill();
+  }
+}
+
+// ============================================================
+// 庭 — 画面の隅のキャンバス
+// ============================================================
+const gc = $('garden'), g = gc.getContext('2d');
+let GW = 320, GH = 190;
+function sizeGarden(){
+  const st = gc.parentElement.getBoundingClientRect();
+  GW = Math.max(240, Math.min(380, st.width*0.32));
+  GH = GW*0.58;
+  gc.width = GW*2; gc.height = GH*2;
+  gc.style.width = GW+'px'; gc.style.height = GH+'px';
+  g.setTransform(2,0,0,2,0,0);
+}
+window.addEventListener('resize', () => { sizeFake(); sizeGarden(); });
+
+const grass = [];    // {x, h, lean, born, hue}
+const flowers = [];  // {x, h, born, hue}
+const bugs = [];     // 蛍 {name, color, x, y, tx, ty, born, phase, label}
+const sparks = [];   // 花火 {x,y,parts:[{x,y,vx,vy,life,col}], born}
+let startT = performance.now();
+const stats = { kusa:0, hana:0, hanabi:0 };
+
+function groundY(x){ // なだらかな丘
+  return GH-14 - Math.sin((x/GW)*Math.PI)*14;
+}
+
+function addGrass(){
+  stats.kusa++;
+  if (grass.length > 130) grass.splice(Math.floor(rand(30)), 1);
+  grass.push({ x:rand(10,GW-10), h:rand(9,20), lean:rand(-0.4,0.4), born:performance.now(), hue:rand(95,135) });
+}
+function addFlower(){
+  stats.hana++;
+  if (flowers.length > 28) flowers.shift();
+  flowers.push({ x:rand(16,GW-16), h:rand(16,30), born:performance.now(), hue:pick([340,15,45,280,200]) });
+}
+function addFirework(){
+  stats.hanabi++;
+  const x = rand(GW*0.2,GW*0.8), y = rand(GH*0.15,GH*0.4);
+  const parts = [];
+  const hue = rand(360);
+  for (let i=0;i<26;i++){
+    const a = i/26*TAU, sp = rand(18,42);
+    parts.push({ x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, life:rand(0.6,1.1), col:`hsl(${hue+rand(-20,20)},90%,70%)` });
+  }
+  sparks.push({ parts, born:performance.now() });
+}
+function addBug(name, color){
+  if (bugs.find(b=>b.name===name)) return;
+  if (bugs.length > 12) bugs.shift();
+  bugs.push({ name, color, x:-12, y:rand(GH*0.3,GH*0.6), tx:rand(20,GW-20), ty:0, born:performance.now(), phase:rand(TAU), label:performance.now() });
+  bugs[bugs.length-1].ty = groundY(bugs[bugs.length-1].tx) - rand(18,46);
+}
+function pokeBug(name){
+  const b = bugs.find(b=>b.name===name);
+  if (b) { b.label = performance.now(); b.tx = rand(20,GW-20); b.ty = groundY(b.tx)-rand(18,46); }
+}
+
+function drawGarden(now){
+  g.clearRect(0,0,GW,GH);
+  const mins = (now-startT)/60000;
+
+  // 空気感: 時間経過でほんのり夕暮れる薄板
+  g.fillStyle = `rgba(20,16,40,0.38)`;
+  roundRect(g, 0, 0, GW, GH, 12); g.fill();
+  const dusk = Math.min(0.22, mins*0.02);
+  g.fillStyle = `rgba(255,140,80,${dusk})`;
+  roundRect(g, 0, 0, GW, GH, 12); g.fill();
+
+  // 丘
+  g.fillStyle = '#1d2b22';
+  g.beginPath();
+  g.moveTo(0,GH);
+  for (let x=0;x<=GW;x+=8) g.lineTo(x, groundY(x));
+  g.lineTo(GW,GH);
+  g.closePath(); g.fill();
+
+  // 草
+  for (const k of grass){
+    const age = Math.min(1,(now-k.born)/600);
+    const h = k.h * (1-Math.pow(1-age,3));
+    const sway = Math.sin(now*0.0015 + k.x)*2;
+    const gy = groundY(k.x);
+    g.strokeStyle = `hsl(${k.hue},45%,${38+age*8}%)`;
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.moveTo(k.x, gy);
+    g.quadraticCurveTo(k.x + k.lean*6 + sway*0.4, gy - h*0.6, k.x + k.lean*10 + sway, gy - h);
+    g.stroke();
+  }
+
+  // 花
+  for (const f of flowers){
+    const age = Math.min(1,(now-f.born)/900);
+    const h = f.h*(1-Math.pow(1-age,3));
+    const gy = groundY(f.x);
+    const sway = Math.sin(now*0.0012+f.x)*2;
+    g.strokeStyle = 'hsl(120,30%,35%)';
+    g.lineWidth = 1.6;
+    g.beginPath(); g.moveTo(f.x,gy); g.quadraticCurveTo(f.x+sway*0.5, gy-h*0.6, f.x+sway, gy-h); g.stroke();
+    const px = f.x+sway, py = gy-h;
+    if (age>0.4){
+      const pr = 3.6*Math.min(1,(age-0.4)/0.6);
+      g.fillStyle = `hsl(${f.hue},75%,70%)`;
+      for (let i=0;i<5;i++){
+        const a = i/5*TAU + now*0.0003;
+        g.beginPath(); g.arc(px+Math.cos(a)*pr, py+Math.sin(a)*pr, pr*0.9, 0, TAU); g.fill();
+      }
+      g.fillStyle = '#ffe9a8';
+      g.beginPath(); g.arc(px,py,pr*0.7,0,TAU); g.fill();
+    }
+  }
+
+  // 蛍(コメントした人)
+  for (const b of bugs){
+    b.x += (b.tx-b.x)*0.02;
+    b.y += (b.ty-b.y)*0.02 + Math.sin(now*0.003+b.phase)*0.3;
+    if (Math.random()<0.003){ b.tx = rand(20,GW-20); b.ty = groundY(b.tx)-rand(18,50); }
+    const glow = 0.55 + Math.sin(now*0.004+b.phase)*0.45;
+    const gr = g.createRadialGradient(b.x,b.y,0,b.x,b.y,9);
+    gr.addColorStop(0, `rgba(255,220,120,${0.6*glow})`);
+    gr.addColorStop(1, 'rgba(255,220,120,0)');
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(b.x,b.y,9,0,TAU); g.fill();
+    g.fillStyle = `hsl(48,100%,${60+glow*25}%)`;
+    g.beginPath(); g.arc(b.x,b.y,2.2,0,TAU); g.fill();
+    const la = 1 - Math.min(1,(now-b.label)/3000);
+    if (la>0){
+      g.globalAlpha = la;
+      g.font = '600 9px sans-serif';
+      g.textAlign = 'center';
+      g.fillStyle = '#fff';
+      g.fillText(b.name, b.x, b.y-9);
+      g.globalAlpha = 1;
+    }
+  }
+
+  // 花火
+  for (let i=sparks.length-1;i>=0;i--){
+    const s = sparks[i];
+    const t = (now-s.born)/1000;
+    let alive = false;
+    for (const p of s.parts){
+      if (t>p.life) continue;
+      alive = true;
+      const px = p.x + p.vx*t, py = p.y + p.vy*t + 14*t*t;
+      g.globalAlpha = 1 - t/p.life;
+      g.fillStyle = p.col;
+      g.fillRect(px-1, py-1, 2, 2);
+    }
+    g.globalAlpha = 1;
+    if (!alive) sparks.splice(i,1);
+  }
+
+  // 枠
+  g.strokeStyle = 'rgba(255,255,255,0.14)';
+  g.lineWidth = 1;
+  roundRect(g, 0.5, 0.5, GW-1, GH-1, 12); g.stroke();
+}
+
+function roundRect(c,x,y,w,h,r){
+  c.beginPath();
+  c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath();
+}
+
+// ============================================================
+// コメント → 庭(本番はChatSourceがYouTube/わんコメに差し替わる)
+// ============================================================
+const seen = new Set();
+function react(m){
+  let hit = false;
+  const t = m.text;
+  if (!seen.has(m.name)){
+    seen.add(m.name);
+    addBug(m.name, m.color);
+    hit = true;
+  } else {
+    pokeBug(m.name);
+  }
+  if (/草|^[wWｗＷ]+$|わろた|笑/.test(t)) { addGrass(); if (t.length>2) addGrass(); hit = true; }
+  if (/888|８８８|ぱちぱち|パチパチ/.test(t)) { addFirework(); hit = true; }
+  if (/かわい|可愛|すき|好き|きれい|綺麗|尊い|えらい/.test(t)) { addFlower(); hit = true; }
+  return hit;
+}
+
+const chatListeners = [];
+function onChat(fn){ chatListeners.push(fn); }
+function emitChat(m){ for (const fn of chatListeners) fn(m); }
+onChat(m => renderMsg(m, react(m)));
+
+// チャット表示
+const msgs = $('msgs');
+function renderMsg(m, hit){
+  const el = document.createElement('div');
+  el.className = 'm';
+  el.innerHTML = `<div class="a" style="background:${m.color}"></div>
+    <div class="n">${esc(m.name)}</div><div class="b${hit?' hit':''}">${esc(m.text)}</div>`;
+  msgs.appendChild(el);
+  while (msgs.children.length > 60) msgs.removeChild(msgs.firstChild);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+// 手入力(あなた=視聴者)
+const input = $('chat-input');
+function sendManual(text){
+  const t = (text ?? input.value).trim();
+  if (!t) return;
+  emitChat({ name:'あなた', text:t, color:'#ffd24d' });
+  if (text===undefined){ input.value=''; input.focus(); }
+}
+$('btn-send').addEventListener('click', () => sendManual());
+input.addEventListener('keydown', e => { if (e.key==='Enter') sendManual(); });
+for (const b of document.querySelectorAll('.quick button')){
+  b.addEventListener('click', () => sendManual(b.dataset.say));
+}
+
+// 自動デモ
+const DEMO_NAMES = ['もちこ','ねこすけ','Kai⭐','ろむ専さん','みかん','タロウ','ふぐり','ASMR好き','新規です','わかば','Pon','ゆずぽん','カナ','ハチ','tomo_3','まめだいふく','すずらん','Rey','ぴょん','くろまめ','ナナシ','ten','こけし','ミドリ','ボンド','ushi','さくさく','ゲコ太','ノア','ひつじ'];
+const demoUsers = DEMO_NAMES.map((n,i)=>({ name:n, color:`hsl(${(i*47)%360},55%,55%)` }));
+const DEMO_SAY = ['草','www','8888','かわいい','こんにちは!','うますぎ','それなw','おしい','きれい','初見です','すき','今北','wwwww','尊い…','888888','ないす'];
+let demoOn=false, demoTimer=null;
+function demoTick(){
+  if (!demoOn) return;
+  emitChat({ ...pick(demoUsers), text:pick(DEMO_SAY) });
+  demoTimer = setTimeout(demoTick, rand(500,2400));
+}
+$('demo-toggle').addEventListener('change', e => {
+  demoOn = e.target.checked;
+  clearTimeout(demoTimer);
+  if (demoOn) demoTick();
+});
+
+// ============================================================
+// 今日の庭カード
+// ============================================================
+$('btn-card').addEventListener('click', () => {
+  const cw=640, ch=540;
+  const c = document.createElement('canvas');
+  c.width=cw; c.height=ch;
+  const x = c.getContext('2d');
+  const bg = x.createLinearGradient(0,0,0,ch);
+  bg.addColorStop(0,'#1e2130'); bg.addColorStop(1,'#171a26');
+  x.fillStyle=bg; x.fillRect(0,0,cw,ch);
+  x.fillStyle='#e8ecff';
+  x.font='700 24px "Hiragino Sans",sans-serif';
+  x.textAlign='center';
+  x.fillText('🌱 今日の庭', cw/2, 46);
+  x.font='12px sans-serif';
+  x.fillStyle='#8a93b8';
+  const mins = Math.floor((performance.now()-startT)/60000);
+  x.fillText(new Date().toLocaleDateString('ja-JP') + ' · ' + mins + '分の配信で育った庭', cw/2, 70);
+  // 庭スナップショット
+  const gw2 = cw-80, gh2 = gw2*(GH/GW);
+  x.drawImage(gc, 40, 95, gw2, gh2);
+  // 統計
+  x.font='600 16px "Hiragino Sans",sans-serif';
+  x.fillStyle='#ffd24d';
+  x.fillText(`草 ${stats.kusa} 本 · 花 ${stats.hana} 輪 · 花火 ${stats.hanabi} 発 · 蛍 ${seen.size} 匹`, cw/2, 110+gh2+34);
+  x.font='11px sans-serif';
+  x.fillStyle='#667';
+  x.fillText('コメントの庭 — DevNull Studio', cw/2, ch-22);
+  const a = document.createElement('a');
+  a.href = c.toDataURL('image/png');
+  a.download = 'garden_' + Date.now() + '.png';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+
+// ============================================================
+// メインループ
+// ============================================================
+sizeFake(); sizeGarden();
+// 初期状態: 少しだけ育った状態から(空っぽは寂しい)
+for (let i=0;i<6;i++) addGrass();
+stats.kusa = 0;
+
+function frame(now){
+  requestAnimationFrame(frame);
+  drawFake(now);
+  drawGarden(now);
+}
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>

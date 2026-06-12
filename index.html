@@ -3,248 +3,353 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DevNull Studio — App & Web Development</title>
-<meta name="description" content="DevNull Studio is a software development studio based in Japan, specializing in mobile apps, web applications, and digital experiences.">
+<title>DevNull Studio — 遊び心で、Webをつくる</title>
+<meta name="description" content="DevNull Studioは東京の小さな開発スタジオ。ブラウザでそのまま遊べるゲームと、配信を楽しくするツールをつくっています。">
 <link rel="canonical" href="https://devnull-studio.com">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg: #fafafa;
-  --text: #1a1a1a;
-  --text-dim: #555;
-  --text-muted: #888;
-  --border: #e5e5e5;
-  --accent: #0071e3;
+  --paper: #faf8f2;
+  --paper-2: #f3efe5;
+  --ink: #1d1a16;
+  --ink-dim: #5a544a;
+  --ink-faint: #948c7e;
+  --line: #e6e0d2;
+  --shu: #b3342e;
+  --gold: #b08f3c;
 }
 
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  line-height: 1.7;
+  font-family: 'Hiragino Sans', 'Noto Sans JP', -apple-system, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.8;
   -webkit-font-smoothing: antialiased;
 }
 
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
+::selection { background: rgba(179,52,46,0.15); }
 
-/* Nav */
+a { color: inherit; text-decoration: none; }
+
+.serif { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif; }
+
+/* ===== ヘッダー ===== */
 header {
-  border-bottom: 1px solid var(--border);
-  padding: 0 clamp(24px, 4vw, 64px);
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  background: rgba(250,250,250,0.9);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  z-index: 10;
+  position: sticky; top: 0; z-index: 10;
+  height: 60px;
+  padding: 0 clamp(20px, 4vw, 56px);
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(250,248,242,0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
 }
-
-.logo {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.01em;
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; letter-spacing: 0.02em; }
+.logo .seal {
+  width: 26px; height: 26px;
+  background: var(--shu); color: var(--paper);
+  border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+  font-family: 'Hiragino Mincho ProN', serif;
+  transform: rotate(-3deg);
 }
-
-.logo span { color: var(--text-muted); font-weight: 400; }
-
+nav { display: flex; gap: clamp(14px, 2.5vw, 30px); }
 nav a {
-  font-size: 13px;
-  color: var(--text-dim);
-  margin-left: 28px;
-  transition: color 0.2s;
+  font-size: 13px; color: var(--ink-dim);
+  padding: 4px 2px;
+  border-bottom: 2px solid transparent;
+  transition: color .2s, border-color .2s;
 }
+nav a:hover { color: var(--ink); border-color: var(--shu); }
 
-nav a:hover { color: var(--text); text-decoration: none; }
-
-/* Container */
-.container {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 0 clamp(24px, 4vw, 64px);
-}
-
-/* Hero */
+/* ===== ヒーロー ===== */
 .hero {
-  padding: 100px 0 80px;
-  text-align: center;
+  padding: clamp(72px, 12vh, 130px) clamp(20px, 4vw, 56px) clamp(60px, 9vh, 100px);
+  max-width: 1060px; margin: 0 auto;
+  position: relative;
 }
-
 .hero h1 {
-  font-size: clamp(28px, 4vw, 42px);
+  font-size: clamp(34px, 6vw, 64px);
   font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.2;
-  margin-bottom: 20px;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
 }
-
+.hero h1 .accent { color: var(--shu); }
 .hero p {
-  font-size: clamp(15px, 2vw, 18px);
-  color: var(--text-dim);
-  max-width: 520px;
-  margin: 0 auto;
+  margin-top: 26px;
+  font-size: clamp(14px, 1.8vw, 17px);
+  color: var(--ink-dim);
+  max-width: 560px;
+  line-height: 2.1;
+}
+.hero .cta { margin-top: 36px; display: flex; gap: 14px; flex-wrap: wrap; }
+.btn {
+  display: inline-block;
+  font-size: 14px; font-weight: 700;
+  padding: 12px 30px;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink);
+  transition: all .2s;
+}
+.btn:hover { background: var(--ink); color: var(--paper); transform: translateY(-2px); }
+.btn.fill { background: var(--shu); border-color: var(--shu); color: #fff; }
+.btn.fill:hover { background: #c9453e; border-color: #c9453e; }
+.hero .stroke {
+  position: absolute; right: clamp(0px, 4vw, 60px); top: 50px;
+  width: clamp(120px, 22vw, 280px); opacity: 0.9;
+  pointer-events: none;
 }
 
-/* Section */
-.section {
-  padding: 64px 0;
-  border-top: 1px solid var(--border);
-}
+/* ===== セクション共通 ===== */
+section { max-width: 1060px; margin: 0 auto; padding: clamp(48px, 8vh, 84px) clamp(20px, 4vw, 56px); }
+.sec-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 34px; }
+.sec-head .no { font-size: 12px; color: var(--shu); letter-spacing: 0.2em; font-weight: 700; }
+.sec-head h2 { font-size: clamp(22px, 3vw, 30px); font-weight: 700; letter-spacing: 0.06em; }
+.sec-head .en { font-size: 11px; color: var(--ink-faint); letter-spacing: 0.3em; }
 
-.section-title {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--text-muted);
-  margin-bottom: 24px;
+/* ===== 作品カード ===== */
+.works { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; }
+.work {
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  transition: transform .25s, box-shadow .25s;
 }
+.work:hover { transform: translateY(-5px); box-shadow: 0 16px 40px rgba(60,45,20,0.12); }
+.thumb {
+  height: 175px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.t-sumi {
+  background:
+    radial-gradient(ellipse at 75% 18%, rgba(255,255,250,0.6), transparent 55%),
+    radial-gradient(ellipse at 15% 85%, rgba(176,143,60,0.18), transparent 50%),
+    #ece4d0;
+}
+.t-sumi .big { font-family:'Hiragino Mincho ProN',serif; font-size: 44px; font-weight: 700; color: #1d1a16; letter-spacing: 0.35em; margin-left: 0.35em; }
+.t-sumi .firefly { position: absolute; right: 28%; top: 30%; width: 10px; height: 10px; border-radius: 50%; background: #e8b54a; box-shadow: 0 0 18px 6px rgba(232,181,74,0.55); }
+.t-cosmic { background: radial-gradient(circle at 30% 30%, #1c1c3a, #0a0a14 75%); }
+.t-cosmic .big { font-family: 'Courier New', monospace; font-weight: 700; font-size: 23px; letter-spacing: 0.12em;
+  background: linear-gradient(180deg,#fff 20%,#8ab4ff 60%,#c08aff 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.t-glitch { background: linear-gradient(160deg, #05060a, #101522); }
+.t-glitch .big { font-family: 'Courier New', monospace; font-weight: 700; font-size: 21px; color: #e8fbff;
+  text-shadow: 2px 0 0 rgba(255,0,90,0.75), -2px 0 0 rgba(0,229,255,0.75); }
+.t-sub { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 9px; letter-spacing: 0.4em; color: rgba(255,255,255,0.5); }
+.t-sumi .t-sub { color: rgba(29,26,22,0.45); }
+.work-body { padding: 18px 20px 20px; }
+.work-body h3 { font-size: 16.5px; font-weight: 700; }
+.work-body p { font-size: 13px; color: var(--ink-dim); margin-top: 7px; line-height: 1.85; }
+.tags { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font-size: 10.5px; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 999px; padding: 2px 11px; }
+.tag.hot { color: var(--shu); border-color: rgba(179,52,46,0.35); }
 
-.section h2 {
-  font-size: 22px;
+/* ===== 実験室 ===== */
+.lab-band { background: var(--paper-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.lab-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; }
+.lab-item {
+  display: block;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 24px 26px;
+  transition: transform .25s, box-shadow .25s;
+  position: relative;
+}
+.lab-item:hover { transform: translateY(-4px); box-shadow: 0 14px 34px rgba(60,45,20,0.1); }
+.lab-item .icon { font-size: 30px; }
+.lab-item h3 { font-size: 16px; font-weight: 700; margin-top: 12px; }
+.lab-item p { font-size: 13px; color: var(--ink-dim); margin-top: 7px; line-height: 1.85; }
+.lab-item .stat { margin-top: 14px; font-size: 11.5px; font-weight: 700; color: var(--shu); letter-spacing: 0.06em; }
+.lab-item.soon { opacity: 0.75; }
+.lab-item.soon .stat { color: var(--ink-faint); }
+.lab-note { margin-top: 26px; font-size: 12.5px; color: var(--ink-faint); line-height: 2; }
+
+/* ===== About ===== */
+.about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px, 5vw, 70px); align-items: start; }
+.about-grid p { font-size: 14px; color: var(--ink-dim); line-height: 2.2; }
+.about-grid p + p { margin-top: 16px; }
+.belief {
+  font-family: 'Hiragino Mincho ProN', serif;
+  font-size: clamp(19px, 2.6vw, 26px);
   font-weight: 600;
-  letter-spacing: -0.02em;
-  margin-bottom: 16px;
+  letter-spacing: 0.08em;
+  line-height: 2;
+  border-left: 3px solid var(--shu);
+  padding-left: 24px;
 }
+@media (max-width: 720px) { .about-grid { grid-template-columns: 1fr; } }
 
-.section p, .section li {
-  font-size: 15px;
-  color: var(--text-dim);
-  line-height: 1.8;
+/* ===== Contact ===== */
+.contact-box {
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 20px;
+  padding: clamp(36px, 6vw, 60px);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 26px; flex-wrap: wrap;
 }
+.contact-box h2 { font-size: clamp(20px, 3vw, 28px); font-weight: 700; letter-spacing: 0.06em; }
+.contact-box p { font-size: 13px; color: rgba(250,248,242,0.65); margin-top: 8px; }
+.contact-box .btn { border-color: var(--paper); color: var(--paper); }
+.contact-box .btn:hover { background: var(--paper); color: var(--ink); }
 
-/* Services grid */
-.services {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 32px;
-  margin-top: 24px;
-}
-
-.service h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.service p {
-  font-size: 14px;
-  color: var(--text-muted);
-}
-
-/* Contact */
-.contact-info {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.contact-row {
-  display: flex;
-  gap: 16px;
-  font-size: 15px;
-}
-
-.contact-label {
-  color: var(--text-muted);
-  min-width: 80px;
-  flex-shrink: 0;
-}
-
-/* Footer */
+/* ===== フッター ===== */
 footer {
-  border-top: 1px solid var(--border);
-  padding: 32px clamp(24px, 4vw, 64px);
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-muted);
+  border-top: 1px solid var(--line);
+  padding: 30px clamp(20px, 4vw, 56px);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px;
+  font-size: 12px; color: var(--ink-faint);
 }
+footer .links { display: flex; gap: 20px; }
+footer a:hover { color: var(--ink); }
 
-footer a { color: var(--text-muted); }
-footer a:hover { color: var(--text); }
-footer .links { margin-top: 8px; }
-footer .links a { margin: 0 12px; }
-
-@media (max-width: 640px) {
-  .services { grid-template-columns: 1fr; }
-  nav a { margin-left: 16px; font-size: 12px; }
+@media (max-width: 560px) {
+  nav a:nth-child(3) { display: none; }
+  .hero .stroke { display: none; }
 }
 </style>
 </head>
 <body>
 
 <header>
-  <a href="/" class="logo">DevNull Studio</a>
+  <a href="/" class="logo"><span class="seal">D</span>DevNull Studio</a>
   <nav>
-    <a href="#about">About</a>
-    <a href="#services">Services</a>
-    <a href="#contact">Contact</a>
-    <a href="/games.html">Games</a>
+    <a href="#works">作品</a>
+    <a href="#lab">実験室</a>
+    <a href="#about">スタジオ</a>
+    <a href="#contact">お問い合わせ</a>
   </nav>
 </header>
 
-<div class="container">
-
-  <section class="hero">
-    <h1>Building apps that<br>people love to use.</h1>
-    <p>DevNull Studio is a software development studio based in Japan. We design and build mobile apps, web applications, and digital products.</p>
-  </section>
-
-  <section class="section" id="about">
-    <div class="section-title">About</div>
-    <h2>Who We Are</h2>
-    <p>DevNull Studio is an independent software development studio focused on creating high-quality digital experiences. We specialize in full-stack development, from concept and design to deployment and ongoing support. Our work spans iOS and Android apps, web applications, and cross-platform solutions.</p>
-  </section>
-
-  <section class="section" id="services">
-    <div class="section-title">Services</div>
-    <h2>What We Do</h2>
-    <div class="services">
-      <div class="service">
-        <h3>Mobile Apps</h3>
-        <p>Native and cross-platform mobile applications for iOS and Android using Swift, React Native, and Expo.</p>
-      </div>
-      <div class="service">
-        <h3>Web Applications</h3>
-        <p>Modern web apps and platforms built with React, Next.js, TypeScript, and cloud infrastructure.</p>
-      </div>
-      <div class="service">
-        <h3>UI/UX Design</h3>
-        <p>User-centered design that balances aesthetics with usability, from wireframes to polished interfaces.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="contact">
-    <div class="section-title">Contact</div>
-    <h2>Get in Touch</h2>
-    <p>For inquiries about our services or partnership opportunities, please contact us.</p>
-    <div class="contact-info">
-      <div class="contact-row">
-        <span class="contact-label">Email</span>
-        <a href="mailto:contact@devnull-studio.com">contact@devnull-studio.com</a>
-      </div>
-      <div class="contact-row">
-        <span class="contact-label">Location</span>
-        <span>Tokyo, Japan</span>
-      </div>
-    </div>
-  </section>
-
+<div class="hero">
+  <svg class="stroke" viewBox="0 0 280 220" fill="none" aria-hidden="true">
+    <path d="M20 190 Q90 120 150 130 T265 40" stroke="#1d1a16" stroke-width="9" stroke-linecap="round" opacity="0.88"/>
+    <path d="M150 200 Q200 185 250 195" stroke="#1d1a16" stroke-width="5" stroke-linecap="round" opacity="0.5"/>
+    <circle cx="235" cy="62" r="6" fill="#e8b54a"/>
+    <circle cx="235" cy="62" r="13" fill="none" stroke="#b08f3c" stroke-width="1.5" opacity="0.6"/>
+  </svg>
+  <h1>遊び心で、<br>Webを<span class="accent">つくる</span>。</h1>
+  <p>DevNull Studioは東京の小さな開発スタジオです。インストール不要でブラウザからそのまま遊べるゲームと、ライブ配信を楽しくする道具をつくっています。</p>
+  <div class="cta">
+    <a class="btn fill" href="/sumi.html">墨蛍 を遊ぶ</a>
+    <a class="btn" href="#works">作品を見る</a>
+  </div>
 </div>
 
+<section id="works">
+  <div class="sec-head">
+    <span class="no">01</span>
+    <h2>作品</h2>
+    <span class="en">GAMES</span>
+  </div>
+  <div class="works">
+    <a class="work" href="/sumi.html">
+      <div class="thumb t-sumi">
+        <span class="big">墨蛍</span>
+        <span class="firefly"></span>
+        <span class="t-sub">SUMI — HOTARU</span>
+      </div>
+      <div class="work-body">
+        <h3>墨蛍(すみほたる)</h3>
+        <p>筆で壁を描き、跳ねる蛍を星へ導く。描いた墨は消えず、一局ごとにあなたの軌跡が一幅の墨絵になる。夜を巡るステージモードと、どこまで生き延びるかの無限の夜。</p>
+        <div class="tags"><span class="tag hot">いちおし</span><span class="tag">描く</span><span class="tag">iPad / Apple Pencil</span></div>
+      </div>
+    </a>
+    <a class="work" href="/cosmic.html">
+      <div class="thumb t-cosmic">
+        <span class="big">COSMIC FUSION</span>
+        <span class="t-sub">MERGE THE PLANETS</span>
+      </div>
+      <div class="work-body">
+        <h3>COSMIC FUSION</h3>
+        <p>星を落として、同じ星どうしを合体させて進化させる物理パズル。隕石から太陽を目指そう。じっくり遊べてタブレットに最適。</p>
+        <div class="tags"><span class="tag">パズル</span><span class="tag">物理</span></div>
+      </div>
+    </a>
+    <a class="work" href="/game.html">
+      <div class="thumb t-glitch">
+        <span class="big">GLITCH//RUNNER</span>
+        <span class="t-sub">SURVIVE THE SIGNAL STORM</span>
+      </div>
+      <div class="work-body">
+        <h3>GLITCH//RUNNER</h3>
+        <p>迫りくるネオン弾幕をかわし続ける高速アクション。弾をかすめるほどスコア倍率が上がるリスクリターン設計。腕に自信のある人向け。</p>
+        <div class="tags"><span class="tag">アクション</span><span class="tag">高難度</span></div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<div class="lab-band">
+  <section id="lab">
+    <div class="sec-head">
+      <span class="no">02</span>
+      <h2>実験室</h2>
+      <span class="en">LAB — 配信を楽しくする道具の試作</span>
+    </div>
+    <div class="lab-list">
+      <a class="lab-item" href="/garden-demo.html">
+        <div class="icon">🌱</div>
+        <h3>コメントの庭</h3>
+        <p>画面の隅に置く小さな庭。視聴者が「草」と打つと草が生え、「8888」で花火が上がり、初見さんは蛍になって住み着く。配信を邪魔しない常駐演出。</p>
+        <div class="stat">▶ ブラウザで実証デモを触れます</div>
+      </a>
+      <a class="lab-item" href="/race-demo.html">
+        <div class="icon">🏁</div>
+        <h3>レース投票</h3>
+        <p>コメントで「1」と打つと、その選択肢が走り出すアンケート。投票者の名前が刻まれ、接戦がそのまま配信の見せ場になる。</p>
+        <div class="stat">▶ ブラウザで実証デモを触れます</div>
+      </a>
+      <div class="lab-item soon">
+        <div class="icon">📋</div>
+        <h3>配信カルテ(構想中)</h3>
+        <p>チャットの流れから、盛り上がった瞬間・常連さんの動き・初見さんを1枚にまとめる配信後の日報。切り抜き候補も自動で。</p>
+        <div class="stat">準備中</div>
+      </div>
+    </div>
+    <div class="lab-note">※ 実験室のデモはチャット欄を内蔵しており、配信や特別な設定なしで動きを確認できます。すべてローカル処理で、コメントが外部に送信されることはありません。</div>
+  </section>
+</div>
+
+<section id="about">
+  <div class="sec-head">
+    <span class="no">03</span>
+    <h2>スタジオについて</h2>
+    <span class="en">ABOUT</span>
+  </div>
+  <div class="about-grid">
+    <div class="belief serif">小さくても、<br>手触りのいいものを。</div>
+    <div>
+      <p>DevNull Studioは、東京を拠点にWebの企画・設計・開発までを一貫して行う独立系のスタジオです。アプリのような体験をインストールなしで届けられる、ブラウザという場所の可能性を信じています。</p>
+      <p>自社作品のゲームづくりで磨いた「触って気持ちいい」の感覚を、配信ツールやWebアプリケーションにも注いでいます。TypeScript / React / モバイルアプリ開発のご相談も承ります。</p>
+    </div>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="contact-box">
+    <div>
+      <h2>お問い合わせ</h2>
+      <p>制作のご依頼・協業のご相談・作品の感想、なんでもどうぞ。</p>
+    </div>
+    <a class="btn" href="mailto:contact@devnull-studio.com">contact@devnull-studio.com</a>
+  </div>
+</section>
+
 <footer>
-  <div>&copy; 2026 DevNull Studio. All rights reserved.</div>
+  <div>&copy; 2026 DevNull Studio — Tokyo, Japan</div>
   <div class="links">
-    <a href="/privacy.html">Privacy Policy</a>
+    <a href="/games.html">ゲーム一覧</a>
+    <a href="/privacy.html">プライバシーポリシー</a>
   </div>
 </footer>
 
