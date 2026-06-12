@@ -372,6 +372,54 @@ section { max-width: 1060px; margin: 0 auto; padding: clamp(48px, 8vh, 84px) cla
 .lab-item.soon .stat { color: var(--ink-faint); }
 .lab-note { margin-top: 26px; font-size: 12.5px; color: var(--ink-faint); line-height: 2; }
 
+/* ===== おしらせ(正直な開発記録) ===== */
+.news-list { display: flex; flex-direction: column; }
+.news-item {
+  display: flex; gap: 18px; align-items: baseline;
+  padding: 13px 4px;
+  border-bottom: 1px dashed var(--line);
+  font-size: 14px;
+}
+.news-item .d { font-size: 12px; color: var(--ink-faint); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.news-item .t { color: var(--ink-dim); }
+.news-item .t b { color: var(--ink); }
+.news-item .tag-n {
+  font-size: 10px; color: var(--shu);
+  border: 1px solid rgba(179,52,46,0.4); border-radius: 999px;
+  padding: 1px 9px; white-space: nowrap;
+}
+.news-foot { margin-top: 14px; font-size: 12px; color: var(--ink-faint); }
+
+/* ===== FAQ ===== */
+.faq-list { display: flex; flex-direction: column; gap: 10px; }
+.faq-list details {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 0 20px;
+}
+.faq-list summary {
+  cursor: pointer; list-style: none;
+  font-size: 14.5px; font-weight: 700;
+  padding: 15px 0;
+  display: flex; align-items: center; gap: 12px;
+}
+.faq-list summary::before { content: 'Q'; color: var(--shu); font-weight: 800; }
+.faq-list summary::-webkit-details-marker { display: none; }
+.faq-list details p { font-size: 13.5px; color: var(--ink-dim); padding: 0 0 16px 26px; }
+.faq-list details[open] summary { border-bottom: 1px dashed var(--line); margin-bottom: 12px; }
+
+/* ===== ご依頼の流れ ===== */
+.flow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+.flow .step {
+  flex: 1; min-width: 130px;
+  background: rgba(250,248,242,0.12); border: 1px solid rgba(250,248,242,0.3);
+  border-radius: 10px; padding: 12px 14px;
+}
+.flow .step .n { font-size: 11px; color: #d9b34a; font-weight: 700; }
+.flow .step .tt { font-size: 13px; font-weight: 700; margin-top: 2px; }
+.flow .step .dd { font-size: 11px; color: rgba(250,248,242,0.65); margin-top: 4px; line-height: 1.7; }
+body.night .flow .step .dd { color: rgba(29,26,22,0.6); }
+body.night .flow .step { background: rgba(29,26,22,0.05); border-color: rgba(29,26,22,0.25); }
+
 /* ===== About ===== */
 .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px, 5vw, 70px); align-items: start; }
 .about-grid p { font-size: 14px; color: var(--ink-dim); line-height: 2.2; }
@@ -425,7 +473,8 @@ footer a:hover { color: var(--ink); }
   <nav>
     <a href="#works">作品</a>
     <a href="#lab">実験室</a>
-    <a href="#about">スタジオ</a>
+    <a href="#news">おしらせ</a>
+    <a href="#faq">FAQ</a>
     <a href="#contact">お問い合わせ</a>
   </nav>
 </header>
@@ -505,6 +554,59 @@ footer a:hover { color: var(--ink); }
   </section>
 </div>
 
+<section id="news">
+  <div class="sec-head">
+    <h2>おしらせ<svg class="sq" viewBox="0 0 120 9" preserveAspectRatio="none"><path d="M2 6 Q 20 2 40 5.5 T 78 5 T 118 4"/></svg></h2>
+    <span class="memo">開発の記録。正直に書いています</span>
+  </div>
+  <div class="news-list">
+    <div class="news-item"><span class="d">2026.06</span><span class="tag-n">サイト</span><span class="t"><b>実績システムを追加。</b>このサイトの隠し要素は7つです。7つということにしておいてください。</span></div>
+    <div class="news-item"><span class="d">2026.06</span><span class="tag-n">実験室</span><span class="t"><b>「コメントの庭」「レース投票」の実証デモを公開。</b>配信を楽しくする道具を作りはじめました。チャット欄つきでその場で試せます。</span></div>
+    <div class="news-item"><span class="d">2026.06</span><span class="tag-n">墨蛍</span><span class="t"><b>祈り(引き寄せ)をまた弱くしました。</b>通算2敗です。今は夜巡りと宵だけで使えます。</span></div>
+    <div class="news-item"><span class="d">2026.06</span><span class="tag-n">墨蛍</span><span class="t"><b>「描かずに祈るだけで星が取れる」抜け道を塞ぎました。</b>見つけた方、正直すごいと思いました。</span></div>
+    <div class="news-item"><span class="d">2026.06</span><span class="tag-n">墨蛍</span><span class="t"><b>ステージモード「夜巡り」・難易度3段階・ギャラリーを追加。</b>星の位置が毎回変わるバグも直しました(ステージの意味がなかった)。</span></div>
+    <div class="news-item"><span class="d">2026.06</span><span class="tag-n">墨蛍</span><span class="t"><b>公開しました。</b>筆で描いて、蛍を星へ導くゲームです。</span></div>
+  </div>
+  <div class="news-foot">これより古い記録は /dev/null にあります(つまり、ありません)。</div>
+</section>
+
+<section id="faq">
+  <div class="sec-head">
+    <h2>よくある質問<svg class="sq" viewBox="0 0 120 9" preserveAspectRatio="none"><path d="M2 6 Q 20 2 40 5.5 T 78 5 T 118 4"/></svg></h2>
+    <span class="memo">聞かれる前に答えておきます</span>
+  </div>
+  <div class="faq-list">
+    <details>
+      <summary>ゲームは無料ですか?</summary>
+      <p>全部無料で、ブラウザで開くだけです。アカウント登録もインストールもありません。広告もいまのところありません。</p>
+    </details>
+    <details>
+      <summary>スマホやiPadでも遊べますか?</summary>
+      <p>遊べます。墨蛍はiPad+Apple Pencilがいちばん気持ちいいです(筆圧で線の太さが変わります)。スマホでも指で問題なく遊べます。</p>
+    </details>
+    <details>
+      <summary>セーブデータはどこに保存されますか?</summary>
+      <p>あなたの端末の中だけです(ブラウザのlocalStorage)。当スタジオのサーバーには何も送信されません。そもそもサーバーがありません。ブラウザのデータを消すと記録も消えるので、その点だけご注意を。</p>
+    </details>
+    <details>
+      <summary>実況・配信・切り抜きをしてもいいですか?</summary>
+      <p>大歓迎です。連絡不要・収益化OK。詳しくは<a href="/guidelines.html">実況・二次創作ガイドライン</a>へ(短いので30秒で読めます)。</p>
+    </details>
+    <details>
+      <summary>開発のご依頼はできますか?</summary>
+      <p>できます。Webアプリ・モバイルアプリ・ゲーム的な演出のあるWebなど。下のお問い合わせからメールをください。小さい相談ほど歓迎です。</p>
+    </details>
+    <details>
+      <summary>黒猫は実在しますか?</summary>
+      <p>実在します(非常勤)。出社日は不定です。このサイトのどこかにも来ます。</p>
+    </details>
+    <details>
+      <summary>実績が 8/7 になったのですが、バグですか?</summary>
+      <p>仕様です。おめでとうございます。あなたはモニターの裏側に気付いた人です。</p>
+    </details>
+  </div>
+</section>
+
 <section id="about">
   <div class="sec-head">
     <h2>スタジオについて<svg class="sq" viewBox="0 0 120 9" preserveAspectRatio="none"><path d="M2 6 Q 20 2 40 5.5 T 78 5 T 118 4"/></svg></h2>
@@ -521,18 +623,27 @@ footer a:hover { color: var(--ink); }
 </section>
 
 <section id="contact">
-  <div class="contact-box">
-    <div>
-      <h2>お問い合わせ</h2>
-      <p>制作のご依頼・協業のご相談・作品の感想、なんでもどうぞ。返信は人間が書きます。</p>
+  <div class="contact-box" style="display:block;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:26px; flex-wrap:wrap;">
+      <div>
+        <h2>お問い合わせ</h2>
+        <p>制作のご依頼・協業のご相談・作品の感想、なんでもどうぞ。返信は人間が書きます。</p>
+      </div>
+      <a class="btn" href="mailto:contact@devnull-studio.com">contact@devnull-studio.com</a>
     </div>
-    <a class="btn" href="mailto:contact@devnull-studio.com">contact@devnull-studio.com</a>
+    <div class="flow">
+      <div class="step"><div class="n">STEP 1</div><div class="tt">メールで相談</div><div class="dd">ふわっとした内容で大丈夫です。「こういうの作れる?」だけでも</div></div>
+      <div class="step"><div class="n">STEP 2</div><div class="tt">人間が返信</div><div class="dd">翌営業日までに。実現方法と概算の目安をお伝えします</div></div>
+      <div class="step"><div class="n">STEP 3</div><div class="tt">お見積もり</div><div class="dd">内容と予算が合えば着手。合わなければ無理にすすめません</div></div>
+      <div class="step"><div class="n">STEP 4</div><div class="tt">つくる</div><div class="dd">動くものを毎週お見せしながら進めます。途中で触れます</div></div>
+    </div>
   </div>
 </section>
 
 <footer>
   <div><span id="copy" style="cursor:pointer" title="?">&copy;</span> 2026 DevNull Studio — Tokyo, Japan<span style="margin-left:14px; opacity:0.6">手書きHTML・外部ライブラリ0個</span></div>
   <div class="links">
+    <a href="/guidelines.html">実況・二次創作ガイドライン</a>
     <a href="/privacy.html">プライバシーポリシー</a>
   </div>
 </footer>
