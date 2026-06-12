@@ -1,0 +1,114 @@
+# Opus を Fable に寄せる最適化ガイド
+
+Fable サブスクが使えなくなる前提で、`claude-opus-4-8`（Opus 4.8）の出力品質と
+振る舞いを、できるだけ `claude-fable-5`（Fable 5）に近づけるための実運用メモ。
+
+## 前提（正直なところ）
+
+- **Fable 5 はそもそも Opus 4.8 より上位の最も高性能なモデル。** 素のモデル知能を
+  同一にすることは不可能。
+- ただし **Fable の実務上の優位の多くは「動かし方」から来る** — 常時思考・高 effort、
+  指示しすぎないプロンプト様式、並列 sub-agent やメモリといったエージェント構成。
+  これらのレバーは Opus 4.8 でもほぼ同じように効く。
+- **Opus 4.8 は単価が Fable の半分**（入力 $5 / 出力 $25 per MTok、Fable は $10 / $50）。
+  浮いた予算を「高 effort 運用」「多段検証」「best-of-N」に再投資して差を埋める。
+
+| | Fable 5 | Opus 4.8 |
+|---|---|---|
+| Model ID | `claude-fable-5` | `claude-opus-4-8` |
+| 価格 (in/out per MTok) | $10 / $50 | $5 / $25 |
+| context / max output | 1M / 128K | 1M / 128K |
+| thinking | 常時オン（`thinking` 省略 or `adaptive`） | adaptive（明示が必要） |
+| effort | low〜xhigh / max | low〜xhigh / max |
+
+---
+
+## 1. 設定レベル（すぐ効く・必須）
+
+| レバー | 設定 | 理由 |
+|---|---|---|
+| effort | `output_config: {effort: "xhigh"}`（難所は `"max"`） | Fable の賢さは高 effort の寄与が大きい。Opus 4.8 でも `xhigh` がコーディング/エージェントの最適点。`high` を基準に `medium/high/xhigh` をスイープして決める |
+| adaptive thinking | `thinking: {type: "adaptive"}` を **明示** | 省略すると思考オフになる（Fable は常時オン）。`display: "summarized"` で推論サマリも可視化 |
+| context / output | 1M context・最大 128K 出力。出力は `.stream()` ＋ `get_final_message()` | 長尺タスクで打ち切らない。128K 出力はストリーミング必須 |
+| prompt caching | 安定プレフィックス（system / tools）をキャッシュ | 高 effort 運用や多段検証のコストを下げる |
+
+```python
+client.messages.create(
+    model="claude-opus-4-8",
+    max_tokens=64000,                      # ストリーミング時は広めに
+    thinking={"type": "adaptive", "display": "summarized"},
+    output_config={"effort": "xhigh"},     # 難所は "max"
+    system=[{"type": "text", "text": SYSTEM,
+             "cache_control": {"type": "ephemeral"}}],
+    messages=[...],
+)
+```
+
+> ⚠️ Opus 4.8 / Fable 5 では `temperature` / `top_p` / `top_k` と
+> `thinking.budget_tokens` は **削除**（送ると 400）。深さは `effort` で制御する。
+
+---
+
+## 2. プロンプト様式を「Fable 向けチューニング」に合わせる（無料で効く）
+
+Fable 移行ガイドが推奨するプロンプト断片は、**Opus 4.8 でも品質を上げる**もの。
+ここが一番コスパが高い。
+
+- **冒頭 1 ターンに全仕様を渡す。** ふわっと小出しにしない。明確なゴールで一段賢くなる。
+- **過剰計画の抑制:**
+  > 行動できる情報が揃ったら行動する。確定済みの事実を再導出せず、選ばない選択肢を羅列しない。判断時は網羅列挙でなく推奨を出す。
+- **余計な整形 / リファクタの禁止:**
+  > タスクが要求する以上の機能・抽象・防御コードを足さない。バグ修正に周辺の掃除は不要。
+- **進捗主張の根拠付け:**
+  > 進捗報告の各主張を、このセッションのツール結果に照合してから述べる。未検証なら未検証と明示する。
+- **越権の禁止:**
+  > ユーザーが問題を述べているだけのときは所見を返して止まる。修正は依頼されてから。
+- **指示はまず減らす。** Fable も Opus 4.8 も過剰指示でむしろ品質が落ちる。
+  「CRITICAL: YOU MUST …」のような強い言い回しは外し、まず素直に試す。
+
+---
+
+## 3. エージェント構成で「モデル差」を「システム差」で埋める
+
+Fable が強い領域（長時間自律・並列 sub-agent・メモリ活用）を構成で補う。
+
+- **並列 sub-agent ＋ 非同期。** 独立サブタスクを委譲し、本ループはブロックしない。
+- **別コンテキストの検証エージェント。** 自己批評よりフレッシュな検証者 sub-agent が効く。
+  仕様照合を一定間隔で回す自己チェックハーネスを持たせる。
+- **メモリ面（`.md` ファイル）。** 学びを書かせ、次セッションで参照させる。
+  Opus 4.8 はメモリ / sub-agent / カスタムツールに手を伸ばしにくいので、
+  **「いつ使うか」を各ツールの description と system に明記**する。
+- **best-of-N / 多段。** Opus は半額なので、同一タスクを複数回回して検証者に選ばせると、
+  Fable 単発に匹敵・凌駕しうる。
+
+---
+
+## 4. コストを品質に再投資する戦略
+
+Opus 4.8 が半額であることを使い、同一予算で Fable 単発を超えにいく：
+
+- 単発 Fable（`max`）の代わりに、Opus 4.8（`xhigh`）+ フレッシュ検証パス。
+- 重要タスクは Opus 4.8 で 2〜3 回生成 → 検証 sub-agent で選抜（best-of-N）。
+- prompt caching で安定プレフィックスを使い回し、高 effort の固定費を圧縮。
+
+---
+
+## 5. 検証（思い込みを排す）
+
+- 自前の小さな eval set を用意する。
+- `medium / high / xhigh / max` ×（素プロンプト / 本ガイドのチューニング済プロンプト）で実測。
+- 効くものを残し、効かないものは捨てる。**まず指示を減らして試す**のが定石。
+
+---
+
+## まとめ（チェックリスト）
+
+- [ ] `model="claude-opus-4-8"`、`thinking={"type":"adaptive"}` を明示
+- [ ] `output_config.effort` を `high`〜`xhigh`（難所 `max`）でスイープ
+- [ ] `max_tokens` を広め＋ストリーミング（128K 出力対応）
+- [ ] system / tools を prompt caching でキャッシュ
+- [ ] プロンプトに「過剰計画抑制 / 整形禁止 / 進捗根拠付け / 越権禁止」を追加
+- [ ] 強い命令文（CRITICAL / MUST）を外し、指示を減らす
+- [ ] 並列 sub-agent＋非同期、フレッシュ検証者、メモリ `.md` を導入
+- [ ] 半額分を best-of-N / 多段検証に再投資
+- [ ] eval set で effort × プロンプトを実測して確定
