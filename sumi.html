@@ -409,7 +409,7 @@ html, body {
 </head>
 <body>
 
-<canvas id="game"></canvas>
+<canvas id="game" role="img" aria-label="墨蛍のゲーム画面。筆で壁を描き、蛍を星へ導きます">このゲームはcanvas描画を使用します。キーボードのみの環境では遊べません。概要: 筆で壁を描き、跳ねる蛍を時間内に星へ導くゲームです。</canvas>
 
 <div id="hud">
   <div id="score">0</div>
@@ -418,8 +418,8 @@ html, body {
   <div id="hint"></div>
 </div>
 
-<button id="btn-fs" title="全画面">⛶</button>
-<button id="btn-mute" title="音を消す/出す">♪</button>
+<button id="btn-fs" title="全画面" aria-label="全画面に切り替え">⛶</button>
+<button id="btn-mute" title="音を消す/出す" aria-label="音を消す・出す">♪</button>
 
 <div class="overlay" id="title-screen">
   <div class="title-inner">

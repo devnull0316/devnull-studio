@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>利用規約 — DevNull Studio</title>
+<meta name="description" content="DevNull Studioのゲーム・デモの利用規約。短く、まっとうな内容です。">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --paper: #faf8f2; --ink: #1d1a16; --ink-dim: #5a544a; --ink-faint: #7d7468;
+  --line: #e6e0d2; --shu: #b3342e;
+}
+body {
+  font-family: 'Hiragino Sans', 'Noto Sans JP', -apple-system, sans-serif;
+  background: var(--paper); color: var(--ink);
+  line-height: 2; -webkit-font-smoothing: antialiased;
+}
+a { color: var(--shu); }
+header {
+  position: sticky; top: 0; z-index: 10; height: 60px;
+  padding: 0 clamp(20px, 4vw, 56px);
+  display: flex; align-items: center;
+  background: rgba(250,248,242,0.88);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; color: var(--ink); text-decoration: none; }
+.logo .seal {
+  width: 26px; height: 26px; background: var(--shu); color: var(--paper);
+  border-radius: 5px; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; font-family: 'Hiragino Mincho ProN', serif;
+  transform: rotate(-3deg);
+}
+main { max-width: 720px; margin: 0 auto; padding: clamp(40px, 7vh, 70px) clamp(20px, 4vw, 56px) 80px; }
+h1 { font-size: clamp(24px, 4vw, 32px); font-weight: 700; }
+.updated { font-size: 12px; color: var(--ink-faint); margin-top: 8px; }
+h2 { font-size: 17px; font-weight: 700; margin: 36px 0 8px; padding-left: 12px; border-left: 4px solid var(--shu); }
+p, li { font-size: 14px; color: var(--ink-dim); }
+ul { padding-left: 22px; }
+li { margin: 5px 0; }
+footer { border-top: 1px solid var(--line); padding: 28px; text-align: center; font-size: 12px; color: var(--ink-faint); }
+footer a { color: var(--ink-faint); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo"><span class="seal">D</span>DevNull Studio</a>
+</header>
+
+<main>
+  <h1>利用規約</h1>
+  <div class="updated">最終更新: 2026年6月 — 短く、まっとうな内容です</div>
+
+  <h2>1. 適用</h2>
+  <p>この規約は、DevNull Studio(以下「当方」)が当サイトで提供するゲーム・デモ・その他のコンテンツ(以下「本サービス」)の利用に適用されます。本サービスを利用した時点で、この規約に同意したものとします。</p>
+
+  <h2>2. 提供のかたち</h2>
+  <ul>
+    <li>本サービスは現状のまま(as is)、無料で提供されます</li>
+    <li>内容の変更・追加・終了を、予告なく行うことがあります(終了する場合、できる限り事前にお知らせするよう努めます)</li>
+    <li>セーブデータはお使いの端末内(localStorage)にのみ保存されます。端末・ブラウザの操作による消失について、当方は復元できません</li>
+  </ul>
+
+  <h2>3. してはいけないこと</h2>
+  <ul>
+    <li>本サービスの再配布、改変しての公開、販売</li>
+    <li>当方や第三者になりすます行為、本サービスを使った法令違反</li>
+    <li>サーバー等への攻撃(といっても、サーバーはありませんが)</li>
+  </ul>
+
+  <h2>4. 実況・二次創作</h2>
+  <p>歓迎です。詳細は<a href="/guidelines.html">実況・二次創作ガイドライン</a>をご覧ください。</p>
+
+  <h2>5. 免責</h2>
+  <p>本サービスの利用により生じた損害について、当方は、当方に故意または重大な過失がある場合を除き、責任を負いません。なお、消費者契約法その他の法令により免責が認められない場合は、その法令の範囲に従います。</p>
+
+  <h2>6. 規約の変更</h2>
+  <p>この規約を変更する場合は、このページを更新し、日付を改めます。重要な変更は目立つ形でお知らせします。</p>
+
+  <h2>7. 連絡先</h2>
+  <p><a href="#" class="mail-x" data-u="contact" data-d="devnull-studio.com" rel="nofollow">メールアドレスを表示</a><script>document.querySelectorAll('.mail-x').forEach(m=>{m.textContent=m.dataset.u+'@'+m.dataset.d;m.addEventListener('click',e=>{e.preventDefault();location.href='mailto:'+m.textContent;});});</script></p>
+</main>
+
+<footer>
+  <a href="/">DevNull Studio</a> — <a href="/guidelines.html">ガイドライン</a> — <a href="/privacy.html">プライバシーポリシー</a>
+</footer>
+
+</body>
+</html>

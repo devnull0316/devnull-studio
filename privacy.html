@@ -11,7 +11,7 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
   --paper: #faf8f2; --paper-2: #f3efe5;
-  --ink: #1d1a16; --ink-dim: #5a544a; --ink-faint: #948c7e;
+  --ink: #1d1a16; --ink-dim: #5a544a; --ink-faint: #7d7468;
   --line: #e6e0d2; --shu: #b3342e;
 }
 body {
@@ -89,7 +89,7 @@ footer a { color: var(--ink-faint); text-decoration: none; }
   <p>このポリシーを変更する場合は、このページを更新し、日付を改めます。「集めない」方向への変更以外(つまり何かを集め始める場合)は、目立つ形でお知らせします。</p>
 
   <h2>7. 連絡先</h2>
-  <p><a href="mailto:contact@devnull-studio.com">contact@devnull-studio.com</a>(返信は人間が書きます)</p>
+  <p><a href="#" class="mail-x" data-u="contact" data-d="devnull-studio.com" rel="nofollow">メールアドレスを表示</a><script>document.querySelectorAll('.mail-x').forEach(m=>{m.textContent=m.dataset.u+'@'+m.dataset.d;m.addEventListener('click',e=>{e.preventDefault();location.href='mailto:'+m.textContent;});});</script>(返信は人間が書きます)</p>
 </main>
 
 <footer>
