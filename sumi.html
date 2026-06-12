@@ -441,7 +441,7 @@ html, body {
         <b>①</b> 指で線を描く — それが墨の壁<br>
         <b>②</b> 蛍は墨の壁で跳ね返る<br>
         <b>③</b> 時間が切れる前に、光る<b>星</b>へ導く<br>
-        <b>④</b> 指を<b>止めて押さえる</b>と、墨を使って蛍を星へ引き寄せる<br>
+        <b>④</b> 指を<b>止めて押さえる</b>と、墨を使って蛍を星へ引き寄せる<span style="font-size:0.75em; opacity:0.65">(夜巡り・宵のみ)</span><br>
         <b>墨は消えない。</b>星を取ると、まわりの墨だけ燃えて消える。
       </div>
       <div class="mode-row" style="margin-top:24px">
@@ -1329,7 +1329,7 @@ function updateFly(dt) {
       // attraction is a tool — hold a still finger to call the firefly
       const nearR = U * 0.12;
       let w = d2s < nearR ? lerp(0.35, 0.1, d2s / nearR) : 0;
-      if (praying) w = Math.max(w, M.photoNear * 0.85);
+      if (praying) w = Math.max(w, M.photoNear * 0.7);
       if (w > 0) {
         const want = Math.atan2(star.y - fly.y, star.x - fly.x);
         const cur = Math.atan2(fly.vy, fly.vx);
@@ -1793,7 +1793,10 @@ if (!(document.documentElement.requestFullscreen || document.documentElement.web
 // Update
 // ============================================================
 function update(dt) {
-  praying = state === 'play' && drawingId !== null && !pressMoved &&
+  // prayer is a helping hand for the gentle modes only — 夜半/暁 are
+  // pure tests of brushwork
+  const prayerAllowed = gameMode === 'meguri' || modeKey === 'yoi';
+  praying = prayerAllowed && state === 'play' && drawingId !== null && !pressMoved &&
             performance.now() - pressStart > 250 && !!star && ink > inkMax * 0.03;
   if (praying) ink = Math.max(0, ink - inkMax * 0.055 * dt); // prayer burns ink
   if (state === 'play') {
