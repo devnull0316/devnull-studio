@@ -6,6 +6,17 @@
 <title>DevNull Studio — 遊び心で、Webをつくる</title>
 <meta name="description" content="DevNull Studioは東京の小さな開発スタジオ。ブラウザでそのまま遊べるゲームと、配信を楽しくするツールをつくっています。">
 <link rel="canonical" href="https://devnull-studio.com">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="theme-color" content="#faf8f2">
+<meta property="og:type" content="website">
+<meta property="og:title" content="DevNull Studio — 遊び心で、Webをつくる">
+<meta property="og:description" content="ブラウザでそのまま遊べるゲームと、配信を楽しくする道具をつくる東京の小さなスタジオ。">
+<meta property="og:url" content="https://devnull-studio.com">
+<meta property="og:image" content="https://devnull-studio.com/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Organization","name":"DevNull Studio","url":"https://devnull-studio.com","email":"contact@devnull-studio.com","logo":"https://devnull-studio.com/favicon.svg","address":{"@type":"PostalAddress","addressLocality":"Tokyo","addressCountry":"JP"}}
+</script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -35,6 +46,79 @@ body {
 a { color: inherit; text-decoration: none; }
 
 .serif { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif; }
+
+/* ===== スクロール出現 ===== */
+.reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
+.reveal.in { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .reveal { opacity: 1; transform: none; }
+}
+
+/* ===== 夜モード ===== */
+body.night {
+  --paper: #14121a;
+  --paper-2: #1a1722;
+  --ink: #e8e2d4;
+  --ink-dim: #b3ab9a;
+  --ink-faint: #7d766a;
+  --line: #2e2a38;
+}
+body, header, .feature, .lab-item, .work, .contact-box { transition: background-color .9s ease, color .9s ease, border-color .9s ease; }
+body.night header { background: rgba(20,18,26,0.88); }
+body.night .feature, body.night .lab-item { background: #1a1722; }
+body.night .contact-box { background: #e8e2d4; color: #1d1a16; }
+body.night .contact-box p { color: rgba(29,26,22,0.6); }
+body.night .contact-box .btn { border-color: #1d1a16; color: #1d1a16; }
+.nightfly {
+  position: fixed; width: 8px; height: 8px; border-radius: 50%;
+  background: #e8b54a; box-shadow: 0 0 16px 6px rgba(232,181,74,0.45);
+  pointer-events: none; z-index: 50;
+  animation: nf linear infinite;
+}
+@keyframes nf {
+  0% { transform: translate(0,0); opacity: 0; }
+  10%, 90% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+}
+#sunback {
+  position: fixed; top: 70px; right: 16px; z-index: 60;
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--paper-2);
+  font-size: 19px; cursor: pointer; display: none;
+  align-items: center; justify-content: center;
+}
+body.night #sunback { display: flex; }
+
+/* ===== 墨こぼし ===== */
+#inkdrop {
+  position: fixed; z-index: 98; pointer-events: none;
+  width: 26px; height: 38px; border-radius: 50% 50% 60% 60%;
+  background: #1d1a16; top: -50px;
+}
+.inkstain {
+  position: fixed; z-index: 97; pointer-events: none;
+  border-radius: 48% 52% 55% 45% / 52% 46% 54% 48%;
+  background: radial-gradient(ellipse at center, rgba(29,26,22,0.85), rgba(29,26,22,0.55) 55%, transparent 72%);
+  transition: opacity 6s ease;
+}
+@keyframes shake-page {
+  0%, 100% { transform: translate(0,0); }
+  25% { transform: translate(-5px, 3px); }
+  50% { transform: translate(4px, -3px); }
+  75% { transform: translate(-3px, 2px); }
+}
+/* ===== /dev/null 未遂 ===== */
+#nullhole {
+  position: fixed; left: 50%; bottom: -16vh; transform: translateX(-50%) scale(0);
+  width: 50vh; height: 26vh; border-radius: 50%;
+  background: radial-gradient(ellipse at center, #1d1a16 55%, rgba(29,26,22,0.3) 74%, transparent 80%);
+  z-index: 96; pointer-events: none;
+  transition: transform .5s cubic-bezier(.2,.8,.3,1);
+}
+#nullhole.open { transform: translateX(-50%) scale(1); }
+body.sucking { transition: transform .8s cubic-bezier(.6,0,.9,.4) !important; transform: translateY(7vh) scale(0.94) rotate(1.5deg); }
 
 /* ===== ヘッダー ===== */
 header {
@@ -432,7 +516,10 @@ function flee(cx, cy){
     const said = ho.querySelector('.said');
     said.textContent = 'つかまえた…と思ったでしょ';
     said.style.opacity = 1;
-    setTimeout(() => { said.style.opacity = 0; resting = false; tame = false; escapes = 0; }, 2200);
+    setTimeout(() => {
+      said.style.opacity = 0; resting = false; tame = false; escapes = 0;
+      if (window.__nightfall) window.__nightfall(); // 捕まえた代償に、夜が来る
+    }, 2200);
     return;
   }
   escapes++;
@@ -502,6 +589,112 @@ function toast(msg){
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2400);
 }
+
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---- 5) スクロール出現 ----
+const revealTargets = document.querySelectorAll('.sec-head, .feature, .lab-item, .about-grid, .contact-box, .lab-note');
+for (const el of revealTargets) el.classList.add('reveal');
+if (calm || !('IntersectionObserver' in window)) {
+  for (const el of revealTargets) el.classList.add('in');
+} else {
+  const io = new IntersectionObserver(es => {
+    for (const e of es) if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+  }, { threshold: 0.12 });
+  for (const el of revealTargets) io.observe(el);
+}
+
+// ---- 6) 蛍を捕まえると、夜が来る ----
+const sun = document.createElement('button');
+sun.id = 'sunback';
+sun.textContent = '☀';
+sun.title = '朝に戻る';
+document.body.appendChild(sun);
+let nightflies = [];
+function nightfall(){
+  if (document.body.classList.contains('night')) return;
+  document.body.classList.add('night');
+  toast('蛍と遊んでいたら、夜になってしまった。');
+  if (calm) return;
+  for (let i = 0; i < 9; i++){
+    const f = document.createElement('div');
+    f.className = 'nightfly';
+    f.style.left = (5 + Math.random() * 90) + 'vw';
+    f.style.top = (10 + Math.random() * 80) + 'vh';
+    f.style.setProperty('--dx', (Math.random() * 240 - 120) + 'px');
+    f.style.setProperty('--dy', (Math.random() * 200 - 100) + 'px');
+    f.style.animationDuration = (6 + Math.random() * 7) + 's';
+    f.style.animationDelay = (Math.random() * 4) + 's';
+    document.body.appendChild(f);
+    nightflies.push(f);
+  }
+}
+sun.addEventListener('click', () => {
+  document.body.classList.remove('night');
+  nightflies.forEach(f => f.remove());
+  nightflies = [];
+  toast('おはようございます。');
+});
+
+// 蛍ギミックの「捕まえた」成立時に夜を呼ぶ(flee側から発火)
+window.__nightfall = nightfall;
+
+// ---- 7) 墨こぼし(滞在中に一度だけ、突然) ----
+if (!calm && !sessionStorage.getItem('inkSpilled')){
+  setTimeout(() => {
+    sessionStorage.setItem('inkSpilled', '1');
+    const x = 15 + Math.random() * 70;
+    const drop = document.createElement('div');
+    drop.id = 'inkdrop';
+    drop.style.left = x + 'vw';
+    document.body.appendChild(drop);
+    const t0 = performance.now(), fall = 420;
+    (function f(now){
+      const t = (now - t0) / fall;
+      if (t >= 1){
+        drop.remove();
+        document.body.style.animation = 'shake-page .35s ease';
+        setTimeout(() => document.body.style.animation = '', 400);
+        const st = document.createElement('div');
+        st.className = 'inkstain';
+        const w = 120 + Math.random() * 80;
+        st.style.width = w + 'px';
+        st.style.height = w * 0.7 + 'px';
+        st.style.left = `calc(${x}vw - ${w/2}px)`;
+        st.style.top = (55 + Math.random() * 25) + 'vh';
+        document.body.appendChild(st);
+        toast('…墨、こぼしました。すみません。');
+        setTimeout(() => { st.style.opacity = '0'; setTimeout(() => st.remove(), 6200); }, 1600);
+        return;
+      }
+      drop.style.top = (-50 + t * t * (window.innerHeight * 0.72 + 50)) + 'px';
+      requestAnimationFrame(f);
+    })(t0);
+  }, 45000 + Math.random() * 45000);
+}
+
+// ---- 8) 連打すると /dev/null が目を覚ます ----
+const hole = document.createElement('div');
+hole.id = 'nullhole';
+document.body.appendChild(hole);
+let clicks = [], lastSuck = -Infinity;
+document.addEventListener('pointerdown', e => {
+  if (e.target.closest('a, button, input')) return;
+  const now = performance.now();
+  clicks = clicks.filter(t => now - t < 2200);
+  clicks.push(now);
+  if (clicks.length >= 7 && now - lastSuck > 60000 && !calm){
+    lastSuck = now;
+    clicks = [];
+    hole.classList.add('open');
+    document.body.classList.add('sucking');
+    setTimeout(() => {
+      document.body.classList.remove('sucking');
+      setTimeout(() => hole.classList.remove('open'), 500);
+      toast('あぶないところでした。連打すると /dev/null が目を覚まします。');
+    }, 850);
+  }
+});
 })();
 </script>
 
