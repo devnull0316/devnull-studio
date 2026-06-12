@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>レース投票 — 実証デモ | DevNull Studio</title>
+<meta name="description" content="コメントで選択肢が走る配信用アンケートの実証デモ。チャット欄に打つと目の前で動きます。">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root { --gold:#ffd24d; --bg:#15161c; }
+html,body { height:100%; }
+body {
+  background:var(--bg);
+  font-family:'Hiragino Sans','Noto Sans JP',-apple-system,sans-serif;
+  color:#e8ecff;
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+
+header {
+  padding:10px 18px;
+  display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid #2a2d3e;
+  flex-wrap:wrap; gap:8px;
+}
+header .t { font-size:15px; font-weight:800; }
+header .t span { color:var(--gold); }
+header .sub { font-size:11px; color:#8a93b8; }
+
+.wrap { flex:1; display:flex; min-height:0; }
+
+/* ===== 配信プレビュー ===== */
+.stage-wrap { flex:1.7; display:flex; flex-direction:column; min-width:0; padding:14px; }
+.stage-label { font-size:11px; letter-spacing:0.2em; color:#8a93b8; margin-bottom:8px; }
+.stage {
+  position:relative; flex:1;
+  background:linear-gradient(160deg,#1d2333,#141824);
+  border-radius:12px; border:1px solid #2e3450;
+  overflow:hidden;
+  min-height:300px;
+}
+
+.q-bar { position:absolute; top:0; left:0; right:0; padding:12px 18px; background:rgba(10,12,20,0.75); z-index:3; }
+.q-bar .ql { font-size:10px; letter-spacing:0.3em; color:var(--gold); }
+.q-bar .qt { font-size:clamp(15px,2.2vw,22px); font-weight:800; margin-top:2px; }
+.q-bar .qh { position:absolute; right:18px; top:14px; text-align:right; font-size:11px; color:#aab; line-height:1.6; }
+.q-bar .qh b { color:var(--gold); }
+
+#course { position:absolute; top:74px; left:0; right:0; bottom:52px; }
+.goal-line { position:absolute; right:72px; top:74px; bottom:52px; width:5px; background:repeating-linear-gradient(0deg,#fff 0 8px,#222 8px 16px); opacity:0.7; z-index:1; }
+
+.row { position:absolute; left:0; right:0; }
+.row .base { position:absolute; left:20px; right:86px; top:50%; height:2px; background:rgba(255,255,255,0.07); }
+.trail { position:absolute; left:20px; top:50%; transform:translateY(-50%); height:22px; border-radius:999px; opacity:0.22; transition:width .35s ease; }
+.racer { position:absolute; top:50%; transform:translateY(-50%); transition:left .35s ease; z-index:2; display:flex; align-items:center; gap:10px; }
+.racer .body { display:flex; flex-direction:column; align-items:center; }
+.racer .emoji { font-size:clamp(26px,4.5vh,42px); filter:drop-shadow(0 4px 6px rgba(0,0,0,0.4)); transition:transform .2s; }
+.racer.bump .emoji { transform:scale(1.25) rotate(-6deg); }
+.racer .opt { font-size:clamp(10px,1.6vh,14px); font-weight:800; background:rgba(255,255,255,0.12); padding:1px 12px; border-radius:999px; margin-top:2px; white-space:nowrap; }
+.racer .voters { font-size:10px; color:#8fa3c0; margin-top:3px; max-width:200px; white-space:nowrap; overflow:hidden; }
+.racer .pct { font-size:14px; font-weight:800; color:#9ab; }
+.crown { position:absolute; font-size:20px; transition:left .35s ease, top .3s; z-index:2; }
+
+.foot-bar { position:absolute; left:0; right:0; bottom:0; height:52px; background:rgba(10,12,20,0.85); display:flex; align-items:center; justify-content:space-between; padding:0 18px; z-index:3; }
+.foot-bar .total { font-size:12px; color:#cfd8e3; } .foot-bar .total b { color:var(--gold); font-size:16px; }
+.foot-bar .timer { font-size:24px; font-weight:800; color:var(--gold); font-variant-numeric:tabular-nums; }
+
+/* 結果オーバーレイ */
+#result {
+  position:absolute; inset:0; z-index:5;
+  background:rgba(10,12,20,0.82);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .4s;
+  text-align:center;
+}
+#result.show { opacity:1; pointer-events:auto; }
+#result .we { font-size:64px; }
+#result .wt { font-size:13px; letter-spacing:0.3em; color:var(--gold); margin-top:10px; }
+#result .wn { font-size:clamp(20px,3.5vw,34px); font-weight:800; margin-top:4px; }
+#result .ws { font-size:13px; color:#aab3d6; margin-top:10px; line-height:1.8; }
+#result button { margin-top:22px; }
+
+/* 紙吹雪 */
+.confetti { position:absolute; width:9px; height:14px; z-index:6; pointer-events:none; }
+
+/* ===== チャット欄 ===== */
+.chat {
+  width:min(340px,38vw);
+  border-left:1px solid #2a2d3e;
+  display:flex; flex-direction:column;
+  background:#181818;
+}
+.chat-h { padding:10px 14px; border-bottom:1px solid #2a2d3e; }
+.chat-h .ct { font-size:13px; font-weight:700; }
+.chat-h .cs { font-size:10px; color:#8a93b8; margin-top:2px; line-height:1.5; }
+.demo-row { display:flex; align-items:center; gap:8px; padding:8px 14px; border-bottom:1px solid #2a2d3e; font-size:12px; }
+.demo-row label { display:flex; align-items:center; gap:6px; cursor:pointer; color:#cfd8e3; }
+#msgs { flex:1; overflow-y:auto; padding:8px 12px; display:flex; flex-direction:column; gap:7px; font-size:12.5px; }
+.m { display:flex; gap:7px; align-items:baseline; animation:pop .18s ease; }
+@keyframes pop { from { opacity:0; transform:translateY(5px); } }
+.m .a { width:19px; height:19px; border-radius:50%; flex-shrink:0; align-self:center; }
+.m .n { color:#9e9e9e; font-size:11px; white-space:nowrap; }
+.m .b { color:#eee; word-break:break-all; }
+.m .b.vote { color:var(--gold); font-weight:700; }
+.chat-in { border-top:1px solid #2a2d3e; padding:10px 12px; display:flex; gap:8px; }
+.chat-in input {
+  flex:1; background:#222530; border:1px solid #3a3f55; border-radius:999px;
+  color:#fff; font-size:14px; padding:9px 16px; outline:none; font-family:inherit;
+}
+.chat-in input:focus { border-color:var(--gold); }
+.quick { display:flex; gap:6px; padding:0 12px 12px; flex-wrap:wrap; }
+.quick button { font-size:12px; padding:6px 14px; }
+
+button {
+  font-family:inherit; font-size:13px; font-weight:700;
+  background:#2e3450; color:#e8ecff;
+  border:1px solid #444b6e; border-radius:999px;
+  padding:8px 18px; cursor:pointer;
+}
+button:hover { background:#3a4163; }
+button.primary { background:var(--gold); border-color:var(--gold); color:#1d2030; }
+button.primary:hover { background:#ffdd75; }
+
+/* ===== 設定 ===== */
+#setup {
+  position:fixed; inset:0; z-index:10;
+  background:rgba(13,14,20,0.92);
+  display:flex; align-items:center; justify-content:center;
+}
+#setup.hidden { display:none; }
+.panel {
+  width:min(480px,92vw);
+  background:#1d2130; border:1px solid #343a52; border-radius:14px;
+  padding:26px;
+}
+.panel h1 { font-size:19px; font-weight:800; }
+.panel h1 span { color:var(--gold); }
+.panel .d { font-size:12px; color:#8a93b8; margin:8px 0 18px; line-height:1.7; }
+.panel label { display:block; font-size:11px; color:#8a93b8; letter-spacing:0.1em; margin:12px 0 5px; }
+.panel input[type=text] {
+  width:100%; background:#222530; border:1px solid #3a3f55; border-radius:8px;
+  color:#fff; font-size:14px; padding:9px 12px; outline:none; font-family:inherit;
+}
+.panel input[type=text]:focus { border-color:var(--gold); }
+.opts { display:flex; flex-direction:column; gap:8px; }
+.opt-row { display:flex; gap:8px; align-items:center; }
+.opt-row .num { font-size:13px; font-weight:800; color:var(--gold); width:18px; }
+.panel .row2 { display:flex; gap:14px; align-items:center; margin-top:16px; font-size:12px; color:#cfd8e3; }
+.panel .go { margin-top:22px; display:flex; justify-content:flex-end; gap:10px; }
+
+@media (max-width:680px) {
+  .wrap { flex-direction:column; }
+  .chat { width:100%; border-left:none; border-top:1px solid #2a2d3e; height:42%; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="t">レース投票 <span>— 実証デモ</span></div>
+    <div class="sub">右のチャット欄 = 本番ではYouTubeのコメント欄。仕組みはそのまま、入力源だけ差し替わる構造です</div>
+  </div>
+  <button id="btn-setup">⚙ 質問を変える</button>
+</header>
+
+<div class="wrap">
+  <div class="stage-wrap">
+    <div class="stage-label">▼ 配信プレビュー(本番ではこの枠がOBS経由で配信画面に乗る)</div>
+    <div class="stage">
+      <div class="q-bar">
+        <div class="ql">アンケート — LIVE</div>
+        <div class="qt" id="qtext">Q. 次の配信、何やる?</div>
+        <div class="qh" id="qhint"></div>
+      </div>
+      <div class="goal-line"></div>
+      <div id="course"></div>
+      <div class="foot-bar">
+        <div class="total">投票数 <b id="total">0</b> 票 — 1票ごとにリアルタイムで走る</div>
+        <div class="timer" id="timer">--</div>
+      </div>
+      <div id="result">
+        <div class="we" id="r-emoji">🏆</div>
+        <div class="wt">WINNER</div>
+        <div class="wn" id="r-name"></div>
+        <div class="ws" id="r-stats"></div>
+        <button class="primary" id="btn-again">もう一度</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat">
+    <div class="chat-h">
+      <div class="ct">チャット欄(テスト用)</div>
+      <div class="cs">あなたが視聴者です。数字を打つと投票になります。<br>本番ではこの欄の代わりにYouTubeチャットを読み取ります。</div>
+    </div>
+    <div class="demo-row">
+      <label><input type="checkbox" id="demo-toggle"> 自動デモ(偽視聴者約40人)</label>
+    </div>
+    <div id="msgs"></div>
+    <div class="quick" id="quick"></div>
+    <div class="chat-in">
+      <input type="text" id="chat-input" placeholder="コメントを入力(例: 1)" autocomplete="off">
+      <button class="primary" id="btn-send">送信</button>
+    </div>
+  </div>
+</div>
+
+<div id="setup">
+  <div class="panel">
+    <h1>レース投票 <span>セットアップ</span></h1>
+    <div class="d">質問と選択肢(2〜4個)を決めてスタート。視聴者はコメントで「1」「2」…と打つだけで投票でき、票が入るたび選択肢が走ります。</div>
+    <label>質問</label>
+    <input type="text" id="s-q" value="次の配信、何やる?">
+    <label>選択肢(空欄は無視)</label>
+    <div class="opts">
+      <div class="opt-row"><span class="num">1</span><input type="text" class="s-opt" value="スイカゲームRTA"></div>
+      <div class="opt-row"><span class="num">2</span><input type="text" class="s-opt" value="ホラゲの続き"></div>
+      <div class="opt-row"><span class="num">3</span><input type="text" class="s-opt" value="マイクラ建築"></div>
+      <div class="opt-row"><span class="num">4</span><input type="text" class="s-opt" value=""></div>
+    </div>
+    <div class="row2">
+      <span>投票時間:</span>
+      <label><input type="radio" name="s-dur" value="30"> 30秒</label>
+      <label><input type="radio" name="s-dur" value="60" checked> 60秒</label>
+      <label><input type="radio" name="s-dur" value="90"> 90秒</label>
+    </div>
+    <div class="go">
+      <button class="primary" id="btn-start">レース開始 ▶</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+(() => {
+
+const $ = id => document.getElementById(id);
+const rand = (a=1,b) => b===undefined ? Math.random()*a : a+Math.random()*(b-a);
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+
+const EMOJI = ['🍉','👻','⛏️','🎤','🍜','🚀','🐱','🎲','🔥','🌊','🎹','🦊'];
+const COLORS = ['#ff6b81','#4dd0e1','#aed581','#ffb74d'];
+
+// ============================================================
+// ChatSource — 本番では YouTubeSource / OneCommeSource に差し替わる。
+// emits: {name, text, color}
+// ============================================================
+const chatListeners = [];
+function onChat(fn){ chatListeners.push(fn); }
+function emitChat(msg){ for (const fn of chatListeners) fn(msg); }
+
+// --- ManualSource: あなた自身が視聴者 ---
+const input = $('chat-input');
+function sendManual(){
+  const t = input.value.trim();
+  if (!t) return;
+  emitChat({ name:'あなた', text:t, color:'#ffd24d' });
+  input.value = '';
+  input.focus();
+}
+$('btn-send').addEventListener('click', sendManual);
+input.addEventListener('keydown', e => { if (e.key==='Enter') sendManual(); });
+
+// --- DemoSource: 偽視聴者 ---
+const DEMO_NAMES = ['もちこ','ねこすけ','Kai⭐','ろむ専さん','みかん','タロウ','ふぐり','ASMR好き','新規です','わかば','Pon','ゆずぽん','カナ','ハチ','tomo_3','まめだいふく','すずらん','Rey','ぴょん','くろまめ','ナナシ','ten','こけし','ミドリ','ボンド','ushi','さくさく','ゲコ太','ノア','ひつじ','GG_taro','うに','らら','ケビン','ぽてと','シロ','龍之介','メイ','おはぎ','ZZZ'];
+const demoUsers = DEMO_NAMES.map((n,i) => ({ name:n, color:`hsl(${(i*47)%360},55%,55%)`, fav:0, chatty:rand(0.3,1.6) }));
+let demoOn = false, demoTimer = null;
+const CHEERS = ['がんばれ!','きたー','www','逆転www','おしい','これは接戦','8888','どっちだ!?','見える見える','うおおお'];
+
+function demoTick(){
+  if (!demoOn) return;
+  const u = pick(demoUsers);
+  let text;
+  if (race.state==='run' && Math.random()<0.62) {
+    if (!u.fav || Math.random()<0.18) u.fav = 1+Math.floor(Math.random()*race.opts.length);
+    text = String(u.fav) + (Math.random()<0.2 ? '!!' : '');
+  } else {
+    text = pick(CHEERS);
+  }
+  emitChat({ name:u.name, text, color:u.color });
+  demoTimer = setTimeout(demoTick, rand(120, race.state==='run'?650:1600));
+}
+$('demo-toggle').addEventListener('change', e => {
+  demoOn = e.target.checked;
+  clearTimeout(demoTimer);
+  if (demoOn) demoTick();
+});
+
+// ============================================================
+// チャット表示
+// ============================================================
+const msgs = $('msgs');
+function renderMsg(m, isVote){
+  const el = document.createElement('div');
+  el.className = 'm';
+  el.innerHTML = `<div class="a" style="background:${m.color}"></div>
+    <div class="n">${esc(m.name)}</div><div class="b${isVote?' vote':''}">${esc(m.text)}</div>`;
+  msgs.appendChild(el);
+  while (msgs.children.length > 60) msgs.removeChild(msgs.firstChild);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+// ============================================================
+// レース本体
+// ============================================================
+const race = { state:'idle', opts:[], votes:new Map(), endAt:0, q:'' };
+
+function parseVote(text){
+  const m = text.match(/^[\s]*([1-4１-４])/);
+  if (!m) return 0;
+  const n = '1234'.indexOf(m[1]) + 1 || '１２３４'.indexOf(m[1]) + 1;
+  return n>=1 && n<=race.opts.length ? n : 0;
+}
+
+onChat(m => {
+  const v = race.state==='run' ? parseVote(m.text) : 0;
+  renderMsg(m, v>0);
+  if (v>0){
+    race.votes.set(m.name, { v, color:m.color }); // 最後の票が有効(変更可)
+    const o = race.opts[v-1];
+    o.el.classList.remove('bump'); void o.el.offsetWidth; o.el.classList.add('bump');
+    layout();
+  }
+});
+
+function counts(){
+  const c = race.opts.map(()=>({n:0, names:[]}));
+  for (const [name,{v}] of race.votes){ c[v-1].n++; c[v-1].names.push(name); }
+  return c;
+}
+
+function startRace(q, optNames, dur){
+  race.q = q; race.state='run';
+  race.votes = new Map();
+  race.endAt = performance.now() + dur*1000;
+  $('qtext').textContent = 'Q. ' + q;
+  $('result').classList.remove('show');
+
+  const course = $('course');
+  course.innerHTML = '';
+  race.opts = optNames.map((name,i) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.style.top = (i*100/optNames.length) + '%';
+    row.style.height = (100/optNames.length) + '%';
+    row.innerHTML = `<div class="base"></div>
+      <div class="trail" style="background:${COLORS[i]}; width:0;"></div>
+      <div class="racer" style="left:20px;">
+        <div class="body">
+          <span class="emoji">${EMOJI[i]}</span>
+          <span class="opt">${i+1}. ${esc(name)}</span>
+          <div class="voters"></div>
+        </div>
+        <span class="pct">0%</span>
+      </div>`;
+    course.appendChild(row);
+    return { name, el:row.querySelector('.racer'), trail:row.querySelector('.trail'),
+             pctEl:row.querySelector('.pct'), votersEl:row.querySelector('.voters') };
+  });
+  let crown = $('course').querySelector('.crown');
+  $('qhint').innerHTML = 'コメントで ' + optNames.map((_,i)=>`「<b>${i+1}</b>」`).join(' ') + '<br>票が入るたび、その選択肢が走る';
+
+  // クイック投票ボタン(テスト用ショートカット)
+  const quick = $('quick');
+  quick.innerHTML = '';
+  optNames.forEach((n,i) => {
+    const b = document.createElement('button');
+    b.textContent = `「${i+1}」と打つ`;
+    b.addEventListener('click', () => emitChat({ name:'あなた', text:String(i+1), color:'#ffd24d' }));
+    quick.appendChild(b);
+  });
+  layout();
+}
+
+function layout(){
+  const c = counts();
+  const total = c.reduce((s,x)=>s+x.n, 0);
+  $('total').textContent = total;
+  const course = $('course');
+  const trackW = Math.max(100, course.clientWidth - 86 - 130);
+  let leader = -1, max = -1;
+  c.forEach((x,i) => { if (x.n > max){ max = x.n; leader = i; } });
+  c.forEach((x,i) => {
+    const share = total ? x.n/total : 0;
+    const px = 20 + share*trackW;
+    race.opts[i].el.style.left = px + 'px';
+    race.opts[i].trail.style.width = px + 'px';
+    race.opts[i].pctEl.textContent = Math.round(share*100) + '%';
+    const nm = x.names.slice(-3).join('、');
+    race.opts[i].votersEl.textContent = x.n ? (nm + (x.n>3 ? `、ほか${x.n-3}人` : '')) : '';
+  });
+  let crown = course.querySelector('.crown');
+  if (total>0 && max>0){
+    if (!crown){ crown = document.createElement('div'); crown.className='crown'; crown.textContent='👑'; course.appendChild(crown); }
+    const lel = race.opts[leader].el;
+    crown.style.left = (parseFloat(lel.style.left)+10) + 'px';
+    crown.style.top = `calc(${leader*100/race.opts.length}% + 2px)`;
+  } else if (crown) crown.remove();
+}
+
+function finishRace(){
+  race.state = 'done';
+  const c = counts();
+  const total = c.reduce((s,x)=>s+x.n,0);
+  let wi = 0; c.forEach((x,i)=>{ if (x.n>c[wi].n) wi=i; });
+  const tie = c.filter(x=>x.n===c[wi].n).length>1 && total>0;
+  $('r-emoji').textContent = total===0 ? '🦗' : EMOJI[wi];
+  $('r-name').textContent = total===0 ? '票が入りませんでした' : (tie ? '同票! 延長戦…!?' : `${wi+1}. ${race.opts[wi].name}`);
+  $('r-stats').innerHTML = c.map((x,i)=>`${EMOJI[i]} ${esc(race.opts[i].name)} — <b>${x.n}票</b>`).join('<br>') + `<br><span style="opacity:.6">投票総数 ${total} 票</span>`;
+  $('result').classList.add('show');
+  if (total>0 && !tie) confetti();
+}
+
+function confetti(){
+  const stage = document.querySelector('.stage');
+  for (let i=0;i<70;i++){
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.background = pick(['#ffd24d','#ff6b81','#4dd0e1','#aed581','#fff']);
+    c.style.left = rand(5,95)+'%';
+    c.style.top = '-20px';
+    c.style.transform = `rotate(${rand(360)}deg)`;
+    stage.appendChild(c);
+    const fall = c.animate(
+      [{ transform:`translateY(0) rotate(0deg)` },
+       { transform:`translateY(${stage.clientHeight+40}px) rotate(${rand(360,1080)}deg)` }],
+      { duration:rand(1800,3600), delay:rand(0,800), easing:'cubic-bezier(.2,.6,.8,1)' });
+    fall.onfinish = () => c.remove();
+  }
+}
+
+// timer loop
+setInterval(() => {
+  if (race.state!=='run') return;
+  const left = Math.max(0, race.endAt - performance.now());
+  const s = Math.ceil(left/1000);
+  $('timer').textContent = Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+  if (left<=0) finishRace();
+}, 120);
+
+window.addEventListener('resize', () => { if (race.state!=='idle') layout(); });
+
+// ============================================================
+// セットアップ
+// ============================================================
+function openSetup(){ $('setup').classList.remove('hidden'); }
+$('btn-setup').addEventListener('click', openSetup);
+$('btn-again').addEventListener('click', openSetup);
+$('btn-start').addEventListener('click', () => {
+  const q = $('s-q').value.trim() || '質問';
+  const opts = [...document.querySelectorAll('.s-opt')].map(i=>i.value.trim()).filter(Boolean).slice(0,4);
+  if (opts.length < 2) { alert('選択肢を2つ以上入れてください'); return; }
+  const dur = +document.querySelector('input[name=s-dur]:checked').value;
+  $('setup').classList.add('hidden');
+  startRace(q, opts, dur);
+});
+
+})();
+</script>
+</body>
+</html>
