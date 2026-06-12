@@ -120,6 +120,68 @@ body.night #sunback { display: flex; }
 #nullhole.open { transform: translateX(-50%) scale(1); }
 body.sucking { transition: transform .8s cubic-bezier(.6,0,.9,.4) !important; transform: translateY(7vh) scale(0.94) rotate(1.5deg); }
 
+/* ===== 実績システム ===== */
+#ach-btn {
+  position: fixed; bottom: 18px; right: 18px; z-index: 95;
+  font-size: 12px; font-weight: 700;
+  background: var(--paper-2); color: var(--ink-dim);
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 8px 16px; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  transition: transform .2s, box-shadow .2s;
+}
+#ach-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(60,45,20,0.15); }
+#ach-btn.complete { background: linear-gradient(135deg, #f3d98a, #d9b34a); color: #4a3a10; border-color: #d9b34a; }
+#ach-modal {
+  position: fixed; inset: 0; z-index: 110;
+  background: rgba(20,18,14,0.55);
+  display: none; align-items: center; justify-content: center;
+  padding: 20px;
+}
+#ach-modal.show { display: flex; }
+.ach-panel {
+  width: min(440px, 94vw); max-height: 80vh; overflow-y: auto;
+  background: var(--paper); border-radius: 16px;
+  padding: 26px 28px;
+  border: 1px solid var(--line);
+}
+.ach-panel h3 { font-size: 17px; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; }
+.ach-panel h3 span { font-size: 12px; color: var(--ink-faint); }
+.ach-list { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+.ach {
+  display: flex; gap: 12px; align-items: center;
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 14px;
+}
+.ach .ic { font-size: 20px; width: 28px; text-align: center; }
+.ach .tt { font-size: 13px; font-weight: 700; }
+.ach .dd { font-size: 11px; color: var(--ink-faint); margin-top: 1px; }
+.ach.locked { opacity: 0.55; }
+.ach.locked .tt { color: var(--ink-faint); }
+.ach.done { border-color: rgba(217,179,74,0.55); background: rgba(243,217,138,0.12); }
+.ach-close { margin-top: 18px; text-align: right; }
+.toast-ach {
+  position: fixed; bottom: 76px; right: 18px; z-index: 111;
+  background: var(--ink); color: var(--paper);
+  border-radius: 12px; padding: 12px 18px;
+  font-size: 13px;
+  display: flex; align-items: center; gap: 10px;
+  transform: translateX(120%);
+  transition: transform .4s cubic-bezier(.2,.8,.3,1);
+  box-shadow: 0 8px 26px rgba(0,0,0,0.25);
+}
+.toast-ach.show { transform: translateX(0); }
+.toast-ach .tic { font-size: 20px; }
+.toast-ach .ttl { font-size: 10px; letter-spacing: 0.15em; color: #d9b34a; font-weight: 700; }
+
+/* ===== 作品の空気がにじむ ===== */
+.feature, .lab-item { --aura: transparent; box-shadow: 0 0 0 0 var(--aura); }
+.feature:hover { box-shadow: 0 20px 50px rgba(60,45,20,0.13), 0 0 60px 6px var(--aura); }
+.lab-item:hover { box-shadow: 0 14px 34px rgba(60,45,20,0.1), 0 0 46px 4px var(--aura); }
+.feature { --aura: rgba(232,181,74,0.22); }
+.lab-item[href="/garden-demo.html"] { --aura: rgba(140,200,120,0.25); }
+.lab-item[href="/race-demo.html"] { --aura: rgba(255,210,77,0.25); }
+
 /* ===== ヘッダー ===== */
 header {
   position: sticky; top: 0; z-index: 10;
@@ -433,7 +495,7 @@ footer a:hover { color: var(--ink); }
 </section>
 
 <footer>
-  <div><span id="copy" style="cursor:pointer" title="?">&copy;</span> 2026 DevNull Studio — Tokyo, Japan</div>
+  <div><span id="copy" style="cursor:pointer" title="?">&copy;</span> 2026 DevNull Studio — Tokyo, Japan<span style="margin-left:14px; opacity:0.6">手書きHTML・外部ライブラリ0個</span></div>
   <div class="links">
     <a href="/privacy.html">プライバシーポリシー</a>
   </div>
@@ -518,6 +580,7 @@ function flee(cx, cy){
     said.style.opacity = 1;
     setTimeout(() => {
       said.style.opacity = 0; resting = false; tame = false; escapes = 0;
+      if (window.__unlock) window.__unlock('hotaru');
       if (window.__nightfall) window.__nightfall(); // 捕まえた代償に、夜が来る
     }, 2200);
     return;
@@ -544,6 +607,7 @@ document.querySelector('.logo .seal').addEventListener('click', e => {
   e.preventDefault(); e.stopPropagation();
   if (stamps.length >= 8){
     toast('押しすぎです。');
+    if (window.__unlock) window.__unlock('stamp');
     for (const st of stamps) st.classList.add('off');
     setTimeout(() => { stamps.forEach(st => st.remove()); stamps = []; }, 1100);
     return;
@@ -563,6 +627,7 @@ let catBusy = false;
 $('copy').addEventListener('click', () => {
   if (catBusy) return;
   catBusy = true;
+  if (window.__unlock) window.__unlock('cat');
   const c = document.createElement('div');
   c.id = 'neko-walk';
   c.textContent = '🐈';
@@ -592,6 +657,64 @@ function toast(msg){
 
 const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// ---- 実績システム(ゲームスタジオのサイトには実績がある) ----
+const ACH = [
+  { id: 'hotaru', ic: '✨', tt: '手乗り蛍', dd: '蛍を捕まえた(つもりになった)' },
+  { id: 'night',  ic: '🌙', tt: '夜をつれてきた', dd: 'サイトを夜にした' },
+  { id: 'stamp',  ic: '🈚', tt: '乱れ判', dd: '判子を押しすぎて怒られた' },
+  { id: 'cat',    ic: '🐈', tt: '猫の目撃者', dd: '黒猫の散歩を目撃した' },
+  { id: 'suck',   ic: '🕳', tt: '深淵をのぞいた', dd: '/dev/null を起こしてしまった' },
+  { id: 'ink',    ic: '💧', tt: '墨の証人', dd: '墨がこぼれる瞬間に居合わせた' },
+  { id: 'void404', ic: '🚫', tt: '虚無からの生還', dd: '404ページから帰ってきた' },
+];
+const achGet = () => { try { return JSON.parse(localStorage.getItem('dn_ach') || '{}'); } catch (e) { return {}; } };
+const achBtn = document.createElement('button');
+achBtn.id = 'ach-btn';
+document.body.appendChild(achBtn);
+const achModal = document.createElement('div');
+achModal.id = 'ach-modal';
+achModal.innerHTML = '<div class="ach-panel"><h3>実績 <span id="ach-count"></span></h3><div class="ach-list" id="ach-list"></div><div class="ach-close"><button class="btn" id="ach-x">閉じる</button></div></div>';
+document.body.appendChild(achModal);
+
+function achRender(){
+  const got = achGet();
+  const n = ACH.filter(a => got[a.id]).length;
+  achBtn.innerHTML = '🏆 <span>' + n + '/' + ACH.length + '</span>';
+  achBtn.classList.toggle('complete', n === ACH.length);
+  document.getElementById('ach-count').textContent = n + ' / ' + ACH.length;
+  const list = document.getElementById('ach-list');
+  list.innerHTML = '';
+  for (const a of ACH){
+    const done = !!got[a.id];
+    const el = document.createElement('div');
+    el.className = 'ach ' + (done ? 'done' : 'locked');
+    el.innerHTML = '<div class="ic">' + (done ? a.ic : '❓') + '</div><div><div class="tt">' +
+      (done ? a.tt : '？？？') + '</div><div class="dd">' + (done ? a.dd : 'このサイトのどこかで…') + '</div></div>';
+    list.appendChild(el);
+  }
+}
+function unlock(id){
+  const got = achGet();
+  if (got[id]) return;
+  got[id] = Date.now();
+  localStorage.setItem('dn_ach', JSON.stringify(got));
+  const a = ACH.find(x => x.id === id);
+  const t = document.createElement('div');
+  t.className = 'toast-ach';
+  t.innerHTML = '<span class="tic">' + a.ic + '</span><div><div class="ttl">実績解除</div><div>' + a.tt + '</div></div>';
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 500); }, 3200);
+  achRender();
+  const got2 = achGet();
+  if (ACH.every(x => got2[x.id])) setTimeout(() => toast('全実績解除。あなたはこのサイトの全てを見た。'), 3600);
+}
+achBtn.addEventListener('click', () => { achRender(); achModal.classList.add('show'); });
+achModal.addEventListener('click', e => { if (e.target === achModal || e.target.id === 'ach-x') achModal.classList.remove('show'); });
+achRender();
+if (localStorage.getItem('dn_404')) { localStorage.removeItem('dn_404'); unlock('void404'); }
+window.__unlock = unlock;
+
 // ---- 5) スクロール出現 ----
 const revealTargets = document.querySelectorAll('.sec-head, .feature, .lab-item, .about-grid, .contact-box, .lab-note');
 for (const el of revealTargets) el.classList.add('reveal');
@@ -615,6 +738,7 @@ function nightfall(){
   if (document.body.classList.contains('night')) return;
   document.body.classList.add('night');
   toast('蛍と遊んでいたら、夜になってしまった。');
+  if (window.__unlock) window.__unlock('night');
   if (calm) return;
   for (let i = 0; i < 9; i++){
     const f = document.createElement('div');
@@ -664,6 +788,7 @@ if (!calm && !sessionStorage.getItem('inkSpilled')){
         st.style.top = (55 + Math.random() * 25) + 'vh';
         document.body.appendChild(st);
         toast('…墨、こぼしました。すみません。');
+        if (window.__unlock) window.__unlock('ink');
         setTimeout(() => { st.style.opacity = '0'; setTimeout(() => st.remove(), 6200); }, 1600);
         return;
       }
@@ -692,6 +817,7 @@ document.addEventListener('pointerdown', e => {
       document.body.classList.remove('sucking');
       setTimeout(() => hole.classList.remove('open'), 500);
       toast('あぶないところでした。連打すると /dev/null が目を覚まします。');
+      if (window.__unlock) window.__unlock('suck');
     }, 850);
   }
 });
