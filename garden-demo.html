@@ -69,6 +69,15 @@ button.primary { background:var(--gold); border-color:var(--gold); color:#1d2030
 .m .n { color:#9e9e9e; font-size:11px; white-space:nowrap; }
 .m .b { color:#eee; word-break:break-all; }
 .m .b.hit { color:#aed581; font-weight:700; }
+.ema-btn {
+  margin-left:auto; flex-shrink:0;
+  font-size:10px; padding:1px 7px;
+  background:transparent; border:1px solid #3a3f55; border-radius:5px;
+  color:#8a93b8; cursor:pointer; opacity:0;
+  transition:opacity .15s;
+}
+.m:hover .ema-btn { opacity:1; }
+.ema-btn:hover { color:var(--gold); border-color:var(--gold); background:transparent; }
 .quick { display:flex; gap:6px; padding:0 12px 10px; flex-wrap:wrap; }
 .quick button { font-size:12px; padding:6px 13px; }
 .chat-in { border-top:1px solid #2a2d3e; padding:10px 12px; display:flex; gap:8px; }
@@ -141,7 +150,8 @@ button.primary { background:var(--gold); border-color:var(--gold); color:#1d2030
       <b>かわいい・すき・きれい</b> → 花が咲く<br>
       <b>はじめてのコメント</b> → 蛍が庭に住み着く(名前付き)<br>
       風・花びら・蝶は勝手に動く。夜は流れ星。<br>
-      そして<b>チャットが静かになると、猫が遊びに来る</b>。
+      そして<b>チャットが静かになると、猫が遊びに来る</b>。<br>
+      コメントの<b>「飾」を押すと絵馬になって庭に吊るされる</b>(配信者の承認制)。
     </div>
   </div>
 </div>
@@ -202,6 +212,7 @@ const petals = [];                   // 流れる花びら
 let butterfly = null;                // 蝶(一度に1匹)
 let cat = null;                      // 猫(一度に1匹)
 let shootingStar = null;
+const emas = []; // 絵馬: 配信者が額装したコメント {name, text, born, slot}
 let nextButterflyT = performance.now() + rand(15000, 35000);
 let nextCatT = performance.now() + rand(45000, 80000);
 let nextPetalT = 0;
@@ -433,6 +444,54 @@ function drawAmbient(now){
   }
 }
 
+function addEma(name, text){
+  if (!stats.ema) stats.ema = 0;
+  stats.ema++;
+  if (emas.length >= 4) emas.shift();
+  const used = emas.map(e => e.slot);
+  let slot = 0;
+  for (let i = 0; i < 4; i++) if (!used.includes(i)) { slot = i; break; }
+  emas.push({ name, text, born: performance.now(), slot });
+}
+
+function drawEmas(now){
+  for (const e of emas){
+    const age = Math.min(1, (now - e.born) / 600);
+    const x = GW * (0.16 + e.slot * 0.225);
+    const hang = 14;
+    const sway = (Math.sin(now * 0.0011 + e.slot * 2) * 3 + wind * 4) * (Math.PI / 180) * 3;
+    g.save();
+    g.translate(x, 0);
+    g.rotate(sway);
+    g.translate(0, hang * age);
+    // 紐
+    g.strokeStyle = 'rgba(200,180,140,0.5)';
+    g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, -hang); g.lineTo(0, 0); g.stroke();
+    // 札
+    const w = 58, h = 34;
+    g.globalAlpha = age;
+    g.fillStyle = '#c9a76a';
+    g.strokeStyle = '#8a6f42';
+    g.lineWidth = 1.2;
+    g.beginPath();
+    g.moveTo(-w/2, -2); g.lineTo(w/2, -2); g.lineTo(w/2, h-10);
+    g.lineTo(0, h-2); g.lineTo(-w/2, h-10);
+    g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#3a2f1d';
+    g.font = '600 8.5px "Hiragino Sans",sans-serif';
+    g.textAlign = 'center';
+    const t = e.text.length > 9 ? e.text.slice(0, 8) + '…' : e.text;
+    g.fillText(t, 0, 11);
+    g.fillStyle = 'rgba(58,47,29,0.6)';
+    g.font = '7px sans-serif';
+    const n = e.name.length > 7 ? e.name.slice(0, 6) + '…' : e.name;
+    g.fillText('— ' + n, 0, 22);
+    g.globalAlpha = 1;
+    g.restore();
+  }
+}
+
 function drawGarden(now){
   g.clearRect(0,0,GW,GH);
   const mins = (now-startT)/60000;
@@ -529,6 +588,7 @@ function drawGarden(now){
     if (!alive) sparks.splice(i,1);
   }
 
+  drawEmas(now);
   drawAmbient(now);
 
   // 枠
@@ -574,7 +634,9 @@ function renderMsg(m, hit){
   const el = document.createElement('div');
   el.className = 'm';
   el.innerHTML = `<div class="a" style="background:${m.color}"></div>
-    <div class="n">${esc(m.name)}</div><div class="b${hit?' hit':''}">${esc(m.text)}</div>`;
+    <div class="n">${esc(m.name)}</div><div class="b${hit?' hit':''}">${esc(m.text)}</div>
+    <button class="ema-btn" title="このコメントを絵馬にして庭に飾る">飾</button>`;
+  el.querySelector('.ema-btn').addEventListener('click', () => addEma(m.name, m.text));
   msgs.appendChild(el);
   while (msgs.children.length > 60) msgs.removeChild(msgs.firstChild);
   msgs.scrollTop = msgs.scrollHeight;
@@ -642,7 +704,7 @@ $('btn-card').addEventListener('click', () => {
   x.fillText(`草 ${stats.kusa} 本 · 花 ${stats.hana} 輪 · 花火 ${stats.hanabi} 発 · 蛍 ${seen.size} 匹`, cw/2, 110+gh2+34);
   x.font='600 13px "Hiragino Sans",sans-serif';
   x.fillStyle='#aab3d6';
-  x.fillText(`蝶のおとずれ ${stats.cho} 回 · 猫のおとずれ ${stats.neko} 回`, cw/2, 110+gh2+58);
+  x.fillText(`蝶のおとずれ ${stats.cho} 回 · 猫のおとずれ ${stats.neko} 回 · 絵馬 ${stats.ema||0} 枚`, cw/2, 110+gh2+58);
   x.font='11px sans-serif';
   x.fillStyle='#667';
   x.fillText('コメントの庭 — DevNull Studio', cw/2, ch-22);

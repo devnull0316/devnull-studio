@@ -349,11 +349,161 @@ footer a:hover { color: var(--ink); }
 </section>
 
 <footer>
-  <div>&copy; 2026 DevNull Studio — Tokyo, Japan</div>
+  <div><span id="copy" style="cursor:pointer" title="?">&copy;</span> 2026 DevNull Studio — Tokyo, Japan</div>
   <div class="links">
     <a href="/privacy.html">プライバシーポリシー</a>
   </div>
 </footer>
+
+<style>
+/* ---- しょうもないが、丁寧なユーモア ---- */
+#hotaru2 {
+  position: absolute; width: 12px; height: 12px; border-radius: 50%;
+  background: #e8b54a;
+  box-shadow: 0 0 18px 7px rgba(232,181,74,0.5);
+  transition: left 0.55s cubic-bezier(.2,.8,.3,1), top 0.55s cubic-bezier(.2,.8,.3,1);
+  cursor: pointer; z-index: 5;
+}
+#hotaru2 .said {
+  position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+  font-size: 11px; white-space: nowrap; color: var(--ink);
+  background: #fff; border: 1px solid var(--line); border-radius: 999px;
+  padding: 2px 10px; opacity: 0; transition: opacity .3s;
+  pointer-events: none;
+}
+.hanko {
+  position: fixed; z-index: 99; pointer-events: none;
+  font-family: 'Hiragino Mincho ProN', serif;
+  color: #fff; background: var(--shu);
+  width: 44px; height: 44px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700;
+  opacity: 0; animation: stamp .35s ease forwards;
+  box-shadow: 0 2px 8px rgba(80,20,15,0.3);
+}
+@keyframes stamp {
+  0% { opacity: 0; transform: scale(2.2) rotate(-12deg); }
+  60% { opacity: 0.92; transform: scale(0.95) rotate(var(--rot)); }
+  100% { opacity: 0.85; transform: scale(1) rotate(var(--rot)); }
+}
+.hanko.off { animation: stampfall 1s ease forwards; }
+@keyframes stampfall {
+  to { opacity: 0; transform: translateY(60vh) rotate(120deg); }
+}
+#toast {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--ink); color: var(--paper);
+  font-size: 13px; padding: 10px 24px; border-radius: 999px;
+  transition: transform .35s cubic-bezier(.2,.8,.3,1); z-index: 100;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+#neko-walk {
+  position: fixed; bottom: 4px; left: -60px; z-index: 100;
+  font-size: 34px; pointer-events: none;
+  filter: brightness(0.25);
+}
+</style>
+<div id="toast"></div>
+<script>
+'use strict';
+(() => {
+const $ = id => document.getElementById(id);
+
+// ---- 1) 逃げる蛍(ヒーロー領域) ----
+const hero = document.querySelector('.hero');
+const ho = document.createElement('div');
+ho.id = 'hotaru2';
+ho.innerHTML = '<span class="said"></span>';
+hero.appendChild(ho);
+let hx = 0.72, hy = 0.30, escapes = 0, tame = false, resting = false;
+function placeHotaru(){
+  ho.style.left = (hx * 100) + '%';
+  ho.style.top = (hy * 100) + '%';
+}
+placeHotaru();
+function flee(cx, cy){
+  if (resting) return;
+  const r = hero.getBoundingClientRect();
+  const px = hx * r.width, py = hy * r.height;
+  const d = Math.hypot(cx - px, cy - py);
+  if (d > 80) return;
+  if (tame){
+    resting = true;
+    const said = ho.querySelector('.said');
+    said.textContent = 'つかまえた…と思ったでしょ';
+    said.style.opacity = 1;
+    setTimeout(() => { said.style.opacity = 0; resting = false; tame = false; escapes = 0; }, 2200);
+    return;
+  }
+  escapes++;
+  if (escapes >= 6) tame = true;
+  const ang = Math.atan2(py - cy, px - cx) + (Math.random() - 0.5) * 1.2;
+  hx = Math.min(0.92, Math.max(0.45, hx + Math.cos(ang) * 0.18));
+  hy = Math.min(0.85, Math.max(0.05, hy + Math.sin(ang) * 0.22));
+  placeHotaru();
+}
+hero.addEventListener('pointermove', e => {
+  const r = hero.getBoundingClientRect();
+  flee(e.clientX - r.left, e.clientY - r.top);
+});
+ho.addEventListener('pointerdown', e => {
+  const r = hero.getBoundingClientRect();
+  flee(e.clientX - r.left, e.clientY - r.top);
+});
+
+// ---- 2) 朱印スタンプ(ロゴの印をクリック) ----
+let stamps = [];
+document.querySelector('.logo .seal').addEventListener('click', e => {
+  e.preventDefault(); e.stopPropagation();
+  if (stamps.length >= 8){
+    toast('押しすぎです。');
+    for (const st of stamps) st.classList.add('off');
+    setTimeout(() => { stamps.forEach(st => st.remove()); stamps = []; }, 1100);
+    return;
+  }
+  const h = document.createElement('div');
+  h.className = 'hanko';
+  h.textContent = '良';
+  h.style.setProperty('--rot', (Math.random() * 24 - 12) + 'deg');
+  h.style.left = (10 + Math.random() * 80) + 'vw';
+  h.style.top = (15 + Math.random() * 65) + 'vh';
+  document.body.appendChild(h);
+  stamps.push(h);
+});
+
+// ---- 3) ©で黒猫が横切る ----
+let catBusy = false;
+$('copy').addEventListener('click', () => {
+  if (catBusy) return;
+  catBusy = true;
+  const c = document.createElement('div');
+  c.id = 'neko-walk';
+  c.textContent = '🐈';
+  document.body.appendChild(c);
+  const dur = 7000, t0 = performance.now();
+  (function step(now){
+    const t = (now - t0) / dur;
+    if (t >= 1){ c.remove(); catBusy = false; return; }
+    c.style.left = (-60 + t * (window.innerWidth + 120)) + 'px';
+    c.style.bottom = (4 + Math.abs(Math.sin(t * 40)) * 3) + 'px';
+    requestAnimationFrame(step);
+  })(t0);
+});
+
+// ---- 4) タブを離れると蛍が昼寝 ----
+const realTitle = document.title;
+document.addEventListener('visibilitychange', () => {
+  document.title = document.hidden ? '蛍はひるね中… — DevNull Studio' : realTitle;
+});
+
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+})();
+</script>
 
 </body>
 </html>
