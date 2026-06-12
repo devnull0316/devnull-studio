@@ -766,6 +766,8 @@ let nightN = 1;
 let nightGoal = 3;
 let nightClearPending = 0;
 let bells = []; // golden bells on stage terrain: ring one for bonus time
+let nightRng = null; // seeded; stage-mode stars follow a fixed per-night sequence
+let lastStarPt = null; // deterministic reference point for stage-mode spacing
 let fracSum = 0; // sum of remaining-time fractions per collected star
 let scrollC = null;     // last composed scroll canvas (save / share / keep)
 let galleryCaption = '';
@@ -1179,6 +1181,9 @@ function genObstacles(n) {
 // ============================================================
 function spawnStar() {
   const m = U * 0.12;
+  // stage mode: the same night always deals the same stars (replayable);
+  // endless keeps true randomness
+  const R = (gameMode === 'meguri' && nightRng) ? nightRng : Math.random;
   const r = Math.max(9, fly.r * 1.5);
   // the gold ring IS the hitbox; it starts generous and tightens as
   // you improve (fixed per star — a shrinking target mid-flight would
@@ -1186,23 +1191,30 @@ function spawnStar() {
   const hitR = r * Math.max(M.hitFloor, M.hit0 - stars * M.hitDec);
   const clearance = hitR + fly.r + 8; // the whole ring must stay reachable
   let bestPt = null, bestScore = -1;
+  const det = R !== Math.random; // deterministic (stage) placement
   for (let i = 0; i < 34; i++) {
-    const x = rand(m, W - m), y = rand(m + H * 0.08, H - m);
-    const dFly = Math.hypot(x - fly.x, y - fly.y);
-    if (dFly < DIAG * 0.3 && i < 24) continue;
-    const near = nearbySegs(x, y, clearance + 70);
+    const x = m + R() * (W - 2 * m), y = m + H * 0.08 + R() * (H - 2 * m - H * 0.08);
+    // spacing reference: in stage mode use the previous star's position
+    // (deterministic) instead of the firefly's exact contact point
+    const ref = det && lastStarPt ? lastStarPt : fly;
+    const dFly = Math.hypot(x - ref.x, y - ref.y);
+    if (dFly < DIAG * (det ? 0.25 : 0.3) && i < 24) continue;
+    const segsToCheck = nearbySegs(x, y, clearance + 70);
     let clutter = 0, minD = 1e9;
-    for (const s of near) {
+    for (const s of segsToCheck) {
+      if (det && !s.fixed) continue; // judge only terrain in stage mode
       const c = segClosest(s, x, y);
       const d = Math.hypot(c.x - x, c.y - y) - s.r;
       minD = Math.min(minD, d);
       if (d < clearance + 70) clutter += (clearance + 70 - d);
     }
-    if (minD < clearance && i < 30) continue; // never bury the ring in ink or terrain
+    if (minD < clearance && i < 30) continue; // never bury the ring in terrain
+    if (det && minD >= clearance) { bestPt = { x, y }; break; } // first valid = fixed sequence
     const sc = dFly * 0.5 - clutter * 2.5 + (minD < clearance ? -5000 : 0);
     if (sc > bestScore) { bestScore = sc; bestPt = { x, y }; }
   }
   if (!bestPt) bestPt = { x: W / 2, y: H / 2 };
+  lastStarPt = { x: bestPt.x, y: bestPt.y };
   star = { x: bestPt.x, y: bestPt.y, r, hitR, born: playT };
   countMax = Math.max(M.tFloor, M.t0 - stars * M.tDec);
   countT = countMax;
@@ -1426,7 +1438,13 @@ function startGame() {
   fly.glow = 1;
   fly.sp = 0;
   armed = false;
-  if (gameMode === 'meguri') genObstacles(nightN);
+  if (gameMode === 'meguri') {
+    genObstacles(nightN);
+    nightRng = mulberry32(nightN * 7919 + 101);
+  } else {
+    nightRng = null;
+  }
+  lastStarPt = { x: W * 0.5, y: H * 0.62 }; // = the firefly's fixed start
   spawnStar();
   countT = countMax = M.t0 + 3; // generous first star; frozen until the first stroke
   tut = (gameMode === 'meguri' && nightN > 1) ? 1 : 0; // hints only where they help
