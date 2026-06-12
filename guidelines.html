@@ -10,7 +10,7 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
   --paper: #faf8f2; --paper-2: #f3efe5;
-  --ink: #1d1a16; --ink-dim: #5a544a; --ink-faint: #948c7e;
+  --ink: #1d1a16; --ink-dim: #5a544a; --ink-faint: #7d7468;
   --line: #e6e0d2; --shu: #b3342e;
 }
 body {
@@ -90,7 +90,7 @@ footer a { color: var(--ink-faint); text-decoration: none; }
   <ul>
     <li>ゲーム本体の再配布、改変しての公開、販売(ゲームはこのサイトでずっと無料です)</li>
     <li>公式・当スタジオを騙る形での投稿</li>
-    <li>法人・営利団体としての利用(イベント・店舗等での使用)— これは個別にご相談ください。だいたい良い返事をします: <a href="#" onclick="location.href='mailto:'+this.dataset.u+'@'+this.dataset.d;return false" data-u="contact" data-d="devnull-studio.com" rel="nofollow">contact[at]devnull-studio.com</a></li>
+    <li>法人・営利団体としての利用(イベント・店舗等での使用)— これは個別にご相談ください。だいたい良い返事をします: <a href="#" class="mail-x" data-u="contact" data-d="devnull-studio.com" rel="nofollow">メールアドレスを表示</a><script>document.querySelectorAll('.mail-x').forEach(m=>{m.textContent=m.dataset.u+'@'+m.dataset.d;m.addEventListener('click',e=>{e.preventDefault();location.href='mailto:'+m.textContent;});});</script></li>
   </ul>
 
   <h2>このガイドラインについて</h2>

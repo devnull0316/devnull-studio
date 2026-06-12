@@ -15,6 +15,7 @@
 <meta property="og:image" content="https://devnull-studio.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="alternate" type="application/rss+xml" title="DevNull Studio おしらせ" href="/feed.xml">
+<link rel="alternate" hreflang="en" href="https://devnull-studio.com/en.html">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Organization","name":"DevNull Studio","url":"https://devnull-studio.com","email":"contact@devnull-studio.com","logo":"https://devnull-studio.com/favicon.svg","address":{"@type":"PostalAddress","addressLocality":"Tokyo","addressCountry":"JP"}}
 </script>
@@ -26,7 +27,7 @@
   --paper-2: #f3efe5;
   --ink: #1d1a16;
   --ink-dim: #5a544a;
-  --ink-faint: #948c7e;
+  --ink-faint: #7d7468;
   --line: #e6e0d2;
   --shu: #b3342e;
   --gold: #b08f3c;
@@ -651,6 +652,7 @@ footer a:hover { color: var(--ink); }
 <footer>
   <div><span id="copy" style="cursor:pointer" title="?">&copy;</span> 2026 DevNull Studio — Tokyo, Japan<span style="margin-left:14px; opacity:0.6">手書きHTML・外部ライブラリ0個・サイト全体 約255KB(阿部寛のホームページ約25個分)</span></div>
   <div class="links">
+    <a href="/en.html">English</a>
     <a href="/guidelines.html">実況・二次創作ガイドライン</a>
     <a href="/privacy.html">プライバシーポリシー</a>
     <a href="/feed.xml">RSS</a>
@@ -817,8 +819,16 @@ const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ml = $('mail-link');
 if (ml){
   const addr = () => ml.dataset.u + '@' + ml.dataset.d;
-  ml.addEventListener('click', e => { e.preventDefault(); location.href = 'mailto:' + addr(); });
-  ml.textContent = addr().replace('@', '[at]');
+  ml.textContent = addr();
+  // mailto はメーラー未設定環境で無反応になるため、コピーを主にする
+  ml.addEventListener('click', e => {
+    e.preventDefault();
+    const a = addr();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(a).then(() => toast('メールアドレスをコピーしました: ' + a));
+    }
+    location.href = 'mailto:' + a;
+  });
 }
 
 // ---- 実績システム(ゲームスタジオのサイトには実績がある) ----
