@@ -111,45 +111,62 @@ section { max-width: 1060px; margin: 0 auto; padding: clamp(48px, 8vh, 84px) cla
 .sec-head h2 { font-size: clamp(22px, 3vw, 30px); font-weight: 700; letter-spacing: 0.06em; }
 .sec-head .en { font-size: 11px; color: var(--ink-faint); letter-spacing: 0.3em; }
 
-/* ===== 作品カード ===== */
-.works { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 22px; }
-.work {
-  display: block;
+/* ===== 作品: 墨蛍ショーケース ===== */
+.feature {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 20px;
   overflow: hidden;
   background: #fff;
   transition: transform .25s, box-shadow .25s;
 }
-.work:hover { transform: translateY(-5px); box-shadow: 0 16px 40px rgba(60,45,20,0.12); }
-.thumb {
-  height: 175px;
-  display: flex; align-items: center; justify-content: center;
-  position: relative; overflow: hidden;
-}
-.t-sumi {
+.feature:hover { transform: translateY(-5px); box-shadow: 0 20px 50px rgba(60,45,20,0.13); }
+.feature-visual {
+  position: relative;
+  min-height: 320px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
   background:
-    radial-gradient(ellipse at 75% 18%, rgba(255,255,250,0.6), transparent 55%),
+    radial-gradient(ellipse at 75% 18%, rgba(255,255,250,0.65), transparent 55%),
     radial-gradient(ellipse at 15% 85%, rgba(176,143,60,0.18), transparent 50%),
     #ece4d0;
+  overflow: hidden;
 }
-.t-sumi .big { font-family:'Hiragino Mincho ProN',serif; font-size: 44px; font-weight: 700; color: #1d1a16; letter-spacing: 0.35em; margin-left: 0.35em; }
-.t-sumi .firefly { position: absolute; right: 28%; top: 30%; width: 10px; height: 10px; border-radius: 50%; background: #e8b54a; box-shadow: 0 0 18px 6px rgba(232,181,74,0.55); }
-.t-cosmic { background: radial-gradient(circle at 30% 30%, #1c1c3a, #0a0a14 75%); }
-.t-cosmic .big { font-family: 'Courier New', monospace; font-weight: 700; font-size: 23px; letter-spacing: 0.12em;
-  background: linear-gradient(180deg,#fff 20%,#8ab4ff 60%,#c08aff 100%);
-  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-.t-glitch { background: linear-gradient(160deg, #05060a, #101522); }
-.t-glitch .big { font-family: 'Courier New', monospace; font-weight: 700; font-size: 21px; color: #e8fbff;
-  text-shadow: 2px 0 0 rgba(255,0,90,0.75), -2px 0 0 rgba(0,229,255,0.75); }
-.t-sub { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 9px; letter-spacing: 0.4em; color: rgba(255,255,255,0.5); }
-.t-sumi .t-sub { color: rgba(29,26,22,0.45); }
-.work-body { padding: 18px 20px 20px; }
-.work-body h3 { font-size: 16.5px; font-weight: 700; }
-.work-body p { font-size: 13px; color: var(--ink-dim); margin-top: 7px; line-height: 1.85; }
-.tags { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
-.tag { font-size: 10.5px; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 999px; padding: 2px 11px; }
-.tag.hot { color: var(--shu); border-color: rgba(179,52,46,0.35); }
+.feature-visual .big { font-size: clamp(56px, 8vw, 88px); font-weight: 700; color: #1d1a16; letter-spacing: 0.3em; margin-left: 0.3em; }
+.feature-visual .yomi { margin-top: 8px; font-size: 11px; letter-spacing: 0.45em; color: rgba(29,26,22,0.5); }
+.feature-visual .firefly {
+  position: absolute; right: 22%; top: 24%;
+  width: 11px; height: 11px; border-radius: 50%;
+  background: #e8b54a;
+  box-shadow: 0 0 20px 8px rgba(232,181,74,0.55);
+  animation: drift 7s ease-in-out infinite alternate;
+}
+@keyframes drift {
+  0% { transform: translate(0,0); }
+  50% { transform: translate(-26px, 18px); }
+  100% { transform: translate(10px, 34px); }
+}
+.feature-visual .f-stroke {
+  position: absolute; left: -10%; bottom: 12%;
+  width: 120%; height: 7px;
+  background: #1d1a16;
+  border-radius: 999px;
+  opacity: 0.85;
+  transform: rotate(-7deg);
+}
+.feature-body { padding: clamp(26px, 4vw, 48px); }
+.f-label { font-size: 11px; font-weight: 700; letter-spacing: 0.25em; color: var(--shu); }
+.feature-body h3 { font-size: clamp(20px, 2.8vw, 28px); font-weight: 700; margin-top: 12px; letter-spacing: 0.04em; }
+.feature-body > p { font-size: 14px; color: var(--ink-dim); margin-top: 14px; line-height: 2.1; }
+.feature-body > p b { color: var(--ink); }
+.f-list { list-style: none; margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+.f-list li { font-size: 13px; color: var(--ink-dim); padding-left: 18px; position: relative; }
+.f-list li::before { content: ''; position: absolute; left: 0; top: 0.7em; width: 7px; height: 7px; border-radius: 2px; background: var(--shu); transform: rotate(45deg) scale(0.8); }
+.f-list li b { color: var(--ink); }
+.f-cta { margin-top: 26px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.f-note { font-size: 11.5px; color: var(--ink-faint); }
+@media (max-width: 760px) { .feature { grid-template-columns: 1fr; } .feature-visual { min-height: 220px; } }
 
 /* ===== 実験室 ===== */
 .lab-band { background: var(--paper-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -249,44 +266,30 @@ footer a:hover { color: var(--ink); }
   <div class="sec-head">
     <span class="no">01</span>
     <h2>作品</h2>
-    <span class="en">GAMES</span>
+    <span class="en">GAME — 墨蛍</span>
   </div>
-  <div class="works">
-    <a class="work" href="/sumi.html">
-      <div class="thumb t-sumi">
-        <span class="big">墨蛍</span>
-        <span class="firefly"></span>
-        <span class="t-sub">SUMI — HOTARU</span>
+  <a class="feature" href="/sumi.html">
+    <div class="feature-visual">
+      <span class="big serif">墨蛍</span>
+      <span class="yomi">— すみほたる —</span>
+      <span class="firefly"></span>
+      <span class="f-stroke"></span>
+    </div>
+    <div class="feature-body">
+      <div class="f-label">いちおしの一作</div>
+      <h3>筆で描いて、蛍を星へ。</h3>
+      <p>指先が筆になる。描いた墨の壁で跳ねる蛍を導き、時間が切れる前に光る星へ。<b>描いた墨は消えない</b> — やがて自分の墨が自分を阻み、一局ごとにあなたの軌跡が一幅の墨絵になる。</p>
+      <ul class="f-list">
+        <li><b>夜巡り</b> — 夜ごとに変わる地形を攻略するステージモード</li>
+        <li><b>無限の夜</b> — 宵・夜半・暁、どこまで生き延びるか</li>
+        <li><b>掛け軸</b> — 遊んだ跡がそのまま絵になり、保存・共有できる</li>
+      </ul>
+      <div class="f-cta">
+        <span class="btn fill">いますぐ遊ぶ — 無料</span>
+        <span class="f-note">iPad / Apple Pencil 推奨 · インストール不要</span>
       </div>
-      <div class="work-body">
-        <h3>墨蛍(すみほたる)</h3>
-        <p>筆で壁を描き、跳ねる蛍を星へ導く。描いた墨は消えず、一局ごとにあなたの軌跡が一幅の墨絵になる。夜を巡るステージモードと、どこまで生き延びるかの無限の夜。</p>
-        <div class="tags"><span class="tag hot">いちおし</span><span class="tag">描く</span><span class="tag">iPad / Apple Pencil</span></div>
-      </div>
-    </a>
-    <a class="work" href="/cosmic.html">
-      <div class="thumb t-cosmic">
-        <span class="big">COSMIC FUSION</span>
-        <span class="t-sub">MERGE THE PLANETS</span>
-      </div>
-      <div class="work-body">
-        <h3>COSMIC FUSION</h3>
-        <p>星を落として、同じ星どうしを合体させて進化させる物理パズル。隕石から太陽を目指そう。じっくり遊べてタブレットに最適。</p>
-        <div class="tags"><span class="tag">パズル</span><span class="tag">物理</span></div>
-      </div>
-    </a>
-    <a class="work" href="/game.html">
-      <div class="thumb t-glitch">
-        <span class="big">GLITCH//RUNNER</span>
-        <span class="t-sub">SURVIVE THE SIGNAL STORM</span>
-      </div>
-      <div class="work-body">
-        <h3>GLITCH//RUNNER</h3>
-        <p>迫りくるネオン弾幕をかわし続ける高速アクション。弾をかすめるほどスコア倍率が上がるリスクリターン設計。腕に自信のある人向け。</p>
-        <div class="tags"><span class="tag">アクション</span><span class="tag">高難度</span></div>
-      </div>
-    </a>
-  </div>
+    </div>
+  </a>
 </section>
 
 <div class="lab-band">
@@ -348,7 +351,6 @@ footer a:hover { color: var(--ink); }
 <footer>
   <div>&copy; 2026 DevNull Studio — Tokyo, Japan</div>
   <div class="links">
-    <a href="/games.html">ゲーム一覧</a>
     <a href="/privacy.html">プライバシーポリシー</a>
   </div>
 </footer>

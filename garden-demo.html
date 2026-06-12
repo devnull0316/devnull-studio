@@ -119,6 +119,11 @@ button.primary { background:var(--gold); border-color:var(--gold); color:#1d2030
     </div>
     <div class="demo-row">
       <label><input type="checkbox" id="demo-toggle"> 自動デモ(偽視聴者約40人)</label>
+      <span style="margin-left:auto; display:flex; gap:5px;">
+        <button id="t-cho" style="font-size:11px; padding:4px 10px;">蝶</button>
+        <button id="t-neko" style="font-size:11px; padding:4px 10px;">猫</button>
+        <button id="t-hoshi" style="font-size:11px; padding:4px 10px;">星</button>
+      </span>
     </div>
     <div id="msgs"></div>
     <div class="quick">
@@ -134,7 +139,9 @@ button.primary { background:var(--gold); border-color:var(--gold); color:#1d2030
     <div class="legend">
       <b>草・w</b> → 草が生える　<b>8888</b> → 花火<br>
       <b>かわいい・すき・きれい</b> → 花が咲く<br>
-      <b>はじめてのコメント</b> → 蛍が庭に住み着く(名前付き)
+      <b>はじめてのコメント</b> → 蛍が庭に住み着く(名前付き)<br>
+      風・花びら・蝶は勝手に動く。夜は流れ星。<br>
+      そして<b>チャットが静かになると、猫が遊びに来る</b>。
     </div>
   </div>
 </div>
@@ -188,7 +195,17 @@ const flowers = [];  // {x, h, born, hue}
 const bugs = [];     // 蛍 {name, color, x, y, tx, ty, born, phase, label}
 const sparks = [];   // 花火 {x,y,parts:[{x,y,vx,vy,life,col}], born}
 let startT = performance.now();
-const stats = { kusa:0, hana:0, hanabi:0 };
+const stats = { kusa:0, hana:0, hanabi:0, cho:0, neko:0 };
+let lastChatT = performance.now();   // 静けさ検知(猫の出現バイアス)
+let wind = 0, gust = 0;
+const petals = [];                   // 流れる花びら
+let butterfly = null;                // 蝶(一度に1匹)
+let cat = null;                      // 猫(一度に1匹)
+let shootingStar = null;
+let nextButterflyT = performance.now() + rand(15000, 35000);
+let nextCatT = performance.now() + rand(45000, 80000);
+let nextPetalT = 0;
+let nextStarT = performance.now() + rand(30000, 60000);
 
 function groundY(x){ // なだらかな丘
   return GH-14 - Math.sin((x/GW)*Math.PI)*14;
@@ -226,6 +243,196 @@ function pokeBug(name){
   if (b) { b.label = performance.now(); b.tx = rand(20,GW-20); b.ty = groundY(b.tx)-rand(18,46); }
 }
 
+// ============================================================
+// 生きている庭 — 常時/ときどき/まれ の3層
+// ============================================================
+function spawnButterfly(){
+  stats.cho++;
+  const fromLeft = Math.random() < 0.5;
+  butterfly = {
+    x: fromLeft ? -10 : GW + 10, dir: fromLeft ? 1 : -1,
+    y: rand(GH * 0.25, GH * 0.55),
+    hue: pick([330, 35, 200, 270]),
+    state: 'fly', restT: 0, phase: rand(TAU),
+  };
+}
+function spawnCat(){
+  stats.neko++;
+  const fromLeft = Math.random() < 0.5;
+  cat = {
+    x: fromLeft ? -30 : GW + 30, dir: fromLeft ? 1 : -1,
+    state: 'walk',                    // walk → (sit → sleep?) → leave
+    t: 0, sitT: rand(6000, 14000),
+    tail: rand(TAU),
+  };
+}
+function updateAmbient(now){
+  // 風: ゆらぎ+時々突風
+  gust *= 0.985;
+  if (Math.random() < 0.004) gust = rand(1.5, 3);
+  wind = Math.sin(now * 0.0004) * 0.7 + Math.sin(now * 0.0013) * 0.3 + gust;
+
+  // 花びら
+  if (now > nextPetalT){
+    nextPetalT = now + rand(2500, 7000);
+    petals.push({ x: -6, y: rand(6, GH * 0.5), rot: rand(TAU), hue: pick([340, 45, 20]) });
+  }
+  for (let i = petals.length - 1; i >= 0; i--){
+    const p = petals[i];
+    p.x += 0.35 + wind * 0.5;
+    p.y += 0.18 + Math.sin(now * 0.003 + p.rot) * 0.25;
+    p.rot += 0.02;
+    if (p.x > GW + 10 || p.y > GH) petals.splice(i, 1);
+  }
+
+  // 蝶
+  if (!butterfly && now > nextButterflyT) spawnButterfly();
+  if (butterfly){
+    const bf = butterfly;
+    bf.phase += 0.012;
+    if (bf.state === 'fly'){
+      bf.x += bf.dir * 0.55;
+      bf.y += Math.sin(bf.phase * 6) * 0.8;
+      // 花があれば時々ひと休み
+      if (flowers.length && Math.random() < 0.003){
+        const f = pick(flowers);
+        bf.state = 'rest'; bf.restT = now + rand(3000, 7000);
+        bf.x = f.x; bf.y = groundY(f.x) - f.h - 4;
+      }
+      if (bf.x < -16 || bf.x > GW + 16){ butterfly = null; nextButterflyT = now + rand(20000, 50000); }
+    } else if (now > bf.restT){
+      bf.state = 'fly';
+    }
+  }
+
+  // 猫 — 静かなチャットほど来やすい(沈黙の救済)
+  const quiet = now - lastChatT > 12000;
+  if (!cat && (now > nextCatT || (quiet && now > nextCatT - 30000))){
+    spawnCat();
+    nextCatT = now + rand(90000, 160000);
+  }
+  if (cat){
+    cat.t += 16;
+    cat.tail += 0.05;
+    if (cat.state === 'walk'){
+      cat.x += cat.dir * 0.42;
+      const mid = cat.x > GW * 0.25 && cat.x < GW * 0.75;
+      if (mid && Math.random() < 0.004){ cat.state = 'sit'; cat.t = 0; }
+      if (cat.x < -34 || cat.x > GW + 34) cat = null;
+    } else if (cat.state === 'sit'){
+      if (cat.t > cat.sitT){
+        if (Math.random() < 0.45){ cat.state = 'sleep'; cat.t = 0; cat.sitT = rand(9000, 18000); }
+        else cat.state = 'walk';
+      }
+    } else if (cat.state === 'sleep'){
+      if (cat.t > cat.sitT) cat.state = 'walk';
+    }
+  }
+
+  // 流れ星(夕暮れ以降)
+  const mins = (now - startT) / 60000;
+  if (!shootingStar && mins > 0.6 && now > nextStarT){
+    shootingStar = { x: rand(GW * 0.2, GW * 0.8), y: rand(6, GH * 0.2), t: 0 };
+    nextStarT = now + rand(40000, 90000);
+  }
+  if (shootingStar){
+    shootingStar.t += 16;
+    if (shootingStar.t > 900) shootingStar = null;
+  }
+
+  // 蛍のダンス: まれに2匹が寄り添って旋回
+  if (bugs.length >= 2 && Math.random() < 0.0008){
+    const a2 = pick(bugs), b2 = pick(bugs);
+    if (a2 !== b2){ a2.tx = b2.tx + rand(-10, 10); a2.ty = b2.ty + rand(-10, 10); }
+  }
+}
+
+function drawAmbient(now){
+  // 夜空の星(夕暮れが深まるほど)
+  const mins = (now - startT) / 60000;
+  const night = Math.min(1, Math.max(0, mins * 0.1 - 0.05));
+  if (night > 0.05){
+    for (let i = 0; i < 10; i++){
+      const sx = (i * 53.7) % GW, sy = 6 + (i * 17.3) % (GH * 0.25);
+      const tw = 0.3 + Math.abs(Math.sin(now * 0.001 + i * 2.1)) * 0.7;
+      g.globalAlpha = night * tw * 0.8;
+      g.fillStyle = '#fff8e0';
+      g.fillRect(sx, sy, 1.6, 1.6);
+    }
+    g.globalAlpha = 1;
+  }
+  // 流れ星
+  if (shootingStar){
+    const t = shootingStar.t / 900;
+    const x = shootingStar.x + t * 60, y = shootingStar.y + t * 26;
+    g.strokeStyle = `rgba(255,250,220,${(1 - t) * 0.9})`;
+    g.lineWidth = 1.4;
+    g.beginPath(); g.moveTo(x - 16, y - 7); g.lineTo(x, y); g.stroke();
+  }
+  // 花びら
+  for (const p of petals){
+    g.save();
+    g.translate(p.x, p.y); g.rotate(p.rot);
+    g.fillStyle = `hsla(${p.hue},70%,78%,0.85)`;
+    g.beginPath(); g.ellipse(0, 0, 3, 1.8, 0, 0, TAU); g.fill();
+    g.restore();
+  }
+  // 蝶
+  if (butterfly){
+    const bf = butterfly;
+    const flap = bf.state === 'rest'
+      ? 0.25 + Math.sin(now * 0.004) * 0.15
+      : Math.abs(Math.sin(now * 0.02));
+    g.save();
+    g.translate(bf.x, bf.y);
+    g.fillStyle = `hsla(${bf.hue},75%,72%,0.95)`;
+    g.beginPath(); g.ellipse(-3 * (0.3 + flap), 0, 3.4 * (0.3 + flap), 4, -0.35, 0, TAU); g.fill();
+    g.beginPath(); g.ellipse( 3 * (0.3 + flap), 0, 3.4 * (0.3 + flap), 4,  0.35, 0, TAU); g.fill();
+    g.fillStyle = '#2b241c';
+    g.fillRect(-0.8, -3, 1.6, 6);
+    g.restore();
+  }
+  // 猫 — 墨色のシルエット
+  if (cat){
+    const gy = groundY(cat.x) + 2;
+    const bob = cat.state === 'walk' ? Math.sin(cat.x * 0.4) * 1 : 0;
+    g.save();
+    g.translate(cat.x, gy + bob);
+    g.scale(cat.dir, 1);
+    g.fillStyle = '#23201b';
+    if (cat.state === 'sleep'){
+      g.beginPath(); g.ellipse(0, -5, 13, 6, 0, 0, TAU); g.fill();          // 丸くなる
+      g.beginPath(); g.arc(9, -8, 5, 0, TAU); g.fill();                      // 頭
+      g.beginPath(); g.moveTo(6,-12); g.lineTo(8,-16); g.lineTo(10,-12); g.fill();
+      g.beginPath(); g.moveTo(10,-12); g.lineTo(12.5,-15.5); g.lineTo(14,-11.5); g.fill();
+      const zt = Math.floor(cat.t / 800) % 3;
+      g.font = '600 8px sans-serif'; g.fillStyle = 'rgba(255,255,255,0.55)';
+      g.scale(cat.dir, 1);
+      g.fillText('z'.repeat(zt + 1), cat.dir > 0 ? 14 : -26, -20);
+    } else {
+      const sit = cat.state === 'sit';
+      g.beginPath(); g.ellipse(0, sit ? -8 : -6, sit ? 7 : 11, sit ? 9 : 5.5, 0, 0, TAU); g.fill(); // 体
+      g.beginPath(); g.arc(sit ? 0 : 9, sit ? -18 : -10, 5, 0, TAU); g.fill();                       // 頭
+      const hx = sit ? 0 : 9, hy = sit ? -18 : -10;
+      g.beginPath(); g.moveTo(hx-4.5,hy-3); g.lineTo(hx-3,hy-8); g.lineTo(hx-0.5,hy-4); g.fill();   // 耳
+      g.beginPath(); g.moveTo(hx+0.5,hy-4); g.lineTo(hx+3,hy-8); g.lineTo(hx+4.5,hy-3); g.fill();
+      // 闇で光る金の目(まばたき付き) — 夜背景での視認性も担う
+      const blink = Math.sin(cat.t * 0.0011) > 0.96 ? 0.2 : 1;
+      g.fillStyle = '#ffd24d';
+      g.beginPath(); g.ellipse(hx - 2, hy - 0.5, 1.1, 1.1 * blink, 0, 0, TAU); g.fill();
+      g.beginPath(); g.ellipse(hx + 2, hy - 0.5, 1.1, 1.1 * blink, 0, 0, TAU); g.fill();
+      g.fillStyle = '#23201b';
+      const tw2 = Math.sin(cat.tail) * 6;                                                            // しっぽ
+      g.strokeStyle = '#23201b'; g.lineWidth = 2.4; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(sit ? 5 : -10, -5);
+      g.quadraticCurveTo(sit ? 12 : -17, -10 + tw2 * 0.4, sit ? 10 : -19, -16 + tw2);
+      g.stroke();
+      if (!sit){ g.fillRect(-7,-2,2.4,4); g.fillRect(-2,-2,2.4,4); g.fillRect(3,-2,2.4,4); g.fillRect(7,-2,2.4,4); }
+    }
+    g.restore();
+  }
+}
+
 function drawGarden(now){
   g.clearRect(0,0,GW,GH);
   const mins = (now-startT)/60000;
@@ -249,7 +456,7 @@ function drawGarden(now){
   for (const k of grass){
     const age = Math.min(1,(now-k.born)/600);
     const h = k.h * (1-Math.pow(1-age,3));
-    const sway = Math.sin(now*0.0015 + k.x)*2;
+    const sway = Math.sin(now*0.0015 + k.x)*2 + wind * (2.2 + (k.x % 7) * 0.3);
     const gy = groundY(k.x);
     g.strokeStyle = `hsl(${k.hue},45%,${38+age*8}%)`;
     g.lineWidth = 1.6;
@@ -264,7 +471,7 @@ function drawGarden(now){
     const age = Math.min(1,(now-f.born)/900);
     const h = f.h*(1-Math.pow(1-age,3));
     const gy = groundY(f.x);
-    const sway = Math.sin(now*0.0012+f.x)*2;
+    const sway = Math.sin(now*0.0012+f.x)*2 + wind * 2.6;
     g.strokeStyle = 'hsl(120,30%,35%)';
     g.lineWidth = 1.6;
     g.beginPath(); g.moveTo(f.x,gy); g.quadraticCurveTo(f.x+sway*0.5, gy-h*0.6, f.x+sway, gy-h); g.stroke();
@@ -322,6 +529,8 @@ function drawGarden(now){
     if (!alive) sparks.splice(i,1);
   }
 
+  drawAmbient(now);
+
   // 枠
   g.strokeStyle = 'rgba(255,255,255,0.14)';
   g.lineWidth = 1;
@@ -357,7 +566,7 @@ function react(m){
 const chatListeners = [];
 function onChat(fn){ chatListeners.push(fn); }
 function emitChat(m){ for (const fn of chatListeners) fn(m); }
-onChat(m => renderMsg(m, react(m)));
+onChat(m => { lastChatT = performance.now(); renderMsg(m, react(m)); });
 
 // チャット表示
 const msgs = $('msgs');
@@ -396,6 +605,9 @@ function demoTick(){
   emitChat({ ...pick(demoUsers), text:pick(DEMO_SAY) });
   demoTimer = setTimeout(demoTick, rand(500,2400));
 }
+$('t-cho').addEventListener('click', () => { if (!butterfly) spawnButterfly(); });
+$('t-neko').addEventListener('click', () => { if (!cat) spawnCat(); });
+$('t-hoshi').addEventListener('click', () => { shootingStar = { x: rand(GW*0.2,GW*0.8), y: rand(6,GH*0.2), t: 0 }; });
 $('demo-toggle').addEventListener('change', e => {
   demoOn = e.target.checked;
   clearTimeout(demoTimer);
@@ -428,6 +640,9 @@ $('btn-card').addEventListener('click', () => {
   x.font='600 16px "Hiragino Sans",sans-serif';
   x.fillStyle='#ffd24d';
   x.fillText(`草 ${stats.kusa} 本 · 花 ${stats.hana} 輪 · 花火 ${stats.hanabi} 発 · 蛍 ${seen.size} 匹`, cw/2, 110+gh2+34);
+  x.font='600 13px "Hiragino Sans",sans-serif';
+  x.fillStyle='#aab3d6';
+  x.fillText(`蝶のおとずれ ${stats.cho} 回 · 猫のおとずれ ${stats.neko} 回`, cw/2, 110+gh2+58);
   x.font='11px sans-serif';
   x.fillStyle='#667';
   x.fillText('コメントの庭 — DevNull Studio', cw/2, ch-22);
@@ -447,6 +662,7 @@ stats.kusa = 0;
 
 function frame(now){
   requestAnimationFrame(frame);
+  updateAmbient(now);
   drawFake(now);
   drawGarden(now);
 }
