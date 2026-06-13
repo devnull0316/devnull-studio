@@ -87,8 +87,10 @@ Project Glasswing、復旧に向けた非公式観測（憶測と明示）、事
    - 本文: 下記フォーマット全文。末尾に @devnull0316 をメンションし、可能ならアサイン
 - 【変化なし】: 新規Issueは作らない（通知を出さない）。最新の fable-watch Issue に
   「<時刻>: 変化なし（<STATUS>）」と短くコメントするに留める。
-- ※Issue作成ができない場合のみ、claude/fable-watch ブランチに routines/logs/<日付>.md を
-  コミットして draft PR を開く方法で代替する。
+- ※Issue作成ができない場合（本リポジトリは Issues 無効）:
+  claude/fable-watch ブランチに routines/logs/<日付>.md をコミットしつつ、
+  draft PR の【説明本文にも出力フォーマット全文を記載】して開く（サマリだけにしない）。
+  タイトルにステータス、本文末尾に @devnull0316 をメンション。
 
 # 出力フォーマット（Issue本文・この順・簡潔に）
 1. 【ステータス】SUSPENDED/PARTIALLY_RESTORED/RESTORED/UNKNOWN ＋確認時刻
