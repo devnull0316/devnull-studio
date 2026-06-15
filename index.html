@@ -348,6 +348,25 @@ section { max-width: 1060px; margin: 0 auto; padding: clamp(48px, 8vh, 84px) cla
 .f-note { font-size: 11.5px; color: var(--ink-faint); }
 @media (max-width: 760px) { .feature { grid-template-columns: 1fr; } .feature-visual { min-height: 220px; } }
 
+/* ===== Webアプリ: Frogs ショーケース ===== */
+.feature.frogs { --aura: rgba(74,124,89,0.20); }
+.feature.frogs .f-label { color: #4a7c59; }
+.feature.frogs .f-list li::before { background: #4a7c59; }
+.feature.frogs .btn.fill { background: #4a7c59; border-color: #4a7c59; }
+.feature.frogs .btn.fill:hover { background: #3f6b4d; border-color: #3f6b4d; }
+.frogs-visual {
+  background:
+    radial-gradient(ellipse at 72% 20%, rgba(255,255,250,0.7), transparent 55%),
+    radial-gradient(ellipse at 18% 86%, rgba(168,213,186,0.45), transparent 55%),
+    #e8f0e6;
+}
+.frogs-visual .big { font-size: clamp(40px, 6vw, 64px); color: #2f4a38; letter-spacing: 0.12em; margin-left: 0.12em; }
+.frogs-visual .yomi { color: rgba(47,74,56,0.6); letter-spacing: 0.3em; }
+.frogs-mark { width: clamp(84px, 12vw, 116px); height: auto; margin-bottom: 10px; }
+body.night .frogs-visual { background: radial-gradient(ellipse at 30% 82%, rgba(74,124,89,0.30), transparent 55%), #16201a; }
+body.night .frogs-visual .big { color: #bcd6c4; }
+body.night .frogs-visual .yomi { color: rgba(188,214,196,0.6); }
+
 /* ===== 実験室 ===== */
 .lab-band { background: var(--paper-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .lab-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; }
@@ -464,7 +483,7 @@ footer .links { display: flex; gap: 20px; }
 footer a:hover { color: var(--ink); }
 
 @media (max-width: 560px) {
-  nav a:nth-child(3) { display: none; }
+  nav a.opt { display: none; }
   .hero .stroke { display: none; }
 }
 </style>
@@ -475,9 +494,10 @@ footer a:hover { color: var(--ink); }
   <a href="/" class="logo"><span class="seal">D</span>DevNull Studio</a>
   <nav>
     <a href="#works">作品</a>
+    <a href="#frogs">Frogs</a>
     <a href="#lab">実験室</a>
-    <a href="#news">おしらせ</a>
-    <a href="#faq">FAQ</a>
+    <a class="opt" href="#news">おしらせ</a>
+    <a class="opt" href="#faq">FAQ</a>
     <a href="#contact">お問い合わせ</a>
   </nav>
 </header>
@@ -527,6 +547,44 @@ footer a:hover { color: var(--ink); }
   </a>
 </section>
 
+<section id="frogs">
+  <div class="sec-head">
+    <h2>Webアプリ<svg class="sq" viewBox="0 0 120 9" preserveAspectRatio="none"><path d="M2 6 Q 20 2 40 5.5 T 78 5 T 118 4"/></svg></h2>
+    <span class="memo">遊びの外でも、しずかにつくっています</span>
+  </div>
+  <a class="feature frogs" href="https://frogs-mu.vercel.app" target="_blank" rel="noopener">
+    <div class="feature-visual frogs-visual">
+      <svg class="frogs-mark" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+        <circle cx="60" cy="60" r="47" stroke="#4a7c59" stroke-width="1.4" opacity="0.35"/>
+        <g>
+          <circle cx="60" cy="46" r="11" fill="#4a7c59"/>
+          <path d="M57 56 Q 47 74 60 87" stroke="#4a7c59" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
+        </g>
+        <g transform="rotate(180 60 62)" opacity="0.5">
+          <circle cx="60" cy="46" r="9.5" fill="#4a7c59"/>
+          <path d="M57 56 Q 47 74 60 87" stroke="#4a7c59" stroke-width="4.4" stroke-linecap="round"/>
+        </g>
+      </svg>
+      <span class="big">Frogs</span>
+      <span class="yomi">— 恋愛観の自己診断 —</span>
+    </div>
+    <div class="feature-body">
+      <div class="f-label">いちおしのWebアプリ</div>
+      <h3>恋愛観を、やさしく見つめなおす。</h3>
+      <p>採点でも、ジャッジでもありません。ふたりの<b>対話のきっかけ</b>になるための、静かな自己診断です。回答は完全にプライベートで、相手に見えるのは「ふたりの差」だけ。</p>
+      <ul class="f-list">
+        <li><b>5つの軸</b> — 愛着・対立・自律・未来・理想とのギャップをやわらかく可視化</li>
+        <li><b>プライバシー第一</b> — 個別の回答は相手に見えず、データは30日で自動削除</li>
+        <li><b>スナップショット</b> — 結果は「いまの瞬間」。時間とともに変わっていい</li>
+      </ul>
+      <div class="f-cta">
+        <span class="btn fill">Frogs を試す — 無料</span>
+        <span class="f-note">所要 約7〜15分 · 登録不要 · スマホで完結</span>
+      </div>
+    </div>
+  </a>
+</section>
+
 <div class="lab-band">
   <section id="lab">
     <div class="sec-head">
@@ -563,6 +621,7 @@ footer a:hover { color: var(--ink); }
     <span class="memo">開発の記録。正直に書いています</span>
   </div>
   <div class="news-list">
+    <div class="news-item"><span class="d">2026.06</span><span class="tag-n">Webアプリ</span><span class="t"><b>Frogs を公開。</b>恋愛観を、やさしく見つめなおすための、静かな自己診断です。</span></div>
     <div class="news-item"><span class="d">2026.06</span><span class="tag-n">サイト</span><span class="t"><b>実績システムを追加。</b>このサイトの隠し要素は7つです。7つということにしておいてください。</span></div>
     <div class="news-item"><span class="d">2026.06</span><span class="tag-n">実験室</span><span class="t"><b>「コメントの庭」「レース投票」の実証デモを公開。</b>配信を楽しくする道具を作りはじめました。チャット欄つきでその場で試せます。</span></div>
     <div class="news-item"><span class="d">2026.06</span><span class="tag-n">墨蛍</span><span class="t"><b>祈り(引き寄せ)をまた弱くしました。</b>通算2敗です。今は夜巡りと宵だけで使えます。</span></div>
