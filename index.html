@@ -4,19 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DevNull Studio — ブラウザで動く、遊びとツール</title>
-<meta name="description" content="DevNull Studioは東京の小さな開発スタジオ。インストール不要でブラウザからそのまま遊べるゲームと、ライブ配信を楽しくするツールをつくっています。">
+<meta name="description" content="DevNull Studioは小さな開発スタジオ。インストール不要でブラウザからそのまま遊べるゲームと、ライブ配信を楽しくするツールをつくっています。">
 <link rel="canonical" href="https://devnull-studio.com">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="theme-color" content="#ffffff">
 <meta property="og:type" content="website">
 <meta property="og:title" content="DevNull Studio — ブラウザで動く、遊びとツール">
-<meta property="og:description" content="インストール不要でブラウザからそのまま遊べるゲームと、配信を楽しくするツールをつくる東京の小さなスタジオ。">
+<meta property="og:description" content="インストール不要でブラウザからそのまま遊べるゲームと、配信を楽しくするツールをつくる小さなスタジオ。">
 <meta property="og:url" content="https://devnull-studio.com">
 <meta property="og:image" content="https://devnull-studio.com/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="alternate" hreflang="en" href="https://devnull-studio.com/en.html">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"Organization","name":"DevNull Studio","url":"https://devnull-studio.com","email":"contact@devnull-studio.com","logo":"https://devnull-studio.com/favicon.svg","address":{"@type":"PostalAddress","addressLocality":"Tokyo","addressCountry":"JP"}}
+{"@context":"https://schema.org","@type":"Organization","name":"DevNull Studio","url":"https://devnull-studio.com","email":"contact@devnull-studio.com","logo":"https://devnull-studio.com/favicon.svg"}
 </script>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -231,7 +231,7 @@ footer { background: var(--bg-soft); border-top: 1px solid var(--border); }
 <div class="hero">
   <div class="eyebrow">DevNull Studio</div>
   <h1>ブラウザで動く、<br>遊びとツール。</h1>
-  <p>インストール不要、アカウント不要。東京の小さな開発スタジオが、ブラウザでそのまま遊べるゲームと、ライブ配信を楽しくする道具をつくっています。</p>
+  <p>インストール不要、アカウント不要。小さな開発スタジオが、ブラウザでそのまま遊べるゲームと、ライブ配信を楽しくする道具をつくっています。</p>
   <div class="cta">
     <a class="btn primary" href="#games">ゲームを見る</a>
     <a class="btn ghost" href="#studio">スタジオについて</a>
@@ -322,9 +322,8 @@ footer { background: var(--bg-soft); border-top: 1px solid var(--border); }
 <section id="studio" class="studio">
   <div class="studio-inner">
     <h2>スタジオについて</h2>
-    <p>DevNull Studioは、東京を拠点にWebの企画・設計・開発までを一貫して行う独立系の開発スタジオです。アプリのような体験をインストールなしで届けられる、ブラウザという場所の可能性を信じています。自社ゲームづくりで磨いた「触って気持ちいい」の感覚を、配信ツールやWebアプリケーションにも注いでいます。</p>
+    <p>DevNull Studioは、Webの企画・設計・開発までを一貫して行う独立系の開発スタジオです。アプリのような体験をインストールなしで届けられる、ブラウザという場所の可能性を信じています。自社ゲームづくりで磨いた「触って気持ちいい」の感覚を、配信ツールやWebアプリケーションにも注いでいます。</p>
     <dl class="facts">
-      <div class="fact"><dt>拠点</dt><dd>東京都</dd></div>
       <div class="fact"><dt>事業</dt><dd>自社ゲーム・配信ツールの開発 / Web・アプリの受託開発</dd></div>
       <div class="fact"><dt>得意分野</dt><dd>TypeScript / React / モバイルアプリ</dd></div>
       <div class="fact"><dt>連絡</dt><dd>下記より（返信は人間が書きます）</dd></div>
@@ -351,13 +350,13 @@ footer { background: var(--bg-soft); border-top: 1px solid var(--border); }
       <a href="/privacy.html">プライバシーポリシー</a>
       <a href="/en.html">English</a>
     </div>
-    <div class="foot-base">&copy; 2026 DevNull Studio — Tokyo, Japan</div>
+    <div class="foot-base">&copy; 2026 DevNull Studio</div>
   </div>
 </footer>
 
 <script>
 'use strict';
-// メールアドレスはボット避けに実行時組み立て(機能要素。演出ではない)
+// メールアドレスはボット避けに実行時組み立て
 (() => {
   const ml = document.getElementById('mail-link');
   if (!ml) return;
