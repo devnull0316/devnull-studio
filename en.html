@@ -7,72 +7,64 @@
 <title>DevNull Studio — Playful things for the web</title>
 <meta name="description" content="DevNull Studio is a tiny indie studio in Tokyo making browser games and tools that make live streams more fun. Free, no install, no account.">
 <link rel="canonical" href="https://devnull-studio.com/en.html">
+<meta name="theme-color" content="#ffffff">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
-  --paper: #faf8f2; --paper-2: #f3efe5;
-  --ink: #1d1a16; --ink-dim: #5a544a; --ink-faint: #7d7468;
-  --line: #e6e0d2; --shu: #b3342e;
+  --bg: #ffffff; --bg-soft: #f5f5f7;
+  --text: #1d1d1f; --text-dim: #6e6e73; --text-mute: #86868b;
+  --border: #d2d2d7; --accent: #0071e3; --accent-hov: #0077ed;
 }
 body {
-  font-family: -apple-system, 'Helvetica Neue', 'Hiragino Sans', sans-serif;
-  background: var(--paper); color: var(--ink);
-  line-height: 1.85; -webkit-font-smoothing: antialiased;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  background: var(--bg); color: var(--text);
+  line-height: 1.7; letter-spacing: 0.01em; -webkit-font-smoothing: antialiased;
 }
-a { color: var(--shu); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 header {
-  position: sticky; top: 0; z-index: 10; height: 60px;
+  position: sticky; top: 0; z-index: 10; height: 52px;
   padding: 0 clamp(20px, 4vw, 56px);
   display: flex; align-items: center; justify-content: space-between;
-  background: rgba(250,248,242,0.88);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--line);
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
 }
-.logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; color: var(--ink); text-decoration: none; }
-.logo .seal {
-  width: 26px; height: 26px; background: var(--shu); color: var(--paper);
-  border-radius: 5px; display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; transform: rotate(-3deg);
-}
-header a.jp { font-size: 13px; color: var(--ink-dim); text-decoration: none; }
-main { max-width: 720px; margin: 0 auto; padding: clamp(44px, 8vh, 80px) clamp(20px, 4vw, 56px) 80px; }
-h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; line-height: 1.35; }
-h1 span { color: var(--shu); }
-.lead { margin-top: 18px; color: var(--ink-dim); font-size: 15px; max-width: 540px; }
-h2 { font-size: 20px; font-weight: 700; margin: 46px 0 12px; padding-left: 12px; border-left: 4px solid var(--shu); }
-p, li { font-size: 14px; color: var(--ink-dim); }
+.logo { display: flex; align-items: center; gap: 9px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); }
+.logo:hover { text-decoration: none; }
+.logo .mark { width: 24px; height: 24px; border-radius: 6px; background: var(--text); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+header .jp { font-size: 13.5px; color: var(--text-dim); }
+header .jp:hover { color: var(--text); text-decoration: none; }
+main { max-width: 720px; margin: 0 auto; padding: clamp(48px, 8vh, 88px) clamp(20px, 4vw, 56px) 88px; }
+h1 { font-size: clamp(32px, 5vw, 50px); font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+.lead { margin-top: 18px; color: var(--text-dim); font-size: 16px; max-width: 560px; }
+h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin: 48px 0 12px; }
+p, li { font-size: 15px; color: var(--text-dim); }
 ul { padding-left: 22px; }
 li { margin: 6px 0; }
-li b, p b { color: var(--ink); }
-.card {
-  margin-top: 14px; background: #fff; border: 1px solid var(--line);
-  border-radius: 14px; padding: 20px 24px;
-}
-.card h3 { font-size: 16px; font-weight: 700; }
-.card .jp-name { font-size: 12px; color: var(--ink-faint); margin-left: 8px; }
-.card p { margin-top: 6px; font-size: 13.5px; }
-.btn {
-  display: inline-block; margin-top: 12px;
-  font-size: 13px; font-weight: 700; text-decoration: none;
-  color: #fff; background: var(--shu);
-  border-radius: 8px; padding: 9px 22px;
-  transform: rotate(-1deg);
-  box-shadow: 2px 2px 0 rgba(29,26,22,0.85);
-}
-.note { font-size: 12px; color: var(--ink-faint); margin-top: 8px; }
-footer { border-top: 1px solid var(--line); padding: 28px; text-align: center; font-size: 12px; color: var(--ink-faint); }
-footer a { color: var(--ink-faint); text-decoration: none; }
+li b, p b { color: var(--text); font-weight: 600; }
+.card { margin-top: 14px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 16px; padding: 22px 26px; }
+.card h3 { font-size: 18px; font-weight: 700; color: var(--text); }
+.card .jp-name { font-size: 13px; color: var(--text-mute); margin-left: 8px; font-weight: 600; }
+.card p { margin-top: 8px; font-size: 14.5px; }
+.btn { display: inline-block; margin-top: 14px; font-size: 14px; font-weight: 500; color: #fff; background: var(--accent); border-radius: 980px; padding: 11px 24px; }
+.btn:hover { background: var(--accent-hov); text-decoration: none; }
+.note { font-size: 13px; color: var(--text-mute); margin-top: 8px; }
+footer { background: var(--bg-soft); border-top: 1px solid var(--border); padding: 32px; text-align: center; font-size: 13px; color: var(--text-mute); }
+footer a { color: var(--text-dim); }
+footer a:hover { color: var(--text); text-decoration: none; }
 </style>
 </head>
 <body>
 
 <header>
-  <a href="/" class="logo"><span class="seal">D</span>DevNull Studio</a>
+  <a href="/" class="logo"><span class="mark">D</span>DevNull Studio</a>
   <a class="jp" href="/">日本語 →</a>
 </header>
 
 <main>
-  <h1>Playful things,<br>built for the <span>web</span>.</h1>
+  <h1>Playful things,<br>built for the web.</h1>
   <p class="lead">DevNull Studio is a tiny indie studio in Tokyo. We make browser games and tools that make live streams more fun. Everything runs right in your browser — free, no install, no account, no tracking.</p>
 
   <h2>Games</h2>
@@ -82,12 +74,13 @@ footer a { color: var(--ink-faint); text-decoration: none; }
     <p class="note">UI is in Japanese, but the game teaches itself in seconds: draw a line, the firefly bounces, reach the star. Best on iPad with Apple Pencil.</p>
     <a class="btn" href="/sumi.html">Play now — free</a>
   </div>
+  <p style="margin-top:16px;"><a href="/games.html">See all games →</a> &nbsp;COSMIC FUSION (merge puzzle) and GLITCH//RUNNER (neon dodge) are playable too.</p>
 
-  <h2>Lab</h2>
+  <h2>Tools for streamers</h2>
   <p>Prototypes of tools for live streamers — a tiny garden that grows from your chat, and a poll where the options race each other. Each demo has a built-in chat box so you can try the whole loop without setting anything up.</p>
   <ul>
-    <li><a href="/garden-demo.html">Comment Garden</a> — viewers' comments grow grass, bloom flowers, launch fireworks. A quiet chat attracts a cat.</li>
-    <li><a href="/race-demo.html">Race Poll</a> — type "1" in chat and watch that option sprint.</li>
+    <li><a href="/garden-demo.html">Comment Garden</a> — viewers' comments grow grass, bloom flowers, launch fireworks.</li>
+    <li><a href="/race-demo.html">Race Poll</a> — type a number in chat and watch that option sprint.</li>
   </ul>
 
   <h2>Streaming &amp; fan content</h2>
@@ -98,7 +91,7 @@ footer a { color: var(--ink-faint); text-decoration: none; }
 </main>
 
 <footer>
-  <a href="/">DevNull Studio</a> — hand-written HTML, zero external libraries — <a href="/privacy.html">Privacy (ja)</a>
+  <a href="/">DevNull Studio</a> — hand-built for the browser — <a href="/privacy.html">Privacy (ja)</a>
 </footer>
 
 </body>

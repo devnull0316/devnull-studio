@@ -5,95 +5,91 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>プライバシーポリシー — DevNull Studio</title>
-<meta name="description" content="DevNull Studioのプライバシーポリシー。集めていないものの一覧が大半を占めます。">
+<meta name="description" content="DevNull Studioのプライバシーポリシー。当サイトは個人情報を収集しません。">
 <link rel="canonical" href="https://devnull-studio.com/privacy.html">
+<meta name="theme-color" content="#ffffff">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
-  --paper: #faf8f2; --paper-2: #f3efe5;
-  --ink: #1d1a16; --ink-dim: #5a544a; --ink-faint: #7d7468;
-  --line: #e6e0d2; --shu: #b3342e;
+  --bg: #ffffff; --bg-soft: #f5f5f7;
+  --text: #1d1d1f; --text-dim: #6e6e73; --text-mute: #86868b;
+  --border: #d2d2d7; --accent: #0071e3;
 }
 body {
-  font-family: 'Hiragino Sans', 'Noto Sans JP', -apple-system, sans-serif;
-  background: var(--paper); color: var(--ink);
-  line-height: 2; -webkit-font-smoothing: antialiased;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  background: var(--bg); color: var(--text);
+  line-height: 1.75; letter-spacing: 0.01em; -webkit-font-smoothing: antialiased;
 }
-a { color: var(--shu); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 header {
-  position: sticky; top: 0; z-index: 10; height: 60px;
+  position: sticky; top: 0; z-index: 10; height: 52px;
   padding: 0 clamp(20px, 4vw, 56px);
   display: flex; align-items: center;
-  background: rgba(250,248,242,0.88);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--line);
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid rgba(0,0,0,0.08);
 }
-.logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; color: var(--ink); text-decoration: none; }
-.logo .seal {
-  width: 26px; height: 26px; background: var(--shu); color: var(--paper);
-  border-radius: 5px; display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; font-family: 'Hiragino Mincho ProN', serif;
-  transform: rotate(-3deg);
-}
-main { max-width: 720px; margin: 0 auto; padding: clamp(40px, 7vh, 70px) clamp(20px, 4vw, 56px) 80px; }
-h1 { font-size: clamp(24px, 4vw, 32px); font-weight: 700; }
-.updated { font-size: 12px; color: var(--ink-faint); margin-top: 8px; }
-.tldr {
-  margin-top: 26px;
-  background: #fff; border: 1.5px solid var(--shu); border-radius: 14px;
-  padding: 18px 24px; font-size: 14.5px; font-weight: 700;
-}
-h2 { font-size: 18px; font-weight: 700; margin: 38px 0 8px; padding-left: 12px; border-left: 4px solid var(--shu); }
-p, li { font-size: 14px; color: var(--ink-dim); }
+.logo { display: flex; align-items: center; gap: 9px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); }
+.logo:hover { text-decoration: none; }
+.logo .mark { width: 24px; height: 24px; border-radius: 6px; background: var(--text); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+main { max-width: 720px; margin: 0 auto; padding: clamp(44px, 7vh, 72px) clamp(20px, 4vw, 56px) 88px; }
+h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; letter-spacing: -0.02em; }
+.updated { font-size: 13px; color: var(--text-mute); margin-top: 8px; }
+.tldr { margin-top: 26px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 14px; padding: 18px 22px; font-size: 15px; font-weight: 600; }
+h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin: 40px 0 10px; }
+p, li { font-size: 15px; color: var(--text-dim); }
 ul { padding-left: 22px; }
 li { margin: 5px 0; }
-li b { color: var(--ink); }
-footer { border-top: 1px solid var(--line); padding: 28px; text-align: center; font-size: 12px; color: var(--ink-faint); }
-footer a { color: var(--ink-faint); text-decoration: none; }
+li b, p b { color: var(--text); font-weight: 600; }
+footer { background: var(--bg-soft); border-top: 1px solid var(--border); padding: 32px; text-align: center; font-size: 13px; color: var(--text-mute); }
+footer a { color: var(--text-dim); }
+footer a:hover { color: var(--text); text-decoration: none; }
 </style>
 </head>
 <body>
 
 <header>
-  <a href="/" class="logo"><span class="seal">D</span>DevNull Studio</a>
+  <a href="/" class="logo"><span class="mark">D</span>DevNull Studio</a>
 </header>
 
 <main>
   <h1>プライバシーポリシー</h1>
   <div class="updated">最終更新: 2026年6月</div>
 
-  <div class="tldr">要約: 当サイトはあなたの個人情報を集めていません。サーバーも持っていません。</div>
+  <div class="tldr">要約: 当サイトは利用者の個人情報を収集していません。サーバーも保有していません。</div>
 
-  <h2>1. 集めていないもの</h2>
-  <p>当サイトとゲーム・実験室のデモは、次のものを<b>収集しません</b>:</p>
+  <h2>1. 収集しない情報</h2>
+  <p>当サイトおよびゲーム・配信ツールのデモは、次の情報を<b>収集しません</b>。</p>
   <ul>
-    <li>氏名・メールアドレス等の個人情報(アカウント登録自体がありません)</li>
-    <li>アクセス解析・行動トラッキング(アナリティクスを導入していません)</li>
-    <li>広告識別子(広告を掲載していません)</li>
-    <li>Cookie(使用していません)</li>
+    <li>氏名・メールアドレス等の個人情報（アカウント登録の仕組みがありません）</li>
+    <li>アクセス解析・行動トラッキング（アナリティクスを導入していません）</li>
+    <li>広告識別子（広告を掲載していません）</li>
+    <li>Cookie（使用していません）</li>
   </ul>
 
-  <h2>2. あなたの端末の中だけに保存されるもの</h2>
-  <p>ゲームのセーブデータ(ベストスコア・進行状況・実績・ギャラリーの画像)は、お使いのブラウザのlocalStorageに保存されます。これは<b>あなたの端末内にだけ存在し、当方には送信されません</b>。ブラウザのサイトデータを削除すると一緒に消えます。</p>
+  <h2>2. 端末内にのみ保存される情報</h2>
+  <p>ゲームのセーブデータ（ベストスコア・進行状況・ギャラリーの画像）は、お使いのブラウザのlocalStorageに保存されます。これは<b>お使いの端末内にのみ存在し、当方には送信されません</b>。ブラウザのサイトデータを削除すると一緒に消去されます。</p>
 
-  <h2>3. 実験室のデモについて</h2>
-  <p>「コメントの庭」「レース投票」などのデモは、入力されたコメントをすべて<b>ブラウザ内(ローカル)で処理</b>します。コメント内容が外部に送信されることはありません。将来、実際のYouTube等と連携する機能を提供する場合も、コメント処理はローカルで行う方針です。方針を変える場合はこのページを先に更新します。</p>
+  <h2>3. 配信ツールのデモについて</h2>
+  <p>「コメントの庭」「レース投票」などのデモは、入力されたコメントをすべて<b>ブラウザ内（ローカル）で処理</b>します。コメント内容が外部に送信されることはありません。将来、実際の配信プラットフォームと連携する機能を提供する場合も、コメント処理はローカルで行う方針です。方針を変更する場合は、このページを先に更新します。</p>
 
   <h2>4. ホスティングについて</h2>
-  <p>当サイトの配信に利用しているホスティング事業者が、サービス運用のための標準的なアクセスログ(IPアドレス等)を一時的に記録する場合があります。これは当方が能動的に収集・利用するものではありません。</p>
+  <p>当サイトの配信に利用しているホスティング事業者が、サービス運用のための標準的なアクセスログ（IPアドレス等）を一時的に記録する場合があります。これは当方が能動的に収集・利用するものではありません。</p>
 
   <h2>5. メールでのお問い合わせ</h2>
-  <p>お問い合わせをいただいた場合、その内容とメールアドレスは返信のためにのみ使い、第三者に渡しません。</p>
+  <p>お問い合わせをいただいた場合、その内容とメールアドレスは返信のためにのみ使用し、第三者に提供しません。</p>
 
   <h2>6. 変更について</h2>
-  <p>このポリシーを変更する場合は、このページを更新し、日付を改めます。「集めない」方向への変更以外(つまり何かを集め始める場合)は、目立つ形でお知らせします。</p>
+  <p>このポリシーを変更する場合は、このページを更新し、日付を改めます。収集する情報を追加するなどの重要な変更を行う場合は、目立つ形でお知らせします。</p>
 
   <h2>7. 連絡先</h2>
-  <p><a href="#" class="mail-x" data-u="contact" data-d="devnull-studio.com" rel="nofollow">メールアドレスを表示</a><script>document.querySelectorAll('.mail-x').forEach(m=>{m.textContent=m.dataset.u+'@'+m.dataset.d;m.addEventListener('click',e=>{e.preventDefault();location.href='mailto:'+m.textContent;});});</script>(返信は人間が書きます)</p>
+  <p><a href="#" class="mail-x" data-u="contact" data-d="devnull-studio.com" rel="nofollow">メールアドレスを表示</a><script>document.querySelectorAll('.mail-x').forEach(m=>{m.textContent=m.dataset.u+'@'+m.dataset.d;m.addEventListener('click',e=>{e.preventDefault();location.href='mailto:'+m.textContent;});});</script>（返信は人間が書きます）</p>
 </main>
 
 <footer>
-  <a href="/">DevNull Studio</a> — <a href="/guidelines.html">実況・二次創作ガイドライン</a>
+  <a href="/">DevNull Studio</a> — <a href="/guidelines.html">実況・二次創作ガイドライン</a> — <a href="/terms.html">利用規約</a>
 </footer>
 
 </body>

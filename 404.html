@@ -4,72 +4,40 @@
 <meta charset="UTF-8">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>404 — /dev/null | DevNull Studio</title>
+<title>404 — ページが見つかりません | DevNull Studio</title>
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#ffffff">
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-html,body { height:100%; }
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #ffffff; --bg-soft: #f5f5f7;
+  --text: #1d1d1f; --text-dim: #6e6e73; --text-mute: #86868b;
+  --border: #d2d2d7; --accent: #0071e3; --accent-hov: #0077ed;
+}
+html, body { height: 100%; }
 body {
-  background:#faf8f2;
-  color:#1d1a16;
-  font-family:'Hiragino Sans','Noto Sans JP',sans-serif;
-  display:flex; align-items:center; justify-content:center;
-  overflow:hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  background: var(--bg); color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 24px; -webkit-font-smoothing: antialiased;
 }
-.box { text-align:center; padding:24px; position:relative; z-index:2; }
-h1 {
-  font-family:'Hiragino Mincho ProN','Yu Mincho',serif;
-  font-size:clamp(64px,14vw,130px);
-  font-weight:700;
-  letter-spacing:0.08em;
-  line-height:1;
-}
-h1 span { display:inline-block; animation:suck 3.2s ease-in infinite; }
-h1 span:nth-child(2) { animation-delay:0.25s; }
-h1 span:nth-child(3) { animation-delay:0.5s; }
-@keyframes suck {
-  0%, 55% { transform:translate(0,0) scale(1) rotate(0); opacity:1; }
-  85% { transform:translate(0,38vh) scale(0.05) rotate(220deg); opacity:0.6; }
-  86%, 100% { transform:translate(0,-10px) scale(1); opacity:0; }
-}
-.msg { margin-top:26px; font-size:clamp(14px,2.2vw,17px); color:#5a544a; line-height:2.1; }
-.msg code {
-  font-family:ui-monospace,Menlo,monospace;
-  background:#1d1a16; color:#faf8f2;
-  padding:2px 10px; border-radius:6px; font-size:0.9em;
-}
+.code { font-size: clamp(72px, 16vw, 132px); font-weight: 700; letter-spacing: -0.04em; line-height: 1; color: var(--text); }
+.msg { margin-top: 18px; font-size: clamp(15px, 2.4vw, 18px); color: var(--text-dim); line-height: 1.7; }
 .home {
-  display:inline-block; margin-top:30px;
-  font-size:14px; font-weight:700;
-  color:#1d1a16; text-decoration:none;
-  border:1.5px solid #1d1a16; border-radius:999px;
-  padding:11px 30px;
-  transition:all .2s;
+  display: inline-block; margin-top: 30px;
+  font-size: 15px; font-weight: 500; color: #fff;
+  background: var(--accent); border-radius: 980px;
+  padding: 12px 28px; text-decoration: none;
+  transition: background-color .2s;
 }
-.home:hover { background:#1d1a16; color:#faf8f2; }
-.hole {
-  position:fixed; left:50%; bottom:-14vh; transform:translateX(-50%);
-  width:46vh; height:26vh;
-  background:radial-gradient(ellipse at center, #1d1a16 58%, rgba(29,26,22,0.25) 75%, transparent 80%);
-  border-radius:50%;
-  z-index:1;
-  animation:breathe 4s ease-in-out infinite;
-}
-@keyframes breathe { 50% { transform:translateX(-50%) scale(1.05); } }
-.note { position:fixed; bottom:18px; left:0; right:0; text-align:center; font-size:11px; color:#948c7e; z-index:2; }
+.home:hover { background: var(--accent-hov); }
 </style>
 </head>
 <body>
-<div class="box">
-  <h1><span>4</span><span>0</span><span>4</span></h1>
-  <div class="msg">
-    お探しのページは <code>/dev/null</code> に吸い込まれました。<br>
-    書き込んだものは、何も返ってきません。仕様です。
-  </div>
-  <a class="home" href="/">無事なページへ戻る</a>
-<script>try { localStorage.setItem('dn_404', '1'); } catch (e) {}</script>
+<div>
+  <div class="code">404</div>
+  <div class="msg">お探しのページは見つかりませんでした。<br>移動または削除された可能性があります。</div>
+  <a class="home" href="/">ホームに戻る</a>
 </div>
-<div class="hole" aria-hidden="true"></div>
-<div class="note">DevNull Studio — たまに、ページも消えます</div>
 </body>
 </html>

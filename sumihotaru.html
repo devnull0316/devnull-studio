@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨蛍 — すみほたる | DevNull Studio</title>
+<meta name="description" content="筆で壁を描き、跳ねる蛍を星へ導く。描いた墨は消えず、やがて己の墨が己を阻む。一局ごとに、あなたの軌跡が一幅の墨絵になる。ブラウザでそのまま遊べる墨絵ゲーム。">
+<link rel="canonical" href="https://devnull-studio.com/sumihotaru.html">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="theme-color" content="#faf8f2">
+<meta property="og:type" content="website">
+<meta property="og:title" content="墨蛍 — すみほたる | DevNull Studio">
+<meta property="og:description" content="筆で描いて、蛍を星へ。描いた墨は消えない墨絵ゲーム。ブラウザでそのまま遊べます。">
+<meta property="og:url" content="https://devnull-studio.com/sumihotaru.html">
+<meta property="og:image" content="https://devnull-studio.com/og.png">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --paper: #faf8f2;
+  --paper-2: #f3efe5;
+  --ink: #1d1a16;
+  --ink-dim: #5a544a;
+  --ink-faint: #7d7468;
+  --line: #e6e0d2;
+  --shu: #b3342e;
+  --gold: #b08f3c;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Hiragino Sans', 'Noto Sans JP', -apple-system, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.9;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: rgba(179,52,46,0.15); }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--shu); outline-offset: 3px; border-radius: 4px; }
+.serif { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* ===== ヘッダー ===== */
+header {
+  position: sticky; top: 0; z-index: 10;
+  height: 60px;
+  padding: 0 clamp(20px, 4vw, 56px);
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(250,248,242,0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; letter-spacing: 0.02em; }
+.logo .seal {
+  width: 26px; height: 26px;
+  background: var(--shu); color: var(--paper);
+  border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+  font-family: 'Hiragino Mincho ProN', serif;
+  transform: rotate(-3deg);
+}
+.logo .back { color: var(--ink-faint); font-weight: 400; font-size: 13px; }
+header nav { display: flex; gap: clamp(14px, 2.5vw, 26px); align-items: center; }
+header nav a { font-size: 13px; color: var(--ink-dim); transition: color .2s; }
+header nav a:hover { color: var(--ink); }
+
+/* ===== ヒーロー ===== */
+.hero {
+  position: relative; overflow: hidden;
+  max-width: 1060px; margin: 0 auto;
+  padding: clamp(56px, 11vh, 120px) clamp(20px, 4vw, 56px) clamp(40px, 7vh, 80px);
+  text-align: center;
+}
+.hero .title { font-family: 'Hiragino Mincho ProN','Yu Mincho',serif; font-size: clamp(72px, 16vw, 150px); font-weight: 700; letter-spacing: 0.28em; margin-left: 0.28em; line-height: 1.1; }
+.hero .yomi { margin-top: 10px; font-size: clamp(12px, 1.6vw, 14px); letter-spacing: 0.5em; color: var(--ink-faint); }
+.hero .lead { margin: 30px auto 0; max-width: 560px; font-size: clamp(16px, 2vw, 19px); font-weight: 600; color: var(--ink); letter-spacing: 0.04em; }
+.hero .desc { margin: 18px auto 0; max-width: 600px; font-size: clamp(14px, 1.8vw, 15.5px); color: var(--ink-dim); line-height: 2.1; }
+.hero .desc b { color: var(--ink); }
+.hero .firefly {
+  position: absolute; right: 18%; top: 22%;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #e8b54a; box-shadow: 0 0 22px 9px rgba(232,181,74,0.5);
+  animation: glow 4s ease-in-out infinite alternate;
+}
+@keyframes glow { from { opacity: 0.55; } to { opacity: 1; } }
+.hero .stroke { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); width: min(420px, 70vw); opacity: 0.9; pointer-events: none; }
+
+.cta { margin-top: 34px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  display: inline-block; font-size: 15px; font-weight: 700;
+  padding: 13px 32px; border-radius: 8px;
+  border: 1.5px solid var(--ink); transition: all .2s; cursor: pointer;
+}
+.btn:hover { background: var(--ink); color: var(--paper); transform: translateY(-2px); }
+.btn.fill {
+  background: var(--shu); border-color: var(--shu); color: #fff;
+  transform: rotate(-1.2deg); box-shadow: 3px 3px 0 rgba(29,26,22,0.85);
+}
+.btn.fill:hover { background: #c9453e; border-color: #c9453e; transform: rotate(-1.2deg) translate(2px, 2px); box-shadow: 1px 1px 0 rgba(29,26,22,0.85); }
+.note { margin-top: 16px; font-size: 12px; color: var(--ink-faint); }
+
+/* ===== セクション ===== */
+section { max-width: 1000px; margin: 0 auto; padding: clamp(40px, 7vh, 80px) clamp(20px, 4vw, 56px); }
+.sec-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
+.sec-head h2 { font-size: clamp(24px, 3.4vw, 32px); font-weight: 700; letter-spacing: 0.06em; position: relative; }
+.sec-head h2 .sq { position: absolute; left: 2px; bottom: -9px; width: 100%; height: 8px; }
+.sec-head h2 .sq path { stroke: var(--shu); stroke-width: 3; fill: none; stroke-linecap: round; }
+.sec-head span.memo { font-size: 12.5px; color: var(--ink-faint); }
+
+/* 特徴 */
+.modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+.mode { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 24px 26px; }
+.mode .nm { font-size: 17px; font-weight: 700; }
+.mode .nm small { font-size: 11px; color: var(--shu); font-weight: 700; letter-spacing: 0.18em; margin-left: 8px; }
+.mode p { font-size: 13.5px; color: var(--ink-dim); margin-top: 8px; line-height: 1.9; }
+
+/* 遊び方 */
+.how { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 4px; }
+.step { display: flex; gap: 14px; align-items: flex-start; }
+.step .n { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--paper-2); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: var(--shu); }
+.step .tt { font-size: 14.5px; font-weight: 700; }
+.step .dd { font-size: 12.5px; color: var(--ink-dim); margin-top: 2px; line-height: 1.8; }
+
+/* 末尾CTA */
+.tail { text-align: center; }
+.tail .belief { font-family: 'Hiragino Mincho ProN', serif; font-size: clamp(20px, 3vw, 28px); font-weight: 600; letter-spacing: 0.08em; line-height: 1.9; }
+
+/* ===== フッター ===== */
+footer { border-top: 1px solid var(--line); padding: 30px clamp(20px, 4vw, 56px); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--ink-faint); }
+footer .links { display: flex; gap: 18px; flex-wrap: wrap; }
+footer a:hover { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo"><span class="seal">D</span>DevNull Studio<span class="back">／ 墨蛍</span></a>
+  <nav>
+    <a href="/games.html">ゲーム一覧</a>
+    <a href="/sumi.html">遊ぶ →</a>
+  </nav>
+</header>
+
+<div class="hero">
+  <h1 class="title">墨蛍</h1>
+  <div class="yomi">— すみほたる —</div>
+  <span class="firefly"></span>
+  <p class="lead">筆で描いて、蛍を星へ。</p>
+  <p class="desc">指先が筆になる。描いた墨の壁で跳ねる蛍を導き、時間が切れる前に光る星へ。<b>描いた墨は消えない</b> — やがて自分の墨が自分を阻み、一局ごとにあなたの軌跡が一幅の墨絵になる。</p>
+  <div class="cta">
+    <a class="btn fill" href="/sumi.html">いますぐ遊ぶ — 無料</a>
+    <a class="btn" href="#how">遊び方を見る</a>
+  </div>
+  <p class="note">iPad / Apple Pencil 推奨 · インストール不要 · ブラウザで完結</p>
+  <svg class="stroke" viewBox="0 0 420 40" fill="none" aria-hidden="true">
+    <path d="M10 28 Q120 8 210 22 T410 14" stroke="#1d1a16" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
+  </svg>
+</div>
+
+<section>
+  <div class="sec-head">
+    <h2>3つの遊び<svg class="sq" viewBox="0 0 120 9" preserveAspectRatio="none" aria-hidden="true"><path d="M2 6 Q 20 2 40 5.5 T 78 5 T 118 4"/></svg></h2>
+    <span class="memo">気分で選べます</span>
+  </div>
+  <div class="modes">
+    <div class="mode">
+      <div class="nm">夜巡り<small>STAGE</small></div>
+      <p>夜ごとに変わる地形を攻略するステージモード。星の配置を読み、一筆で道をつくる。</p>
+    </div>
+    <div class="mode">
+      <div class="nm">無限の夜<small>ENDLESS</small></div>
+      <p>宵・夜半・暁。深まる夜のなか、自分の墨に追い詰められながら、どこまで生き延びられるか。</p>
+    </div>
+    <div class="mode">
+      <div class="nm">掛け軸<small>GALLERY</small></div>
+      <p>遊んだ跡が、そのまま一幅の墨絵になる。気に入った軌跡は保存して、共有できる。</p>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="sec-head">
+    <h2>遊び方<svg class="sq" viewBox="0 0 120 9" preserveAspectRatio="none" aria-hidden="true"><path d="M2 6 Q 20 2 40 5.5 T 78 5 T 118 4"/></svg></h2>
+    <span class="memo">10秒でわかります</span>
+  </div>
+  <div class="how">
+    <div class="step"><div class="n">1</div><div><div class="tt">線を描く</div><div class="dd">画面を指やペンでなぞると、墨の壁になります。</div></div></div>
+    <div class="step"><div class="n">2</div><div><div class="tt">蛍が跳ねる</div><div class="dd">蛍は墨の壁に当たって跳ね返ります。壁で進む向きを操ります。</div></div></div>
+    <div class="step"><div class="n">3</div><div><div class="tt">星へ導く</div><div class="dd">時間が切れる前に、光る星へ。墨は消えないので、引きすぎに注意。</div></div></div>
+  </div>
+</section>
+
+<section class="tail">
+  <div class="belief serif">描いた線は、消えない。<br>だから、絵になる。</div>
+  <div class="cta" style="justify-content:center; margin-top:28px;">
+    <a class="btn fill" href="/sumi.html">墨蛍を遊ぶ — 無料</a>
+  </div>
+</section>
+
+<footer>
+  <div>&copy; 2026 DevNull Studio — Tokyo, Japan</div>
+  <div class="links">
+    <a href="/">サイトトップ</a>
+    <a href="/games.html">ゲーム一覧</a>
+    <a href="/guidelines.html">実況・二次創作ガイドライン</a>
+  </div>
+</footer>
+
+</body>
+</html>
