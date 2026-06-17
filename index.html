@@ -106,23 +106,6 @@ body.night #sunback { display: flex; }
   background: radial-gradient(ellipse at center, rgba(29,26,22,0.85), rgba(29,26,22,0.55) 55%, transparent 72%);
   transition: opacity 6s ease;
 }
-@keyframes shake-page {
-  0%, 100% { transform: translate(0,0); }
-  25% { transform: translate(-5px, 3px); }
-  50% { transform: translate(4px, -3px); }
-  75% { transform: translate(-3px, 2px); }
-}
-/* ===== /dev/null 未遂 ===== */
-#nullhole {
-  position: fixed; left: 50%; bottom: -16vh; transform: translateX(-50%) scale(0);
-  width: 50vh; height: 26vh; border-radius: 50%;
-  background: radial-gradient(ellipse at center, #1d1a16 55%, rgba(29,26,22,0.3) 74%, transparent 80%);
-  z-index: 96; pointer-events: none;
-  transition: transform .5s cubic-bezier(.2,.8,.3,1);
-}
-#nullhole.open { transform: translateX(-50%) scale(1); }
-body.sucking { transition: transform .8s cubic-bezier(.6,0,.9,.4) !important; transform: translateY(7vh) scale(0.94) rotate(1.5deg); }
-
 /* ===== 実績システム ===== */
 #ach-btn {
   position: fixed; bottom: 18px; right: 18px; z-index: 95;
@@ -185,26 +168,6 @@ body.sucking { transition: transform .8s cubic-bezier(.6,0,.9,.4) !important; tr
 .lab-item[href="/garden-demo.html"] { --aura: rgba(140,200,120,0.25); }
 .lab-item[href="/race-demo.html"] { --aura: rgba(255,210,77,0.25); }
 
-/* ===== 世界漏れ(容れ物から中身がこぼれる) ===== */
-#leak-glitch {
-  position: fixed; inset: 0; z-index: 94; pointer-events: none;
-  display: none;
-  background:
-    repeating-linear-gradient(0deg, rgba(0,229,255,0.08) 0 3px, transparent 3px 9px),
-    repeating-linear-gradient(0deg, rgba(255,0,90,0.07) 0 2px, transparent 2px 11px);
-  mix-blend-mode: normal;
-}
-#leak-glitch.on { display: block; animation: leakjit .26s steps(3) 1; }
-@keyframes leakjit {
-  0% { transform: translateX(-6px); clip-path: inset(10% 0 64% 0); }
-  33% { transform: translateX(5px); clip-path: inset(55% 0 18% 0); }
-  66% { transform: translateX(-3px); clip-path: inset(30% 0 40% 0); }
-  100% { transform: translateX(0); clip-path: inset(0 0 0 0); }
-}
-.leak-planet {
-  position: fixed; z-index: 94; pointer-events: none;
-  width: 30px; height: 30px;
-}
 /* ===== ヘッダー ===== */
 header {
   position: sticky; top: 0; z-index: 10;
@@ -463,9 +426,42 @@ footer {
 footer .links { display: flex; gap: 20px; }
 footer a:hover { color: var(--ink); }
 
+/* ヒーローの手書きメモ: PCは蛍を指す絶対配置 / スマホは本文と重ならない静的配置 */
+.hero-memo {
+  position: absolute;
+  right: clamp(10px, 6vw, 120px);
+  top: clamp(270px, 38vh, 360px);
+  transform: rotate(2deg);
+}
+.works-more {
+  margin-top: 22px;
+  font-size: 13px;
+  color: var(--ink-dim);
+  transform: rotate(-0.4deg);
+}
+.works-more b { color: var(--ink); font-weight: 700; }
+.works-more a {
+  color: var(--shu); font-weight: 700;
+  border-bottom: 1px solid rgba(179,52,46,0.35);
+  white-space: nowrap;
+}
+
 @media (max-width: 560px) {
-  nav a:nth-child(3) { display: none; }
+  header { padding: 0 18px; }
+  nav { gap: 16px; }
+  nav a { font-size: 12.5px; }
+  nav a.opt { display: none; }
   .hero .stroke { display: none; }
+}
+@media (max-width: 560px), (hover: none) {
+  .hero-memo {
+    position: static;
+    display: inline-block;
+    right: auto; top: auto;
+    margin-top: 14px;
+    transform: rotate(-1deg);
+    font-size: 12px;
+  }
 }
 </style>
 </head>
@@ -476,8 +472,8 @@ footer a:hover { color: var(--ink); }
   <nav>
     <a href="#works">作品</a>
     <a href="#lab">実験室</a>
-    <a href="#news">おしらせ</a>
-    <a href="#faq">FAQ</a>
+    <a href="#news" class="opt">おしらせ</a>
+    <a href="#faq" class="opt">FAQ</a>
     <a href="#contact">お問い合わせ</a>
   </nav>
 </header>
@@ -490,7 +486,7 @@ footer a:hover { color: var(--ink); }
     <circle cx="235" cy="62" r="13" fill="none" stroke="#b08f3c" stroke-width="1.5" opacity="0.6"/>
   </svg>
   <h1>遊び心で、<br>Webを<span class="accent">つくる</span>。</h1>
-  <div class="memo" style="position:absolute; right:clamp(10px,6vw,120px); top:clamp(280px,40vh,360px); transform:rotate(2deg);">← この蛍、捕まえられます(たぶん)</div>
+  <div class="memo hero-memo">← この蛍、捕まえられます(たぶん)</div>
   <p>DevNull Studioは東京の小さな開発スタジオです。インストール不要でブラウザからそのまま遊べるゲームと、ライブ配信を楽しくする道具をつくっています。</p>
   <div class="cta">
     <a class="btn fill" href="/sumi.html">墨蛍 を遊ぶ</a>
@@ -525,6 +521,7 @@ footer a:hover { color: var(--ink); }
       </div>
     </div>
   </a>
+  <p class="works-more">ほかにも、肩の力を抜いて遊べる小品が2つ — 合体パズル <b>COSMIC FUSION</b> と高速アクション <b>GLITCH//RUNNER</b>。<a href="/games.html">ゲーム一覧を見る →</a></p>
 </section>
 
 <div class="lab-band">
@@ -563,7 +560,7 @@ footer a:hover { color: var(--ink); }
     <span class="memo">開発の記録。正直に書いています</span>
   </div>
   <div class="news-list">
-    <div class="news-item"><span class="d">2026.06</span><span class="tag-n">サイト</span><span class="t"><b>実績システムを追加。</b>このサイトの隠し要素は7つです。7つということにしておいてください。</span></div>
+    <div class="news-item"><span class="d">2026.06</span><span class="tag-n">サイト</span><span class="t"><b>実績システムを追加。</b>このサイトの隠し要素は6つです。6つということにしておいてください。</span></div>
     <div class="news-item"><span class="d">2026.06</span><span class="tag-n">実験室</span><span class="t"><b>「コメントの庭」「レース投票」の実証デモを公開。</b>配信を楽しくする道具を作りはじめました。チャット欄つきでその場で試せます。</span></div>
     <div class="news-item"><span class="d">2026.06</span><span class="tag-n">墨蛍</span><span class="t"><b>祈り(引き寄せ)をまた弱くしました。</b>通算2敗です。今は夜巡りと宵だけで使えます。</span></div>
     <div class="news-item"><span class="d">2026.06</span><span class="tag-n">墨蛍</span><span class="t"><b>「描かずに祈るだけで星が取れる」抜け道を塞ぎました。</b>見つけた方、正直すごいと思いました。</span></div>
@@ -604,7 +601,7 @@ footer a:hover { color: var(--ink); }
       <p>実在します(非常勤)。出社日は不定です。このサイトのどこかにも来ます。</p>
     </details>
     <details>
-      <summary>実績が 8/7 になったのですが、バグですか?</summary>
+      <summary>実績が 7/6 になったのですが、バグですか?</summary>
       <p>仕様です。おめでとうございます。あなたはモニターの裏側に気付いた人です。</p>
     </details>
   </div>
@@ -652,6 +649,7 @@ footer a:hover { color: var(--ink); }
 <footer>
   <div><span id="copy" style="cursor:pointer" title="?">&copy;</span> 2026 DevNull Studio — Tokyo, Japan<span style="margin-left:14px; opacity:0.6">手書きHTML・外部ライブラリ0個・サイト全体 約255KB(阿部寛のホームページ約25個分)</span></div>
   <div class="links">
+    <a href="/games.html">ゲーム一覧</a>
     <a href="/en.html">English</a>
     <a href="/guidelines.html">実況・二次創作ガイドライン</a>
     <a href="/terms.html">利用規約</a>
@@ -751,7 +749,13 @@ function flee(cx, cy){
   hy = Math.min(0.85, Math.max(0.05, hy + Math.sin(ang) * 0.22));
   placeHotaru();
 }
+// タッチ端末は hover で追えないので、文言を「つつく」に変え、スクロールでは反応させない
+const coarsePointer = matchMedia('(hover: none)').matches || matchMedia('(pointer: coarse)').matches;
+const heroMemo = document.querySelector('.hero-memo');
+if (coarsePointer && heroMemo) heroMemo.textContent = 'この蛍、つついてみてください';
+
 hero.addEventListener('pointermove', e => {
+  if (e.pointerType && e.pointerType !== 'mouse') return; // タッチのスワイプ(スクロール)で蛍が暴れないように
   const r = hero.getBoundingClientRect();
   flee(e.clientX - r.left, e.clientY - r.top);
 });
@@ -839,7 +843,6 @@ const ACH = [
   { id: 'night',  ic: '🌙', tt: '夜をつれてきた', dd: 'サイトを夜にした' },
   { id: 'stamp',  ic: '🈚', tt: '乱れ判', dd: '判子を押しすぎて怒られた' },
   { id: 'cat',    ic: '🐈', tt: '猫の目撃者', dd: '黒猫の散歩を目撃した' },
-  { id: 'suck',   ic: '🕳', tt: '深淵をのぞいた', dd: '/dev/null を起こしてしまった' },
   { id: 'ink',    ic: '💧', tt: '墨の証人', dd: '墨がこぼれる瞬間に居合わせた' },
   { id: 'void404', ic: '🚫', tt: '虚無からの生還', dd: '404ページから帰ってきた' },
 ];
@@ -959,8 +962,6 @@ if (!calm && !sessionStorage.getItem('inkSpilled')){
       const t = (now - t0) / fall;
       if (t >= 1){
         drop.remove();
-        document.body.style.animation = 'shake-page .35s ease';
-        setTimeout(() => document.body.style.animation = '', 400);
         const st = document.createElement('div');
         st.className = 'inkstain';
         const w = 120 + Math.random() * 80;
@@ -980,11 +981,6 @@ if (!calm && !sessionStorage.getItem('inkSpilled')){
   }, 45000 + Math.random() * 45000);
 }
 
-// ---- 8) 連打すると /dev/null が目を覚ます ----
-const hole = document.createElement('div');
-hole.id = 'nullhole';
-document.body.appendChild(hole);
-let clicks = [], lastSuck = -Infinity;
 // ---- モニターの裏側(コンソールの隠し実績) ----
 console.log(
   '%c DevNull Studio %c\n\nようこそ、モニターの裏側へ。\nここに気付く人は、だいたい同業者です。\n\n  __found()\n\nと入力すると、何かが起きます。',
@@ -992,58 +988,6 @@ console.log(
 );
 window.__found = () => { unlock('console'); return '🖥 実績解除: モニターの裏側 — ようこそ。'; };
 
-// ---- 世界漏れ: 容れ物から、作品の世界がまれにこぼれる ----
-const leakGlitch = document.createElement('div');
-leakGlitch.id = 'leak-glitch';
-document.body.appendChild(leakGlitch);
-function leakNeon(){ // GLITCH//RUNNERの世界が走る
-  leakGlitch.classList.add('on');
-  setTimeout(() => leakGlitch.classList.remove('on'), 280);
-}
-function leakCosmos(){ // 宇宙から小さな星が漂ってくる
-  const pl = document.createElement('div');
-  pl.className = 'leak-planet';
-  const hue = [200, 30, 260, 140][Math.floor(Math.random() * 4)];
-  pl.innerHTML = '<svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" fill="hsl(' + hue + ',45%,55%)"/><circle cx="11" cy="13" r="1.6" fill="#222"/><circle cx="19" cy="13" r="1.6" fill="#222"/><path d="M11 19 Q15 22 19 19" stroke="#222" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>';
-  pl.style.top = (8 + Math.random() * 25) + 'vh';
-  pl.style.left = '-40px';
-  document.body.appendChild(pl);
-  const dur = 16000, t0 = performance.now();
-  (function step(now){
-    const t = (now - t0) / dur;
-    if (t >= 1){ pl.remove(); return; }
-    pl.style.left = (-40 + t * (window.innerWidth + 80)) + 'px';
-    pl.style.transform = 'translateY(' + Math.sin(t * 9) * 14 + 'px) rotate(' + t * 360 + 'deg)';
-    requestAnimationFrame(step);
-  })(t0);
-}
-if (!calm){
-  (function scheduleLeak(){
-    setTimeout(() => {
-      (Math.random() < 0.5 ? leakNeon : leakCosmos)();
-      scheduleLeak();
-    }, 50000 + Math.random() * 70000);
-  })();
-}
-
-document.addEventListener('pointerdown', e => {
-  if (e.target.closest('a, button, input')) return;
-  const now = performance.now();
-  clicks = clicks.filter(t => now - t < 2200);
-  clicks.push(now);
-  if (clicks.length >= 7 && now - lastSuck > 60000 && !calm){
-    lastSuck = now;
-    clicks = [];
-    hole.classList.add('open');
-    document.body.classList.add('sucking');
-    setTimeout(() => {
-      document.body.classList.remove('sucking');
-      setTimeout(() => hole.classList.remove('open'), 500);
-      toast('あぶないところでした。連打すると /dev/null が目を覚まします。');
-      if (window.__unlock) window.__unlock('suck');
-    }, 850);
-  }
-});
 })();
 </script>
 
