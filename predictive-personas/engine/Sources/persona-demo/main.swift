@@ -99,4 +99,28 @@ try pruneEngine.pruneActivePersona(keepPerReading: 5)
 print("after  prune: \(pruneEngine.activePersona!.store.completions["あ"]!.count) surfaces for 'あ'")
 print("top 5 kept  :", pruneEngine.complete(reading: "あ", limit: 5))
 
+show("10) In-app upload / download / preset switch  (shareable preset package)")
+// This is the data contract behind the app's upload/download/preset features.
+let hub = PersonaEngine()
+let zetaPreset = hub.createPersona(name: "zeta用")
+try hub.learn(reading: "すき", surface: "好きかもしれない")
+try hub.learn(reading: "あい", surface: "アイ（推し）")
+
+// UPLOAD: turn a persona into a versioned, shareable preset
+let preset = try hub.exportPackage(zetaPreset.id, note: "AIチャット用の語彙セット")
+print("uploaded preset: \(preset.count) bytes (versioned, with display name + note)")
+
+// DOWNLOAD: a friend pulls the preset onto their device (always a fresh copy)
+let friend = PersonaEngine()
+let friendDaily = friend.createPersona(name: "日常用")   // they already had their own persona
+try friend.seedDefaultLexicon()                          // ...seeded with defaults
+let downloaded = try friend.importPackage(from: preset, activate: true)
+print("downloaded as preset:", downloaded.name)
+print("friend すき (zeta preset active) →", friend.complete(reading: "すき"))
+
+// PRESET SWITCH: flip back to their own default-seeded persona
+try friend.switchPersona(to: friendDaily.id)
+print("after preset switch active:", friend.activePersona?.name ?? "-")
+print("friend すき (日常用 active)      →", friend.complete(reading: "すき"))
+
 show("done — all M0 + M1 features working on \(ProcessInfo.processInfo.operatingSystemVersionString)")

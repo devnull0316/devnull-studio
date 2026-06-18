@@ -142,6 +142,44 @@ public final class PersonaEngine {
         return persona
     }
 
+    // MARK: - Shareable presets (= in-app upload / download)
+
+    /// Export one persona as a shareable, versioned preset package.
+    ///
+    /// This is the byte payload the app would **upload** (to a file, QR code,
+    /// or a future preset server). Unlike `exportPersona`, it carries a format
+    /// version and display metadata and omits device-specific identity.
+    public func exportPackage(_ id: UUID, note: String? = nil, now: Date = Date()) throws -> Data {
+        guard let persona = personas.first(where: { $0.id == id }) else {
+            throw PersonaError.personaNotFound(id)
+        }
+        let package = PersonaPackage(displayName: persona.name,
+                                     note: note,
+                                     exportedAt: now,
+                                     store: persona.store)
+        return try Self.encoder.encode(package)
+    }
+
+    /// Import a shared preset package — what the app does on **download**.
+    ///
+    /// Sharing is always a *copy*: the imported preset becomes a brand-new
+    /// persona with a fresh identity, so downloading never clobbers or aliases
+    /// an existing persona. Rejects packages from a newer, unsupported format.
+    @discardableResult
+    public func importPackage(from data: Data, activate: Bool = false, now: Date = Date()) throws -> Persona {
+        let package = try Self.decoder.decode(PersonaPackage.self, from: data)
+        guard package.formatVersion <= PersonaPackage.currentVersion else {
+            throw PersonaPackageError.unsupportedVersion(package.formatVersion)
+        }
+        let persona = Persona(name: package.displayName,
+                              createdAt: now,
+                              updatedAt: now,
+                              store: package.store)
+        personas.append(persona)
+        if activate { activePersonaID = persona.id }
+        return persona
+    }
+
     // MARK: - Helpers
 
     private func mutateActive(_ body: (inout Persona) -> Void) throws {
