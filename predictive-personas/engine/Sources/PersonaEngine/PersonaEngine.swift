@@ -14,9 +14,17 @@ public final class PersonaEngine {
     public private(set) var personas: [Persona]
     public private(set) var activePersonaID: UUID?
 
-    public init(personas: [Persona] = [], activePersonaID: UUID? = nil) {
+    /// Decay half-life for recency ranking.
+    /// - `nil` (default): rank by raw count, then recency, then lex — backward-compatible.
+    /// - Any positive interval: older high-count words can be beaten by fresher words.
+    ///   30 days (`30 * 86_400`) is a sensible production default.
+    public var halfLife: TimeInterval?
+
+    public init(personas: [Persona] = [], activePersonaID: UUID? = nil,
+                halfLife: TimeInterval? = nil) {
         self.personas = personas
         self.activePersonaID = activePersonaID ?? personas.first?.id
+        self.halfLife = halfLife
     }
 
     public var activePersona: Persona? {
@@ -46,19 +54,62 @@ public final class PersonaEngine {
 
     // MARK: - Learning & prediction (active persona)
 
+    /// Learn that the user typed `surface` (read as `reading`).
+    ///
+    /// `reading` accepts either hiragana or romaji — romaji is automatically
+    /// converted to hiragana so that `complete("suki")` finds what was learned
+    /// with `learn(reading: "すき", ...)` and vice-versa.
     public func learn(reading: String, surface: String, previous: String? = nil, now: Date = Date()) throws {
+        let normalizedReading = RomajiConverter.resolvedHiragana(reading)
+        let key = normalizedReading.isEmpty ? reading : normalizedReading
         try mutateActive {
-            $0.store.learn(reading: reading, surface: surface, previous: previous, at: now)
+            $0.store.learn(reading: key, surface: surface, previous: previous, at: now)
             $0.updatedAt = now
         }
     }
 
-    public func complete(reading: String, limit: Int = 5) -> [String] {
-        activePersona?.store.candidates(forReading: reading, limit: limit) ?? []
+    /// Candidate completions for the given reading prefix.
+    ///
+    /// `reading` accepts romaji — only the definitively-converted hiragana portion
+    /// is used for lookup, so partial input like `"suk"` searches on `"す"`.
+    /// When `halfLife` is set on this engine, recency decay is applied.
+    public func complete(reading: String, limit: Int = 5, now: Date = Date()) -> [String] {
+        let hiragana = RomajiConverter.resolvedHiragana(reading)
+        let key = hiragana.isEmpty ? reading : hiragana
+        return activePersona?.store.candidates(
+            forReading: key, limit: limit,
+            now: halfLife != nil ? now : nil,
+            halfLife: halfLife ?? 30 * 86_400
+        ) ?? []
     }
 
-    public func predictNext(after surface: String, limit: Int = 5) -> [String] {
-        activePersona?.store.candidates(after: surface, limit: limit) ?? []
+    /// Likely next words after `surface`, best first.
+    public func predictNext(after surface: String, limit: Int = 5, now: Date = Date()) -> [String] {
+        activePersona?.store.candidates(
+            after: surface, limit: limit,
+            now: halfLife != nil ? now : nil,
+            halfLife: halfLife ?? 30 * 86_400
+        ) ?? []
+    }
+
+    // MARK: - Default lexicon
+
+    /// Seed the active persona with a small built-in vocabulary so that common
+    /// words appear as candidates for a brand-new user.
+    ///
+    /// Each entry is recorded at `Date.distantPast`, guaranteeing it always
+    /// ranks below anything the user has actually typed.
+    public func seedDefaultLexicon() throws {
+        for (reading, surface) in DefaultLexicon.entries {
+            try learn(reading: reading, surface: surface, now: .distantPast)
+        }
+    }
+
+    // MARK: - Pruning
+
+    /// Trim the active persona's learning store to stay within memory bounds.
+    public func pruneActivePersona(keepPerReading: Int = 20, maxReadings: Int = 500) throws {
+        try mutateActive { $0.store.prune(keepPerReading: keepPerReading, maxReadings: maxReadings) }
     }
 
     // MARK: - Portability (= upload / download / carry)
