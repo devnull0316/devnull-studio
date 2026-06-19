@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#06080b">
+<title>こんばんは ── prototype</title>
+<style>
+  :root{
+    --ink:#ece8df; --dim:#8790a0; --faint:#565c68;
+    --cold:#8ea3c0; --warm:#e6c993;
+    --line:rgba(236,232,223,.12);
+    --fog:15px; --figop:.18; --glass:.55; --warmth:.10; --bright:.85;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none;}
+  body{
+    background:#04050700; color:var(--ink);
+    font-family:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",serif;
+    -webkit-font-smoothing:antialiased; user-select:none; -webkit-user-select:none;
+    touch-action:manipulation;
+  }
+  #app{position:fixed; inset:0; cursor:pointer;}
+
+  /* ===== 部屋 ===== */
+  #scene{position:absolute; inset:0; overflow:hidden;
+    filter:brightness(var(--bright)); transition:filter 2s ease;}
+  .layer{position:absolute; inset:0;}
+
+  .wall{background:
+    radial-gradient(130% 95% at 50% 4%, #1b2330 0%, #121925 38%, #0a0e16 70%, #06080d 100%);}
+  /* 奥の冷たい光 */
+  .backlight{left:50%; top:2%; width:78vmin; height:70vmin; transform:translateX(-50%);
+    background:radial-gradient(closest-side, rgba(142,163,192,.20), rgba(142,163,192,0) 72%);
+    animation:breathe 8s ease-in-out infinite;}
+  @keyframes breathe{0%,100%{opacity:.7}50%{opacity:1}}
+  /* 温かみ（理解が進むと増す） */
+  .warmth{background:radial-gradient(60% 48% at 50% 30%, rgba(230,201,147,.16), rgba(230,201,147,0) 70%);
+    opacity:var(--warmth); transition:opacity 2.2s ease; mix-blend-mode:screen;}
+
+  .floor{top:64%; bottom:0;
+    background:linear-gradient(#080b11 0%, #05070b 60%, #04050a 100%);
+    box-shadow:inset 0 1px 0 rgba(236,232,223,.05);}
+  .floorglow{top:62%; height:24%; left:50%; width:60vmin; transform:translateX(-50%);
+    background:radial-gradient(closest-side, rgba(142,163,192,.10), transparent 75%); filter:blur(8px);}
+
+  /* ドア（冷たい非常口の気配） */
+  .door{right:7.5%; bottom:36%; width:12.5vmin; height:30vmin;
+    background:linear-gradient(#0d1119,#080b12); border:1px solid rgba(236,232,223,.08); border-bottom:none;}
+  .door::before{content:""; position:absolute; inset:0; box-shadow:inset 0 -30px 30px -24px rgba(142,163,192,.5);}
+  .door::after{content:""; position:absolute; left:16%; top:50%; width:4px; height:10px; border-radius:3px;
+    background:rgba(236,232,223,.2);}
+
+  /* 彼（シルエット） */
+  #figureWrap{position:absolute; left:50%; top:15%; transform:translateX(-50%);
+    width:38vmin; max-width:320px; filter:blur(var(--fog)); opacity:var(--figop);
+    transition:filter 1.8s ease, opacity 1.8s ease; animation:sway 9s ease-in-out infinite;}
+  @keyframes sway{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-.7%)}}
+  #figureWrap svg{width:100%; height:auto; display:block;}
+
+  /* 仕切り（フロストガラス＋枠） */
+  #glass{position:absolute; left:50%; top:10%; transform:translateX(-50%);
+    width:62vmin; max-width:540px; height:54%;
+    background:linear-gradient(175deg, rgba(150,170,200,.12), rgba(120,140,170,.05) 60%, rgba(120,140,170,.09));
+    border:1px solid rgba(236,232,223,.10); border-radius:2px;
+    opacity:var(--glass); transition:opacity 1.8s ease;
+    box-shadow:0 20px 60px -30px rgba(0,0,0,.8);}
+  #glass::before{content:""; position:absolute; inset:0;
+    background:linear-gradient(118deg, rgba(255,255,255,.07) 0 26%, rgba(255,255,255,0) 42%);}
+  /* カウンター */
+  .counter{position:absolute; left:50%; top:64%; transform:translateX(-50%);
+    width:74vmin; max-width:640px; height:8vmin;
+    background:linear-gradient(#10151e,#0a0e15); border-top:1px solid rgba(236,232,223,.08);
+    box-shadow:0 -6px 24px -18px rgba(0,0,0,.9);}
+
+  /* 手前：プレイヤーの椅子の影 */
+  .chair{left:50%; bottom:0; width:34vmin; height:13vmin; transform:translateX(-50%);
+    background:radial-gradient(closest-side, rgba(0,0,0,.6), transparent 72%);}
+
+  /* 粒子・グレイン・ヴィネット */
+  .dust{pointer-events:none;}
+  .dust i{position:absolute; width:3px; height:3px; border-radius:50%;
+    background:rgba(236,232,223,.5); filter:blur(1px); opacity:0; animation:float linear infinite;}
+  @keyframes float{0%{opacity:0; transform:translateY(10px)}10%{opacity:.5}90%{opacity:.5}100%{opacity:0; transform:translateY(-60px)}}
+  .grain{pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+  #vignette{pointer-events:none; box-shadow:inset 0 0 26vmin 7vmin rgba(0,0,0,.74);}
+
+  /* 演出 */
+  #fx{position:absolute; inset:0; pointer-events:none; opacity:0;}
+  #fx.flash{animation:flash 1.8s ease forwards;}
+  @keyframes flash{0%{opacity:0}20%{opacity:.7}100%{opacity:0}}
+  #fx .glow{position:absolute; inset:0;
+    background:radial-gradient(58% 46% at 50% 34%, rgba(230,201,147,.55), rgba(230,201,147,0) 70%);}
+
+  /* ===== テキスト ===== */
+  #textbox{position:absolute; left:0; right:0; bottom:0; z-index:5;
+    padding:0 clamp(20px,6vw,90px) calc(env(safe-area-inset-bottom,0px) + clamp(28px,5vmin,52px));
+    padding-top:clamp(40px,9vmin,90px);
+    background:linear-gradient(180deg, rgba(4,5,8,0) 0%, rgba(4,5,8,.55) 34%, rgba(4,5,8,.9) 100%);}
+  #textbox .rule{height:1px; max-width:680px; margin:0 auto 18px;
+    background:linear-gradient(90deg, transparent, var(--line), transparent); opacity:0; transition:opacity .6s;}
+  #textwrap{max-width:680px; margin:0 auto;}
+  #speaker{font-family:"Hiragino Sans","Noto Sans JP",sans-serif; font-size:clamp(11px,2vmin,14px);
+    letter-spacing:.24em; color:var(--warm); opacity:0; margin-bottom:10px;}
+  #text{font-size:clamp(16px,2.95vmin,22px); line-height:2.1; letter-spacing:.03em; min-height:4.4em;
+    text-shadow:0 1px 14px rgba(0,0,0,.65);}
+  #text .c{opacity:0; animation:rise .42s ease forwards;}
+  @keyframes rise{from{opacity:0; transform:translateY(2px)}to{opacity:1; transform:none}}
+  #hint{position:absolute; right:clamp(20px,6vw,90px); bottom:calc(env(safe-area-inset-bottom,0px) + 14px);
+    color:var(--dim); font-size:13px; opacity:0; animation:bob 1.5s ease-in-out infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0);opacity:.3}50%{transform:translateY(3px);opacity:.85}}
+
+  /* 選択肢 */
+  #choices{position:absolute; left:0; right:0; bottom:0; z-index:6; display:none;
+    flex-direction:column; align-items:center; gap:13px;
+    padding:0 clamp(20px,6vw,90px) calc(env(safe-area-inset-bottom,0px) + clamp(30px,7vmin,64px));}
+  .choice{width:100%; max-width:600px; padding:16px 24px;
+    background:linear-gradient(rgba(22,28,38,.82),rgba(16,20,28,.82));
+    border:1px solid var(--line); border-radius:12px; color:var(--ink);
+    font-family:inherit; font-size:clamp(15px,2.6vmin,18px); line-height:1.6; text-align:left;
+    cursor:pointer; transition:.2s ease; animation:rise .4s ease backwards;}
+  .choice:nth-child(2){animation-delay:.06s}
+  .choice:active,.choice:hover{border-color:rgba(230,201,147,.45); background:linear-gradient(rgba(34,42,56,.9),rgba(24,30,42,.9)); transform:translateY(-1px);}
+
+  /* 記述 */
+  #inputwrap{position:absolute; left:0; right:0; bottom:0; z-index:6; display:none;
+    flex-direction:column; align-items:center; gap:13px;
+    padding:0 clamp(20px,6vw,90px) calc(env(safe-area-inset-bottom,0px) + clamp(30px,7vmin,64px));}
+  #reflect{width:100%; max-width:600px; min-height:66px; resize:none;
+    background:rgba(10,13,19,.9); border:1px solid var(--line); border-radius:12px;
+    color:var(--ink); font-family:inherit; font-size:17px; line-height:1.85; padding:14px 16px;}
+  #reflect:focus{outline:none; border-color:rgba(230,201,147,.45);}
+  .ibtns{display:flex; gap:12px;}
+  .ibtn{padding:12px 28px; background:rgba(22,28,38,.85); border:1px solid var(--line);
+    border-radius:10px; color:var(--ink); font-family:"Hiragino Sans","Noto Sans JP",sans-serif;
+    font-size:14px; cursor:pointer;}
+  .ibtn:active,.ibtn:hover{border-color:rgba(230,201,147,.45);}
+
+  /* 安全 */
+  #safety{position:absolute; left:14px; bottom:calc(env(safe-area-inset-bottom,0px) + 10px); z-index:8;
+    font-family:"Hiragino Sans","Noto Sans JP",sans-serif; font-size:12px; display:flex; gap:16px;}
+  #safety button{background:none; border:none; color:var(--faint); font:inherit; cursor:pointer; padding:5px;}
+  #safety button:active,#safety button:hover{color:var(--dim);}
+
+  /* 最初のタップ案内 */
+  #taphint{position:absolute; left:0; right:0; top:46%; z-index:7; text-align:center; pointer-events:none;
+    color:var(--dim); font-family:"Hiragino Sans","Noto Sans JP",sans-serif; font-size:13px; letter-spacing:.2em;
+    opacity:0; transition:opacity 1s ease;}
+  #taphint.show{opacity:.8; animation:bob 2s ease-in-out infinite;}
+
+  /* オーバーレイ */
+  .overlay{position:absolute; inset:0; z-index:20; background:#05060a;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    padding:9vmin 9vw calc(env(safe-area-inset-bottom,0px) + 9vmin); gap:24px; transition:opacity 1.4s ease;}
+  .overlay::after{content:""; position:absolute; left:50%; top:30%; width:80vmin; height:70vmin; transform:translateX(-50%);
+    background:radial-gradient(closest-side, rgba(142,163,192,.14), transparent 70%); pointer-events:none;}
+  .overlay h1{position:relative; font-size:clamp(32px,9vmin,68px); letter-spacing:.4em; text-indent:.4em;
+    font-weight:400; color:var(--ink); opacity:0; animation:fadein 2.4s ease forwards;}
+  @keyframes fadein{to{opacity:.95}}
+  .overlay .sub{position:relative; color:var(--dim); font-size:clamp(12px,2.4vmin,15px); letter-spacing:.14em;
+    font-family:"Hiragino Sans","Noto Sans JP",sans-serif;}
+  .overlay .note{position:relative; color:var(--faint); font-size:12.5px; line-height:2;
+    font-family:"Hiragino Sans","Noto Sans JP",sans-serif; max-width:34em;}
+  .overlay .start{position:relative; margin-top:12px; padding:15px 50px; background:rgba(236,232,223,.02);
+    border:1px solid rgba(236,232,223,.4); border-radius:999px; color:var(--ink);
+    font-family:inherit; font-size:17px; letter-spacing:.24em; text-indent:.24em; cursor:pointer; transition:.3s;}
+  .overlay .start:active,.overlay .start:hover{background:rgba(236,232,223,.1); border-color:var(--ink);}
+  .overlay.hide{opacity:0; pointer-events:none;}
+  #resources .row{position:relative; color:var(--ink); font-size:15px; line-height:1.4;
+    font-family:"Hiragino Sans","Noto Sans JP",sans-serif;}
+  #resources .row span{color:var(--warm);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="scene">
+    <div class="layer wall"></div>
+    <div class="layer backlight"></div>
+    <div class="layer warmth"></div>
+    <div class="layer floor"></div>
+    <div class="layer floorglow"></div>
+    <div class="layer door"></div>
+    <div id="figureWrap">
+      <svg viewBox="0 0 200 320" aria-hidden="true">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#10141c"/><stop offset="1" stop-color="#04060a"/>
+          </linearGradient>
+        </defs>
+        <path fill="url(#g)" d="M100 34c19 0 32 15 32 36 0 15-7 26-17 32 16 4 28 13 36 28 9 17 13 41 16 78 2 24 4 46 8 70-26 4-52 6-75 6s-49-2-75-6c4-24 6-46 8-70 3-37 7-61 16-78 8-15 20-24 36-28-10-6-17-17-17-32 0-21 13-36 32-36z"/>
+      </svg>
+    </div>
+    <div class="layer counter"></div>
+    <div id="glass"></div>
+    <div class="layer chair"></div>
+    <div class="layer dust" id="dust"></div>
+    <div class="layer grain"></div>
+    <div class="layer" id="vignette"></div>
+    <div id="fx"><div class="glow"></div></div>
+  </div>
+
+  <div id="taphint">画面をタップで進む</div>
+
+  <div id="textbox">
+    <div class="rule" id="rule"></div>
+    <div id="textwrap"><div id="speaker"></div><div id="text"></div></div>
+    <div id="hint">▼</div>
+  </div>
+
+  <div id="choices"></div>
+  <div id="inputwrap">
+    <textarea id="reflect" placeholder="（書かなくてもいい）"></textarea>
+    <div class="ibtns"><button class="ibtn" id="iskip">何も言わない</button><button class="ibtn" id="isend">伝える</button></div>
+  </div>
+
+  <div id="safety"><button id="btnRes">相談先</button><button id="btnClose">そっと閉じる</button></div>
+
+  <div class="overlay" id="title">
+    <h1>こんばんは</h1>
+    <div class="sub">仮題・プロトタイプ</div>
+    <div class="note">これはゲームです。診断や医療ではありません。<br>
+      つらいときは、ひとりで抱えないでください。<br>よりそいホットライン 0120-279-338（24時間・無料）</div>
+    <button class="start" id="btnStart">はじめる</button>
+  </div>
+
+  <div class="overlay hide" id="resources" style="z-index:25">
+    <h1 style="font-size:clamp(22px,5vmin,34px);letter-spacing:.2em;text-indent:.2em">ひとりで、抱えないで</h1>
+    <div class="row">よりそいホットライン　<span>0120-279-338</span>（24時間・無料）</div>
+    <div class="row">いのちの電話　<span>0570-783-556</span></div>
+    <div class="row">厚生労働省「まもろうよこころ」</div>
+    <button class="start" id="btnResBack" style="margin-top:16px">もどる</button>
+  </div>
+
+  <div class="overlay hide" id="closed" style="z-index:25">
+    <div class="sub" style="font-size:clamp(15px,3vmin,19px);font-family:'Hiragino Mincho ProN',serif;line-height:2.2">――また、いつでも。</div>
+    <button class="start" id="btnReopen" style="margin-top:6px">もどる</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+(()=>{
+const root=document.documentElement.style, $=id=>document.getElementById(id);
+const speakerEl=$("speaker"), textEl=$("text"), hintEl=$("hint"), ruleEl=$("rule"),
+      choicesEl=$("choices"), inputEl=$("inputwrap"), reflectEl=$("reflect"), fxEl=$("fx"), taphint=$("taphint");
+const state={ i:0, clarity:.10, reflection:"", started:false };
+
+// 粒子
+(()=>{const d=$("dust"); for(let n=0;n<14;n++){const s=document.createElement("i");
+  s.style.left=(5+Math.random()*90)+"%"; s.style.top=(20+Math.random()*70)+"%";
+  s.style.animationDuration=(9+Math.random()*10)+"s"; s.style.animationDelay=(Math.random()*10)+"s";
+  d.appendChild(s);} })();
+
+function applyClarity(){
+  const v=Math.max(0,Math.min(1,state.clarity));
+  root.setProperty("--fog",(2+(1-v)*15).toFixed(2)+"px");
+  root.setProperty("--figop",(0.18+v*0.6).toFixed(3));
+  root.setProperty("--glass",(0.55-v*0.3).toFixed(3));
+  root.setProperty("--warmth",(0.10+v*0.5).toFixed(3));
+  root.setProperty("--bright",(0.85+v*0.22).toFixed(3));
+}
+const addC=d=>{state.clarity=Math.max(0,Math.min(1,state.clarity+d)); applyClarity();};
+const setC=v=>{state.clarity=Math.max(0,Math.min(1,v)); applyClarity();};
+
+// 物語（ノードの連なり）
+const S=[
+ {t:"n",x:"「こんばんは」――その声で、目を覚ました。"},
+ {t:"n",x:"咄嗟に「こんばんは」と返したものの、状況がうまくつかめない。「失っていましたよ」。そう言った彼は、目の前にいるはずなのに、意図的にぼやかされたような仕切りのせいで、はっきりとは姿がわからない。"},
+ {t:"n",x:"とりあえず、目の前のものを“人間の男”だと決めて、訊いてみることにした。"},
+ {t:"p",x:"「ここは、どこなのかな」"},
+ {t:"k",x:"「知りたくて仕方がないのなら、知ろうとすべきだと思いますよ」"},
+ {t:"p",x:"「どういう意味なのかな」"},
+ {t:"k",x:"「そんなことより。あなたは、誰なんですか」"},
+ {t:"n",x:"「私は……」言葉に詰まる。言語化できない何かに、無理やり型を埋めて“何か”にしようとする自分を見てしまって、つい、逃げた。"},
+ {t:"p",x:"「君は、誰なの」"},
+ {t:"k",x:"「生きていて、思考ができる。ただ、それだけのものです」"},
+ {t:"p",x:"「名前とか、君という一つのものについて、教えてほしい」"},
+ {t:"n",x:"彼は不思議そうにしながら、答え方を探しているようだった。少しして――"},
+ {t:"k",x:"「名前は、決めていないです。今まで、誰も私を知覚しなかったから」"},
+ {t:"n",x:"その意味を飲み込むより先に、彼から、感じたことのない感情の存在を、感じ取れた気がした。"},
+ {t:"p",x:"「君は今、寂しいと感じているんだよ。そういう感情に気づいて、『自分』を色づけて、形づくる。それが、思考できる生き物の在り方だと、私は思う」"},
+ {t:"n",x:"彼は、何も返さなかった。……なんだか、今の私は、私らしくない。思いついたまま訊いて、答えて。こんなに能動的だっただろうか。"},
+ {t:"n",x:"周りを見渡す。刑務所の面会室みたいだ（見たことはないけれど）。ドアと、椅子。彼との間には、シルエットがかろうじて透ける仕切りがあって、なぜここにいるのかも、来た経緯も、直前の記憶も、わからない。ただ、ドアを開けて日常へ戻れば、何かから逃げられる気がした。"},
+ {t:"c",opts:[{label:"それでも、ドアを試す",do:()=>addC(-.03)},{label:"彼の気配に、立ち止まる",do:()=>addC(.04)}]},
+ {t:"n",x:"結局、ドアは開かなかった。押しても引いても、びくともしないし、鍵穴のようなものも見当たらない。蹴破れる材質でもなさそうだった。一生ここにいる羽目になるのだろうか。そもそも、なんなんだ、この部屋は。"},
+ {t:"k",x:"「座りなよ」"},
+ {t:"n",x:"淡々とそう言う彼に、無性に腹が立った。さっきから、何もかも知っているような口ぶりで、肝心なことは、何ひとつ言わないのだ。"},
+ {t:"c",opts:[{label:"「答えろよ。君は、なんなんだ」と問い詰める",do:()=>{}},{label:"込み上げたものを、ひとつ、飲み込む",do:()=>addC(.03)}]},
+ {t:"k",x:"「君が知りたいことは、これから、君が知る。私が答えることでは、ないよ」"},
+ {t:"n",x:"仮に、誰かが意図的に私をここへ入れたのだとしても、できるのは彼と話すことだけだ。ならば、それが唯一の糸口だろう。私は、椅子に戻った。"},
+ {t:"p",x:"「君は、なんでここに入れられたんだと思う」"},
+ {t:"k",x:"「来た理由は、わからない。でも、少なくとも、ここは私にとっての逃げ場なんだ」"},
+ {t:"p",x:"「逃げ場？　この、閉じた部屋が？」"},
+ {t:"k",x:"「時間は、勝手に進んでいくだろう。どんなに辛くても、動けなくても、後ろから壁が迫ってきて、私を押して、無理やり前へ連れていくんだ。……でも、ここは、押し潰してこない。だから、逃げ場なんだ」",do:()=>addC(.05)},
+ {t:"n",x:"時間を、壁と呼ぶ。その言い方に、なぜか、背すじが冷えた。"},
+ {t:"p",x:"「じゃあ君は、ここから一生、出ないつもり？」"},
+ {t:"k",x:"「長い休暇が要るんだ。楽しいことをするためじゃなく、ただ、今まで生きてきたこの体を労って、癒すための時間。それには、ここがいちばんいい。……たぶん、君にも、そういう時間が必要なんだと思うよ」"},
+ {t:"c",opts:[{label:"「……どうして、そう思うの」",do:()=>addC(.06)},{label:"「私は、早く出たいんだ。君とは違う」",do:()=>addC(-.04)}]},
+ {t:"k",x:"「そっか。でも、どれだけ早く前に進んでも、その分、早く疲れるだけだよ。結局は、時間っていう壁から、遠ざかろうとしているだけ。……だから、君にも要るんだ」"},
+ {t:"k",x:"「もし、ここを出られたら。部屋の電気を消して、目を瞑って、好きな音楽を、耳が痛くなるギリギリの音量で聴いてみて。音に、ぜんぶ集中して。……そして、曲が終わった、あの無音の一瞬。あれを、感じて、大事にして」"},
+ {t:"n",x:"達観しているのに、どこか子どもみたいで、彼のことは、まだうまく掴めなかった。"},
+ {t:"in"},
+ {t:"n",x:"私は、ひとつ、息を吐いた。"},
+ {t:"p",x:"「……帰れたら、やってみるよ。それに、別に、生き急いでるわけじゃない」"},
+ {t:"n",x:"そのつもりだったのに、つい、こぼれた。"},
+ {t:"p",x:"「――ただ、不安なんだ。この空間が」"},
+ {t:"fx",fx:"settle",to:.5},
+ {t:"k",x:()=> state.reflection ? "「さっき、君は『"+state.reflection+"』と言ったね」" : "「いま、初めて。……取り繕わずに、言ったね」"},
+ {t:"n",x:"仕切りの滲みが、ほんの少しだけ、晴れた気がした。彼の輪郭が、さっきより、近い。"},
+ {t:"end"},
+];
+
+let typing=false, full="", timer=null;
+const hideHint=()=>hintEl.style.opacity=0, showHint=()=>hintEl.style.opacity=1;
+
+function type(txt){
+  typing=true; full=txt; hideHint(); textEl.innerHTML="";
+  let k=0; clearInterval(timer);
+  timer=setInterval(()=>{
+    const ch=txt.charAt(k++);
+    const sp=document.createElement("span"); sp.className="c"; sp.textContent=ch;
+    sp.style.animationDelay="0s"; textEl.appendChild(sp);
+    if(k>=txt.length){ clearInterval(timer); typing=false; showHint(); }
+  }, 32);
+}
+function finishType(){ clearInterval(timer); textEl.textContent=full; typing=false; showHint(); }
+
+function clearChoices(){ choicesEl.style.display="none"; choicesEl.innerHTML=""; }
+function hideInput(){ inputEl.style.display="none"; }
+
+function render(){
+  const node=S[state.i]; clearChoices(); hideInput();
+  if(!node) return;
+  if(node.t==="end"){ showEnd(); return; }
+  if(node.t==="fx"){
+    fxEl.classList.remove("flash"); void fxEl.offsetWidth; fxEl.classList.add("flash");
+    if(node.fx==="settle") setC(node.to);
+    setTimeout(()=>{ state.i++; render(); }, 1600); return;
+  }
+  if(node.t==="c"){
+    speakerEl.style.opacity=0; textEl.textContent=""; ruleEl.style.opacity=0; hideHint();
+    choicesEl.style.display="flex";
+    node.opts.forEach(o=>{ const b=document.createElement("button"); b.className="choice"; b.textContent=o.label;
+      b.onclick=ev=>{ ev.stopPropagation(); if(o.do)o.do(); state.i++; render(); }; choicesEl.appendChild(b); });
+    return;
+  }
+  if(node.t==="in"){
+    ruleEl.style.opacity=1; speakerEl.textContent="彼"; speakerEl.style.opacity=1;
+    type("「……何か、言いたいことがあれば」"); inputEl.style.display="flex"; return;
+  }
+  if(node.do) node.do();
+  ruleEl.style.opacity=1;
+  const who=node.t==="p"?"私":node.t==="k"?"彼":"";
+  speakerEl.textContent=who; speakerEl.style.opacity=who?1:0;
+  type(typeof node.x==="function"?node.x():node.x);
+}
+
+function advance(){
+  if(!state.started) return;
+  if(taphint.classList.contains("show")) taphint.classList.remove("show");
+  const node=S[state.i]; if(!node) return;
+  if(typing){ finishType(); return; }
+  if(node.t==="c"||node.t==="in"||node.t==="fx"||node.t==="end") return;
+  state.i++; render();
+}
+
+// 全画面タップで進む（操作部は除外）
+$("app").addEventListener("click", e=>{
+  if(e.target.closest("#choices,#inputwrap,#safety,.overlay,button,textarea")) return;
+  advance();
+});
+
+$("isend").onclick=e=>{ e.stopPropagation(); state.reflection=reflectEl.value.trim().slice(0,120); state.i++; render(); };
+$("iskip").onclick=e=>{ e.stopPropagation(); state.reflection=""; state.i++; render(); };
+
+function showEnd(){
+  speakerEl.style.opacity=0; hideHint(); ruleEl.style.opacity=0; textEl.textContent=""; state.started=false;
+  const t=$("title");
+  t.querySelector("h1").textContent="――ここまで";
+  t.querySelector(".sub").textContent="プロトタイプ（続きは、これから）";
+  t.querySelector(".note").innerHTML="触ってくれて、ありがとう。<br>この続きと、結末は、一緒に作っていけます。";
+  t.querySelector(".start").textContent="もう一度";
+  t.classList.remove("hide");
+}
+
+$("btnStart").onclick=e=>{ e.stopPropagation(); const t=$("title"); t.classList.add("hide");
+  state.i=0; state.clarity=.10; state.reflection=""; state.started=true; applyClarity();
+  taphint.classList.add("show");
+  setTimeout(render,800);
+};
+$("btnRes").onclick=e=>{ e.stopPropagation(); $("resources").classList.remove("hide"); };
+$("btnResBack").onclick=e=>{ e.stopPropagation(); $("resources").classList.add("hide"); };
+$("btnClose").onclick=e=>{ e.stopPropagation(); $("closed").classList.remove("hide"); };
+$("btnReopen").onclick=e=>{ e.stopPropagation(); $("closed").classList.add("hide"); };
+
+applyClarity();
+})();
+</script>
+</body>
+</html>
