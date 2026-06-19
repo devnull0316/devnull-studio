@@ -1,0 +1,10 @@
+{
+  // 静的サイト（ルート直下のHTML群）を Cloudflare Workers Assets として配信する設定。
+  // これが無いと `wrangler versions upload` が配信対象を特定できずビルドに失敗する。
+  "name": "devnull-studio",
+  "compatibility_date": "2026-06-19",
+  "assets": {
+    "directory": "./",
+    "not_found_handling": "404-page"
+  }
+}
