@@ -30,10 +30,12 @@
   .wall{background:
     radial-gradient(130% 95% at 50% 4%, #1b2330 0%, #121925 38%, #0a0e16 70%, #06080d 100%);}
   /* 奥の冷たい光 */
-  .backlight{left:50%; top:2%; width:78vmin; height:70vmin; transform:translateX(-50%);
-    background:radial-gradient(closest-side, rgba(142,163,192,.20), rgba(142,163,192,0) 72%);
+  .backlight{left:50%; top:0; width:96vmin; height:82vmin; transform:translateX(-50%);
+    background:
+      radial-gradient(42% 36% at 50% 25%, rgba(174,198,228,.36), rgba(174,198,228,0) 70%),
+      radial-gradient(closest-side, rgba(120,145,180,.15), rgba(120,145,180,0) 72%);
     animation:breathe 8s ease-in-out infinite;}
-  @keyframes breathe{0%,100%{opacity:.7}50%{opacity:1}}
+  @keyframes breathe{0%,100%{opacity:.72}50%{opacity:1}}
   /* 温かみ（理解が進むと増す） */
   .warmth{background:radial-gradient(60% 48% at 50% 30%, rgba(230,201,147,.16), rgba(230,201,147,0) 70%);
     opacity:var(--warmth); transition:opacity 2.2s ease; mix-blend-mode:screen;}
@@ -53,9 +55,16 @@
 
   /* 彼（シルエット） */
   #figureWrap{position:absolute; left:50%; top:15%; transform:translateX(-50%);
-    width:38vmin; max-width:320px; filter:blur(var(--fog)); opacity:var(--figop);
-    transition:filter 1.8s ease, opacity 1.8s ease; animation:sway 9s ease-in-out infinite;}
-  @keyframes sway{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-.7%)}}
+    width:38vmin; max-width:320px; transform-origin:50% 100%;
+    filter:blur(var(--fog)) drop-shadow(0 0 16px rgba(150,180,225,.5));
+    opacity:var(--figop); transition:filter 1.8s ease, opacity 1.8s ease;
+    animation:breath 7s ease-in-out infinite;}
+  /* 呼吸：吸気はゆっくり(→45%)、吐気は速め(45→62%)、その後ゆるむ */
+  @keyframes breath{
+    0%{transform:translateX(-50%) translateY(0) scaleY(1)}
+    45%{transform:translateX(-50%) translateY(-1.1%) scaleY(1.014)}
+    62%{transform:translateX(-50%) translateY(-.2%) scaleY(1.003)}
+    100%{transform:translateX(-50%) translateY(0) scaleY(1)}}
   #figureWrap svg{width:100%; height:auto; display:block;}
 
   /* 仕切り（フロストガラス＋枠） */
@@ -67,6 +76,11 @@
     box-shadow:0 20px 60px -30px rgba(0,0,0,.8);}
   #glass::before{content:""; position:absolute; inset:0;
     background:linear-gradient(118deg, rgba(255,255,255,.07) 0 26%, rgba(255,255,255,0) 42%);}
+  /* 彼が話すと、ガラスに光が走る */
+  #glass.speak::after{content:""; position:absolute; inset:0; border-radius:2px; pointer-events:none;
+    background:linear-gradient(118deg, rgba(184,208,236,0) 34%, rgba(184,208,236,.20) 50%, rgba(184,208,236,0) 66%);
+    animation:sweep 1.1s ease;}
+  @keyframes sweep{0%{opacity:0; transform:translateX(-10%)}25%{opacity:1}100%{opacity:0; transform:translateX(10%)}}
   /* カウンター */
   .counter{position:absolute; left:50%; top:64%; transform:translateX(-50%);
     width:74vmin; max-width:640px; height:8vmin;
@@ -353,6 +367,7 @@ function render(){
   ruleEl.style.opacity=1;
   const who=node.t==="p"?"私":node.t==="k"?"彼":"";
   speakerEl.textContent=who; speakerEl.style.opacity=who?1:0;
+  if(node.t==="k"){ const g=$("glass"); g.classList.remove("speak"); void g.offsetWidth; g.classList.add("speak"); }
   type(typeof node.x==="function"?node.x():node.x);
 }
 
