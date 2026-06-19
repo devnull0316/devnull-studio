@@ -25,14 +25,18 @@
 - [x] テスト44本パス（ローマ字・decay・辞書・pruning・package round-trip 等）
 
 ## M2 — iOSシェルに載せる（xtool ルートを優先、TestFlight は クラウドMac）
+コードは `ios/` に一式実装済み（Linuxではビルド不可、Mac/xtoolで「開いてビルド」状態）。
+残るのは有料アカウント・実機・署名まわり。
 - [ ] Apple Developer 登録（$99）— App Groups / プロビジョニングに必要
 - [ ] **xtool セットアップ**（Linux/WSL）：`xtool build` でキーボード拡張を実機サイドロード
-- [ ] Xcode プロジェクト作成（xtool または クラウドMac）：本体アプリ＋キーボード拡張
-- [ ] `engine` をローカルSwift Package として参照
-- [ ] App Group 設定、`PersonaStore` をコンテナに接続
-- [ ] キーボード拡張で `learn` / `complete` を配線、候補バー表示
-- [ ] **実機で初動作**（メモリを計測：30〜60MB以内）
-- [ ] アップロード・ダウンロード・プリセット切替UI（`exportPackage` / `importPackage` を画面から）
+- [x] 本体アプリ（SwiftUI）：ペルソナ一覧・切替・作成・削除（`ios/HostApp/`）
+- [x] `engine` をローカルSwift Package参照する構成（`ios/README.md` に手順）
+- [x] App Group 配線：`PersonaService` が `PersonaStore` を共有コンテナに向ける
+- [x] キーボード拡張：`learn` / `complete` / `predictNext` 配線、候補バー、ローマ字入力（`ios/Keyboard/`）
+- [x] キーボード上でのペルソナ即切替（👤ボタン＝製品の核）
+- [x] アップロード・ダウンロードUI（`exportPackage` / `importPackage` を画面から）
+- [ ] **実機で初動作**（Mac/xtool＋実機で署名・インストール、メモリ計測：30〜60MB以内）
+- [ ] 濁点・小書き・記号などIME入力の拡充（PoCの次）
 
 ## M3 — プロダクト体験（受験で効く部分）
 - [ ] ペルソナ切替UI（本体アプリ）

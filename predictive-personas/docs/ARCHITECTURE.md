@@ -58,6 +58,14 @@ WordStat
 
 ---
 
+## iOSシェル層の実装（M2、`ios/` に着手済み）
+
+コードは `ios/` に実装済み（UIKit/SwiftUI のため Linux ではビルド不可、Mac/xtool で組む）。
+- `ios/Shared/` … 本体・拡張で共有（`AppGroup`／`PersonaService`）
+- `ios/HostApp/` … SwiftUI 本体アプリ（一覧・切替・作成・削除・プリセット入出力）
+- `ios/Keyboard/` … `UIInputViewController` ＋候補バー＋ローマ字入力＋👤切替
+ビルド手順・プレースホルダ・デモの撮り方は `ios/README.md`。
+
 ## iOSシェル層の統合計画（M2以降）
 
 1. **App Group** を本体アプリとキーボード拡張で共有 → `PersonaStore(directory:)` をApp Groupコンテナに向ける。本体アプリで編集 → 拡張で即利用。
