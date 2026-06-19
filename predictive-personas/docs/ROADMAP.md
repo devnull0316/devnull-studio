@@ -16,20 +16,23 @@
 - [x] ユニットテスト14本パス・`persona-demo` 動作
 - [x] Windows/Linux ビルド確認
 
-## M1 — エンジンを「使える」レベルへ（Windowsで完結）
-- [ ] かな入力の扱い（ローマ字→かな、複数文節の素朴な扱い）
-- [ ] 候補ランキングに recency 減衰（半減期）を導入
-- [ ] よく使う基本辞書（小規模）をバンドルし、学習データと合成
-- [ ] 学習データのサイズ上限／古いエントリの間引き（メモリ対策の布石）
-- [ ] テスト追加（合成・減衰・上限）
+## M1 — エンジンを「使える」レベルへ（Windowsで完結）✅ 完了
+- [x] かな入力の扱い：`RomajiConverter`（greedy最長一致、nn→ん、double consonant→っ）
+- [x] 候補ランキングに recency 減衰（半減期）を導入：`halfLife` パラメータ、score = count × 0.5^(elapsed/halfLife)
+- [x] 基本辞書バンドル：`DefaultLexicon`（約100語）、`seedDefaultLexicon()` で `distantPast` シード
+- [x] 学習データのサイズ上限：`prune(keepPerReading:maxReadings:)` / `pruneActivePersona()`
+- [x] 共有プリセット：`PersonaPackage`、`exportPackage()` / `importPackage()`（versioned・常に新ID）
+- [x] テスト44本パス（ローマ字・decay・辞書・pruning・package round-trip 等）
 
-## M2 — iOSシェルに載せる（ここで初めてクラウドMac）
-- [ ] Apple Developer 登録（$99）
-- [ ] Xcode プロジェクト作成：本体アプリ＋キーボード拡張
+## M2 — iOSシェルに載せる（xtool ルートを優先、TestFlight は クラウドMac）
+- [ ] Apple Developer 登録（$99）— App Groups / プロビジョニングに必要
+- [ ] **xtool セットアップ**（Linux/WSL）：`xtool build` でキーボード拡張を実機サイドロード
+- [ ] Xcode プロジェクト作成（xtool または クラウドMac）：本体アプリ＋キーボード拡張
 - [ ] `engine` をローカルSwift Package として参照
 - [ ] App Group 設定、`PersonaStore` をコンテナに接続
 - [ ] キーボード拡張で `learn` / `complete` を配線、候補バー表示
-- [ ] **実機 or Simulator で初動作**（メモリを計測：30〜60MB以内）
+- [ ] **実機で初動作**（メモリを計測：30〜60MB以内）
+- [ ] アップロード・ダウンロード・プリセット切替UI（`exportPackage` / `importPackage` を画面から）
 
 ## M3 — プロダクト体験（受験で効く部分）
 - [ ] ペルソナ切替UI（本体アプリ）
@@ -51,5 +54,5 @@
 ---
 
 ## いま着手すべき次の1つ
-**M1 の最初の項目（ローマ字→かな or recency減衰）**。すべて Windows で書けてテストできる＝Mac 待ちが発生しない。
-M2 に進むのは、クラウドMac か中古Mac の準備ができてから。
+**M2 の開始（xtool セットアップ）**。$99 Developer アカウントを取得し、xtool を Linux/WSL に入れれば実機でキーボード拡張が動く。クラウドMac を待たずに前進できる。  
+TestFlight 提出のためだけにクラウドMac（Codemagic 等）を使う構成が最も効率的。

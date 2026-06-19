@@ -23,18 +23,21 @@
 **トレードオフ**：フォーク＝最速で動く／自作＝完全オリジナル・IPと受験の物語が強い・OSS化を強制されない。
 **現状の判断**：**エンジンは自作**（`PersonaEngine`）。azooKeyは LOUDS辞書やキーボードUIの**参照実装**として読む。最終確定は M2 で再評価。
 
-## D5. Windows で作れるか → エンジンは可、iOSアプリは不可
-**事実**：Swift言語は Windows公式ツールチェーンでビルド可。だが **UIKit / iOS SDK / コード署名は macOS 専用**。Flutter等でも最終ビルドは裏で Xcode を呼ぶ＝macOSは消せない。
-**結論**：**エンジン層（Foundationのみ）を Windows で開発・テスト**し、**iOSシェルだけクラウドMac**で組む2層構成（→ `ARCHITECTURE.md`）。本リポジトリの engine は実際に Windows/Linux で全テスト通過。
-出典: Swift.org (Swift on Windows), Apple/Codemagic docs, Swift Forums。
+## D5. Windows で作れるか → エンジンは可、iOSアプリは **約90%可**（xtool 経由）
+**事実**：Swift言語は Windows公式ツールチェーンでビルド可。UIKit / iOS SDK / コード署名は本来 macOS 専用。  
+**追記 (2026-06調査)**：**xtool**（OSS, MIT）を使うと Linux/WSL 上で iOS アプリ・キーボード拡張のビルド・実機サイドロードができる。v1.14.0 以降でApp Extensions（＝カスタムキーボード）対応済み、カスタムentitlements指定も可能。  
+**ただし残る制限**：App Groups はプロビジョニングに $99 Developer アカウントが実質必要。TestFlight アップロードには Transporter (macOS専用) またはクラウドMac が依然楽。  
+**結論**：**エンジン層（Foundationのみ）を Windows で開発・テスト**、**キーボード拡張のビルド・実機インストールは xtool で Linux から可**、**TestFlight/App Store 提出だけクラウドMac**という構成で約90%はMacなし。  
+出典: Swift.org (Swift on Windows), xtool GitHub / xtool.sh docs, Apple Developer Docs。
 
 ## D6. テストの切り分け → Windowsはエンジン検証、体験テストは実機
 **注意点**：エンジンを Windows で「友達に使わせる」には使い捨てのWindows UIが要り、しかも得られるのは変換精度の話だけ。**製品の核（人格レイヤー着脱の体験・心理）は実機でしか取れない**。
 **結論**：エンジンの正しさ＝**自動テスト**で担保。友達による体験テストは **TestFlight（実機）**で。
 
-## D7. Windows上で「本物のiOSキーボード」を再現 → 不可
-**事実**：iOS Simulator は macOS専用。Windows用にiOSアプリ拡張を動かせる正規エミュレータは無い（Appetize等のクラウドSimulatorもキーボード拡張は深い統合ゆえ不向き）。
-**結論**：本物の確認はクラウドMacのSimulator か TestFlight実機。Windowsに再現UIを作り込むのは労力対効果が低く、やらない。
+## D7. Windows上で「本物のiOSキーボード」を再現 → Simulator は不可、**実機なら xtool で可**
+**事実**：iOS Simulator は macOS専用。Windows用にiOSアプリ拡張を動かせる正規エミュレータは無い（Appetize等のクラウドSimulatorもキーボード拡張は深い統合ゆえ不向き）。  
+**追記 (2026-06調査)**：xtool なら Linux/WSL から **実機（iPhone/iPad）に直接サイドロード**できる（`xtool install` コマンド）。App Extensions ビルドも v1.14.0 以降で対応済み。つまり「Simulator」は引き続き使えないが、**手元のiPhone実機が開発・動作確認環境になれる**。  
+**結論**：Simulator はクラウドMacに任せる。動作確認の第一手は **xtool＋実機サイドロード**に切り替えることで Mac を待たずに前進できる。
 
 ## D8. 配布と匿名性 → 受験はTestFlightクローズド、公開は法人化後
 **事実**：個人アカウントは本名が販売者名に公開・変更不可。AltStore PALも匿名でない。→ 「公開×匿名×非組織」は両立不可。
@@ -47,6 +50,12 @@
 ## D10. 指標 → スター数でなく「実ユーザー＋洞察」
 **論点**：スターは取得が遅く・難しく・盛れる（心理学科の評価でむしろ逆効果）。
 **結論**：追う指標は **少数でも本物のユーザーと、そこから得た心理学的洞察**（例：人は痕跡を「消す」より「隠して戻せる」方を好むか）。質的データを受験にぶつける。
+
+## D11. xtool 採用判断 → M2 の第1ルートに採用
+**事実**：xtool は MIT ライセンス、aktive (GitHub @nicerloop / nicolo-ribaudo 等) がメンテ継続中。v1.14.0+ でキーボード拡張ビルド・entitlements・カスタムプロビジョニングに対応。  
+**採用理由**：クラウドMac（Codemagic等）を待たずにキーボード拡張の実機動作確認が取れる。Mac購入後にもビルドスクリプトの CI 化でそのまま使える。  
+**注意点**：xtool は非公式ツールのため Apple の規約外。App Store 提出パスは最終的にクラウドMacが確実。開発・テスト用途に限定して使う。  
+**結論**：M2 の開発ループ（ビルド→実機確認）は xtool で回し、TestFlight 提出だけクラウドMac を使う。
 
 ---
 
