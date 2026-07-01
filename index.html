@@ -48,7 +48,7 @@ body {
 a { color: inherit; text-decoration: none; }
 :focus-visible { outline: 2px solid var(--shu); outline-offset: 3px; border-radius: 4px; }
 
-.serif { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif; }
+.serif { font-weight: 800; letter-spacing: 0.06em; }
 
 /* ===== スクロール出現 ===== */
 .reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
@@ -59,124 +59,6 @@ a { color: inherit; text-decoration: none; }
   .reveal { opacity: 1; transform: none; }
 }
 
-/* ===== 夜モード ===== */
-body.night {
-  --paper: #14121a;
-  --paper-2: #1a1722;
-  --ink: #e8e2d4;
-  --ink-dim: #b3ab9a;
-  --ink-faint: #7d766a;
-  --line: #2e2a38;
-}
-body, header, .feature, .lab-item, .work, .contact-box { transition: background-color .9s ease, color .9s ease, border-color .9s ease; }
-body.night header { background: rgba(20,18,26,0.88); }
-body.night .feature, body.night .lab-item { background: #1a1722; }
-body.night .contact-box { background: #e8e2d4; color: #1d1a16; }
-body.night .contact-box p { color: rgba(29,26,22,0.6); }
-body.night .contact-box .btn { border-color: #1d1a16; color: #1d1a16; }
-.nightfly {
-  position: fixed; width: 8px; height: 8px; border-radius: 50%;
-  background: #e8b54a; box-shadow: 0 0 16px 6px rgba(232,181,74,0.45);
-  pointer-events: none; z-index: 50;
-  animation: nf linear infinite;
-}
-@keyframes nf {
-  0% { transform: translate(0,0); opacity: 0; }
-  10%, 90% { opacity: 1; }
-  100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
-}
-#sunback {
-  position: fixed; top: 70px; right: 16px; z-index: 60;
-  width: 42px; height: 42px; border-radius: 50%;
-  border: 1px solid var(--line); background: var(--paper-2);
-  font-size: 19px; cursor: pointer; display: none;
-  align-items: center; justify-content: center;
-}
-body.night #sunback { display: flex; }
-
-/* ===== 墨こぼし ===== */
-#inkdrop {
-  position: fixed; z-index: 98; pointer-events: none;
-  width: 26px; height: 38px; border-radius: 50% 50% 60% 60%;
-  background: #1d1a16; top: -50px;
-}
-.inkstain {
-  position: fixed; z-index: 97; pointer-events: none;
-  border-radius: 48% 52% 55% 45% / 52% 46% 54% 48%;
-  background: radial-gradient(ellipse at center, rgba(29,26,22,0.85), rgba(29,26,22,0.55) 55%, transparent 72%);
-  transition: opacity 6s ease;
-}
-@keyframes shake-page {
-  0%, 100% { transform: translate(0,0); }
-  25% { transform: translate(-5px, 3px); }
-  50% { transform: translate(4px, -3px); }
-  75% { transform: translate(-3px, 2px); }
-}
-/* ===== /dev/null 未遂 ===== */
-#nullhole {
-  position: fixed; left: 50%; bottom: -16vh; transform: translateX(-50%) scale(0);
-  width: 50vh; height: 26vh; border-radius: 50%;
-  background: radial-gradient(ellipse at center, #1d1a16 55%, rgba(29,26,22,0.3) 74%, transparent 80%);
-  z-index: 96; pointer-events: none;
-  transition: transform .5s cubic-bezier(.2,.8,.3,1);
-}
-#nullhole.open { transform: translateX(-50%) scale(1); }
-body.sucking { transition: transform .8s cubic-bezier(.6,0,.9,.4) !important; transform: translateY(7vh) scale(0.94) rotate(1.5deg); }
-
-/* ===== 実績システム ===== */
-#ach-btn {
-  position: fixed; bottom: 18px; right: 18px; z-index: 95;
-  font-size: 12px; font-weight: 700;
-  background: var(--paper-2); color: var(--ink-dim);
-  border: 1px solid var(--line); border-radius: 999px;
-  padding: 8px 16px; cursor: pointer;
-  display: flex; align-items: center; gap: 6px;
-  transition: transform .2s, box-shadow .2s;
-}
-#ach-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(60,45,20,0.15); }
-#ach-btn.complete { background: linear-gradient(135deg, #f3d98a, #d9b34a); color: #4a3a10; border-color: #d9b34a; }
-#ach-modal {
-  position: fixed; inset: 0; z-index: 110;
-  background: rgba(20,18,14,0.55);
-  display: none; align-items: center; justify-content: center;
-  padding: 20px;
-}
-#ach-modal.show { display: flex; }
-.ach-panel {
-  width: min(440px, 94vw); max-height: 80vh; overflow-y: auto;
-  background: var(--paper); border-radius: 16px;
-  padding: 26px 28px;
-  border: 1px solid var(--line);
-}
-.ach-panel h3 { font-size: 17px; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; }
-.ach-panel h3 span { font-size: 12px; color: var(--ink-faint); }
-.ach-list { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
-.ach {
-  display: flex; gap: 12px; align-items: center;
-  border: 1px solid var(--line); border-radius: 10px;
-  padding: 10px 14px;
-}
-.ach .ic { font-size: 20px; width: 28px; text-align: center; }
-.ach .tt { font-size: 13px; font-weight: 700; }
-.ach .dd { font-size: 11px; color: var(--ink-faint); margin-top: 1px; }
-.ach.locked { opacity: 0.55; }
-.ach.locked .tt { color: var(--ink-faint); }
-.ach.done { border-color: rgba(217,179,74,0.55); background: rgba(243,217,138,0.12); }
-.ach-close { margin-top: 18px; text-align: right; }
-.toast-ach {
-  position: fixed; bottom: 76px; right: 18px; z-index: 111;
-  background: var(--ink); color: var(--paper);
-  border-radius: 12px; padding: 12px 18px;
-  font-size: 13px;
-  display: flex; align-items: center; gap: 10px;
-  transform: translateX(120%);
-  transition: transform .4s cubic-bezier(.2,.8,.3,1);
-  box-shadow: 0 8px 26px rgba(0,0,0,0.25);
-}
-.toast-ach.show { transform: translateX(0); }
-.toast-ach .tic { font-size: 20px; }
-.toast-ach .ttl { font-size: 10px; letter-spacing: 0.15em; color: #d9b34a; font-weight: 700; }
-
 /* ===== 作品の空気がにじむ ===== */
 .feature, .lab-item { --aura: transparent; box-shadow: 0 0 0 0 var(--aura); }
 .feature:hover { box-shadow: 0 20px 50px rgba(60,45,20,0.13), 0 0 60px 6px var(--aura); }
@@ -184,27 +66,8 @@ body.sucking { transition: transform .8s cubic-bezier(.6,0,.9,.4) !important; tr
 .feature { --aura: rgba(232,181,74,0.22); }
 .lab-item[href="/garden-demo.html"] { --aura: rgba(140,200,120,0.25); }
 .lab-item[href="/race-demo.html"] { --aura: rgba(255,210,77,0.25); }
+.lab-item[href="/harigami.html"] { --aura: rgba(232,176,84,0.28); }
 
-/* ===== 世界漏れ(容れ物から中身がこぼれる) ===== */
-#leak-glitch {
-  position: fixed; inset: 0; z-index: 94; pointer-events: none;
-  display: none;
-  background:
-    repeating-linear-gradient(0deg, rgba(0,229,255,0.08) 0 3px, transparent 3px 9px),
-    repeating-linear-gradient(0deg, rgba(255,0,90,0.07) 0 2px, transparent 2px 11px);
-  mix-blend-mode: normal;
-}
-#leak-glitch.on { display: block; animation: leakjit .26s steps(3) 1; }
-@keyframes leakjit {
-  0% { transform: translateX(-6px); clip-path: inset(10% 0 64% 0); }
-  33% { transform: translateX(5px); clip-path: inset(55% 0 18% 0); }
-  66% { transform: translateX(-3px); clip-path: inset(30% 0 40% 0); }
-  100% { transform: translateX(0); clip-path: inset(0 0 0 0); }
-}
-.leak-planet {
-  position: fixed; z-index: 94; pointer-events: none;
-  width: 30px; height: 30px;
-}
 /* ===== ヘッダー ===== */
 header {
   position: sticky; top: 0; z-index: 10;
@@ -223,7 +86,6 @@ header {
   border-radius: 5px;
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; font-weight: 700;
-  font-family: 'Hiragino Mincho ProN', serif;
   transform: rotate(-3deg);
 }
 nav { display: flex; gap: clamp(14px, 2.5vw, 30px); }
@@ -420,15 +282,12 @@ section { max-width: 1060px; margin: 0 auto; padding: clamp(48px, 8vh, 84px) cla
 .flow .step .n { font-size: 11px; color: #d9b34a; font-weight: 700; }
 .flow .step .tt { font-size: 13px; font-weight: 700; margin-top: 2px; }
 .flow .step .dd { font-size: 11px; color: rgba(250,248,242,0.65); margin-top: 4px; line-height: 1.7; }
-body.night .flow .step .dd { color: rgba(29,26,22,0.6); }
-body.night .flow .step { background: rgba(29,26,22,0.05); border-color: rgba(29,26,22,0.25); }
 
 /* ===== About ===== */
 .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px, 5vw, 70px); align-items: start; }
 .about-grid p { font-size: 14px; color: var(--ink-dim); line-height: 2.2; }
 .about-grid p + p { margin-top: 16px; }
 .belief {
-  font-family: 'Hiragino Mincho ProN', serif;
   font-size: clamp(19px, 2.6vw, 26px);
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -534,6 +393,12 @@ footer a:hover { color: var(--ink); }
       <span class="memo">配信を楽しくする道具。その場で触れます</span>
     </div>
     <div class="lab-list">
+      <a class="lab-item" href="/harigami.html">
+        <div class="icon"><svg viewBox="0 0 38 38"><path d="M8 12 L28 9 L30 28 L10 31 Z M19 6 C19 8 19 9 19 11 M14 19 H24 M15 24 H22"/><circle cx="19" cy="5" r="1.6"/></svg></div>
+        <h3>ハリガミ(試作)</h3>
+        <p>新しいタブを「誰でも貼れる広告枠」にする実験。貼るのは無料、枠は注目で買う。のこされなかった貼り紙は、色あせて、はがれて、消える。</p>
+        <div class="stat">▶ ブラウザで試作を触れます</div>
+      </a>
       <a class="lab-item" href="/garden-demo.html">
         <div class="icon"><svg viewBox="0 0 38 38"><path d="M19 33 C19 24 19 20 19 16 M19 16 C12 16 8 11 8 6 C15 6 19 10 19 16 M19 20 C25 20 29 16 30 11 C23 10 19 14 19 20"/></svg></div>
         <h3>コメントの庭</h3>
@@ -563,7 +428,8 @@ footer a:hover { color: var(--ink); }
     <span class="memo">開発の記録。正直に書いています</span>
   </div>
   <div class="news-list">
-    <div class="news-item"><span class="d">2026.06</span><span class="tag-n">サイト</span><span class="t"><b>実績システムを追加。</b>このサイトの隠し要素は7つです。7つということにしておいてください。</span></div>
+    <div class="news-item"><span class="d">2026.07</span><span class="tag-n">実験室</span><span class="t"><b>「ハリガミ」の試作を公開。</b>新しいタブを、誰でも貼れる広告枠にする実験です。まだ見た目だけですが、貼って・のこして・はがれるまで動きます。</span></div>
+    <div class="news-item"><span class="d">2026.07</span><span class="tag-n">サイト</span><span class="t"><b>サイトを掃除しました。</b>実績システムや墨がこぼれる演出など、にぎやかしを一式おかたづけ。作品はそのままです。</span></div>
     <div class="news-item"><span class="d">2026.06</span><span class="tag-n">実験室</span><span class="t"><b>「コメントの庭」「レース投票」の実証デモを公開。</b>配信を楽しくする道具を作りはじめました。チャット欄つきでその場で試せます。</span></div>
     <div class="news-item"><span class="d">2026.06</span><span class="tag-n">墨蛍</span><span class="t"><b>祈り(引き寄せ)をまた弱くしました。</b>通算2敗です。今は夜巡りと宵だけで使えます。</span></div>
     <div class="news-item"><span class="d">2026.06</span><span class="tag-n">墨蛍</span><span class="t"><b>「描かずに祈るだけで星が取れる」抜け道を塞ぎました。</b>見つけた方、正直すごいと思いました。</span></div>
@@ -602,10 +468,6 @@ footer a:hover { color: var(--ink); }
     <details>
       <summary>黒猫は実在しますか?</summary>
       <p>実在します(非常勤)。出社日は不定です。このサイトのどこかにも来ます。</p>
-    </details>
-    <details>
-      <summary>実績が 8/7 になったのですが、バグですか?</summary>
-      <p>仕様です。おめでとうございます。あなたはモニターの裏側に気付いた人です。</p>
     </details>
   </div>
 </section>
@@ -650,7 +512,7 @@ footer a:hover { color: var(--ink); }
 </section>
 
 <footer>
-  <div><span id="copy" style="cursor:pointer" title="?">&copy;</span> 2026 DevNull Studio — Tokyo, Japan<span style="margin-left:14px; opacity:0.6">手書きHTML・外部ライブラリ0個・サイト全体 約255KB(阿部寛のホームページ約25個分)</span></div>
+  <div><span id="copy" style="cursor:pointer" title="?">&copy;</span> 2026 DevNull Studio — Tokyo, Japan<span style="margin-left:14px; opacity:0.6">手書きHTML・外部ライブラリ0個・サイト全体 約330KB(阿部寛のホームページ約33個分)</span></div>
   <div class="links">
     <a href="/en.html">English</a>
     <a href="/guidelines.html">実況・二次創作ガイドライン</a>
@@ -675,25 +537,6 @@ footer a:hover { color: var(--ink); }
   background: #fff; border: 1px solid var(--line); border-radius: 999px;
   padding: 2px 10px; opacity: 0; transition: opacity .3s;
   pointer-events: none;
-}
-.hanko {
-  position: fixed; z-index: 99; pointer-events: none;
-  font-family: 'Hiragino Mincho ProN', serif;
-  color: #fff; background: var(--shu);
-  width: 44px; height: 44px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px; font-weight: 700;
-  opacity: 0; animation: stamp .35s ease forwards;
-  box-shadow: 0 2px 8px rgba(80,20,15,0.3);
-}
-@keyframes stamp {
-  0% { opacity: 0; transform: scale(2.2) rotate(-12deg); }
-  60% { opacity: 0.92; transform: scale(0.95) rotate(var(--rot)); }
-  100% { opacity: 0.85; transform: scale(1) rotate(var(--rot)); }
-}
-.hanko.off { animation: stampfall 1s ease forwards; }
-@keyframes stampfall {
-  to { opacity: 0; transform: translateY(60vh) rotate(120deg); }
 }
 #toast {
   position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px);
@@ -739,8 +582,6 @@ function flee(cx, cy){
     said.style.opacity = 1;
     setTimeout(() => {
       said.style.opacity = 0; resting = false; tame = false; escapes = 0;
-      if (window.__unlock) window.__unlock('hotaru');
-      if (window.__nightfall) window.__nightfall(); // 捕まえた代償に、夜が来る
     }, 2200);
     return;
   }
@@ -760,33 +601,11 @@ ho.addEventListener('pointerdown', e => {
   flee(e.clientX - r.left, e.clientY - r.top);
 });
 
-// ---- 2) 朱印スタンプ(ロゴの印をクリック) ----
-let stamps = [];
-document.querySelector('.logo .seal').addEventListener('click', e => {
-  e.preventDefault(); e.stopPropagation();
-  if (stamps.length >= 8){
-    toast('押しすぎです。');
-    if (window.__unlock) window.__unlock('stamp');
-    for (const st of stamps) st.classList.add('off');
-    setTimeout(() => { stamps.forEach(st => st.remove()); stamps = []; }, 1100);
-    return;
-  }
-  const h = document.createElement('div');
-  h.className = 'hanko';
-  h.textContent = '良';
-  h.style.setProperty('--rot', (Math.random() * 24 - 12) + 'deg');
-  h.style.left = (10 + Math.random() * 80) + 'vw';
-  h.style.top = (15 + Math.random() * 65) + 'vh';
-  document.body.appendChild(h);
-  stamps.push(h);
-});
-
-// ---- 3) ©で黒猫が横切る ----
+// ---- 2) ©で黒猫が横切る ----
 let catBusy = false;
 $('copy').addEventListener('click', () => {
   if (catBusy) return;
   catBusy = true;
-  if (window.__unlock) window.__unlock('cat');
   const c = document.createElement('div');
   c.id = 'neko-walk';
   c.textContent = '🐈';
@@ -832,71 +651,7 @@ if (ml){
   });
 }
 
-// ---- 実績システム(ゲームスタジオのサイトには実績がある) ----
-const ACH = [
-  { id: 'console', ic: '🖥', tt: 'モニターの裏側', dd: '開発者ツールに気付き、__found() を呼んだ', hidden: true },
-  { id: 'hotaru', ic: '✨', tt: '手乗り蛍', dd: '蛍を捕まえた(つもりになった)' },
-  { id: 'night',  ic: '🌙', tt: '夜をつれてきた', dd: 'サイトを夜にした' },
-  { id: 'stamp',  ic: '🈚', tt: '乱れ判', dd: '判子を押しすぎて怒られた' },
-  { id: 'cat',    ic: '🐈', tt: '猫の目撃者', dd: '黒猫の散歩を目撃した' },
-  { id: 'suck',   ic: '🕳', tt: '深淵をのぞいた', dd: '/dev/null を起こしてしまった' },
-  { id: 'ink',    ic: '💧', tt: '墨の証人', dd: '墨がこぼれる瞬間に居合わせた' },
-  { id: 'void404', ic: '🚫', tt: '虚無からの生還', dd: '404ページから帰ってきた' },
-];
-const achGet = () => { try { return JSON.parse(localStorage.getItem('dn_ach') || '{}'); } catch (e) { return {}; } };
-const achBtn = document.createElement('button');
-achBtn.id = 'ach-btn';
-achBtn.setAttribute('aria-label', '実績一覧を開く');
-document.body.appendChild(achBtn);
-const achModal = document.createElement('div');
-achModal.id = 'ach-modal';
-achModal.innerHTML = '<div class="ach-panel"><h3>実績 <span id="ach-count"></span></h3><div class="ach-list" id="ach-list"></div><div class="ach-close"><button class="btn" id="ach-x">閉じる</button></div></div>';
-document.body.appendChild(achModal);
-
-function achRender(){
-  const got = achGet();
-  const base = ACH.filter(a => !a.hidden);
-  const n = base.filter(a => got[a.id]).length;
-  const secret = ACH.filter(a => a.hidden && got[a.id]).length;
-  // 隠し実績を見つけると 8/7 になる(バグではありません)
-  achBtn.innerHTML = '🏆 <span>' + (n + secret) + '/' + base.length + '</span>';
-  achBtn.classList.toggle('complete', n >= base.length);
-  document.getElementById('ach-count').textContent = (n + secret) + ' / ' + base.length + (secret ? ' ←!?' : '');
-  const list = document.getElementById('ach-list');
-  list.innerHTML = '';
-  for (const a of ACH){
-    const done = !!got[a.id];
-    if (a.hidden && !done) continue; // 隠し実績は解除されるまで存在しない
-    const el = document.createElement('div');
-    el.className = 'ach ' + (done ? 'done' : 'locked');
-    el.innerHTML = '<div class="ic">' + (done ? a.ic : '❓') + '</div><div><div class="tt">' +
-      (done ? a.tt : '？？？') + '</div><div class="dd">' + (done ? a.dd : 'このサイトのどこかで…') + '</div></div>';
-    list.appendChild(el);
-  }
-}
-function unlock(id){
-  const got = achGet();
-  if (got[id]) return;
-  got[id] = Date.now();
-  localStorage.setItem('dn_ach', JSON.stringify(got));
-  const a = ACH.find(x => x.id === id);
-  const t = document.createElement('div');
-  t.className = 'toast-ach';
-  t.innerHTML = '<span class="tic">' + a.ic + '</span><div><div class="ttl">実績解除</div><div>' + a.tt + '</div></div>';
-  document.body.appendChild(t);
-  requestAnimationFrame(() => t.classList.add('show'));
-  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 500); }, 3200);
-  achRender();
-  const got2 = achGet();
-  if (ACH.filter(x => !x.hidden).every(x => got2[x.id])) setTimeout(() => toast('全実績解除。あなたはこのサイトの全てを見た。'), 3600);
-}
-achBtn.addEventListener('click', () => { achRender(); achModal.classList.add('show'); });
-achModal.addEventListener('click', e => { if (e.target === achModal || e.target.id === 'ach-x') achModal.classList.remove('show'); });
-achRender();
-if (localStorage.getItem('dn_404')) { localStorage.removeItem('dn_404'); unlock('void404'); }
-window.__unlock = unlock;
-
-// ---- 5) スクロール出現 ----
+// ---- 3) スクロール出現 ----
 const revealTargets = document.querySelectorAll('.sec-head, .feature, .lab-item, .about-grid, .contact-box, .lab-note');
 for (const el of revealTargets) el.classList.add('reveal');
 if (calm || !('IntersectionObserver' in window)) {
@@ -908,142 +663,11 @@ if (calm || !('IntersectionObserver' in window)) {
   for (const el of revealTargets) io.observe(el);
 }
 
-// ---- 6) 蛍を捕まえると、夜が来る ----
-const sun = document.createElement('button');
-sun.id = 'sunback';
-sun.textContent = '☀';
-sun.title = '朝に戻る';
-sun.setAttribute('aria-label', '夜モードを解除して朝に戻る');
-document.body.appendChild(sun);
-let nightflies = [];
-function nightfall(){
-  if (document.body.classList.contains('night')) return;
-  document.body.classList.add('night');
-  toast('蛍と遊んでいたら、夜になってしまった。');
-  if (window.__unlock) window.__unlock('night');
-  if (calm) return;
-  for (let i = 0; i < 9; i++){
-    const f = document.createElement('div');
-    f.className = 'nightfly';
-    f.style.left = (5 + Math.random() * 90) + 'vw';
-    f.style.top = (10 + Math.random() * 80) + 'vh';
-    f.style.setProperty('--dx', (Math.random() * 240 - 120) + 'px');
-    f.style.setProperty('--dy', (Math.random() * 200 - 100) + 'px');
-    f.style.animationDuration = (6 + Math.random() * 7) + 's';
-    f.style.animationDelay = (Math.random() * 4) + 's';
-    document.body.appendChild(f);
-    nightflies.push(f);
-  }
-}
-sun.addEventListener('click', () => {
-  document.body.classList.remove('night');
-  nightflies.forEach(f => f.remove());
-  nightflies = [];
-  toast('おはようございます。');
-});
-
-// 蛍ギミックの「捕まえた」成立時に夜を呼ぶ(flee側から発火)
-window.__nightfall = nightfall;
-
-// ---- 7) 墨こぼし(滞在中に一度だけ、突然) ----
-if (!calm && !sessionStorage.getItem('inkSpilled')){
-  setTimeout(() => {
-    sessionStorage.setItem('inkSpilled', '1');
-    const x = 15 + Math.random() * 70;
-    const drop = document.createElement('div');
-    drop.id = 'inkdrop';
-    drop.style.left = x + 'vw';
-    document.body.appendChild(drop);
-    const t0 = performance.now(), fall = 420;
-    (function f(now){
-      const t = (now - t0) / fall;
-      if (t >= 1){
-        drop.remove();
-        document.body.style.animation = 'shake-page .35s ease';
-        setTimeout(() => document.body.style.animation = '', 400);
-        const st = document.createElement('div');
-        st.className = 'inkstain';
-        const w = 120 + Math.random() * 80;
-        st.style.width = w + 'px';
-        st.style.height = w * 0.7 + 'px';
-        st.style.left = `calc(${x}vw - ${w/2}px)`;
-        st.style.top = (55 + Math.random() * 25) + 'vh';
-        document.body.appendChild(st);
-        toast('…墨、こぼしました。すみません。');
-        if (window.__unlock) window.__unlock('ink');
-        setTimeout(() => { st.style.opacity = '0'; setTimeout(() => st.remove(), 6200); }, 1600);
-        return;
-      }
-      drop.style.top = (-50 + t * t * (window.innerHeight * 0.72 + 50)) + 'px';
-      requestAnimationFrame(f);
-    })(t0);
-  }, 45000 + Math.random() * 45000);
-}
-
-// ---- 8) 連打すると /dev/null が目を覚ます ----
-const hole = document.createElement('div');
-hole.id = 'nullhole';
-document.body.appendChild(hole);
-let clicks = [], lastSuck = -Infinity;
-// ---- モニターの裏側(コンソールの隠し実績) ----
+// ---- 4) モニターの裏側(ごあいさつ) ----
 console.log(
-  '%c DevNull Studio %c\n\nようこそ、モニターの裏側へ。\nここに気付く人は、だいたい同業者です。\n\n  __found()\n\nと入力すると、何かが起きます。',
+  '%c DevNull Studio %c\n\nようこそ、モニターの裏側へ。\nここに気付く人は、だいたい同業者です。',
   'background:#b3342e;color:#faf8f2;font-weight:bold;padding:4px 10px;border-radius:4px;', ''
 );
-window.__found = () => { unlock('console'); return '🖥 実績解除: モニターの裏側 — ようこそ。'; };
-
-// ---- 世界漏れ: 容れ物から、作品の世界がまれにこぼれる ----
-const leakGlitch = document.createElement('div');
-leakGlitch.id = 'leak-glitch';
-document.body.appendChild(leakGlitch);
-function leakNeon(){ // GLITCH//RUNNERの世界が走る
-  leakGlitch.classList.add('on');
-  setTimeout(() => leakGlitch.classList.remove('on'), 280);
-}
-function leakCosmos(){ // 宇宙から小さな星が漂ってくる
-  const pl = document.createElement('div');
-  pl.className = 'leak-planet';
-  const hue = [200, 30, 260, 140][Math.floor(Math.random() * 4)];
-  pl.innerHTML = '<svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" fill="hsl(' + hue + ',45%,55%)"/><circle cx="11" cy="13" r="1.6" fill="#222"/><circle cx="19" cy="13" r="1.6" fill="#222"/><path d="M11 19 Q15 22 19 19" stroke="#222" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>';
-  pl.style.top = (8 + Math.random() * 25) + 'vh';
-  pl.style.left = '-40px';
-  document.body.appendChild(pl);
-  const dur = 16000, t0 = performance.now();
-  (function step(now){
-    const t = (now - t0) / dur;
-    if (t >= 1){ pl.remove(); return; }
-    pl.style.left = (-40 + t * (window.innerWidth + 80)) + 'px';
-    pl.style.transform = 'translateY(' + Math.sin(t * 9) * 14 + 'px) rotate(' + t * 360 + 'deg)';
-    requestAnimationFrame(step);
-  })(t0);
-}
-if (!calm){
-  (function scheduleLeak(){
-    setTimeout(() => {
-      (Math.random() < 0.5 ? leakNeon : leakCosmos)();
-      scheduleLeak();
-    }, 50000 + Math.random() * 70000);
-  })();
-}
-
-document.addEventListener('pointerdown', e => {
-  if (e.target.closest('a, button, input')) return;
-  const now = performance.now();
-  clicks = clicks.filter(t => now - t < 2200);
-  clicks.push(now);
-  if (clicks.length >= 7 && now - lastSuck > 60000 && !calm){
-    lastSuck = now;
-    clicks = [];
-    hole.classList.add('open');
-    document.body.classList.add('sucking');
-    setTimeout(() => {
-      document.body.classList.remove('sucking');
-      setTimeout(() => hole.classList.remove('open'), 500);
-      toast('あぶないところでした。連打すると /dev/null が目を覚まします。');
-      if (window.__unlock) window.__unlock('suck');
-    }, 850);
-  }
-});
 })();
 </script>
 
