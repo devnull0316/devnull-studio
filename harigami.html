@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ハリガミ — 新しいタブは、みんなの広告枠(試作)</title>
+<meta name="description" content="ブラウザの新しいタブを「誰でも貼れる広告枠」として開放する実験。貼るのは無料、枠は注目で買う。のこされなかった貼り紙は色あせて、はがれて、消える。">
+<meta name="theme-color" content="#131316">
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="%23131316"/><rect x="8" y="10" width="16" height="15" rx="1.5" fill="%23f2ede1" transform="rotate(-5 16 17)"/><circle cx="16.5" cy="8.6" r="2.7" fill="%23e8b054"/></svg>'>
+<style>
+/* ================================================================
+   ハリガミ β — 見た目の試作(共有なし・全部ローカル)
+   コンセプト: 新しいタブという空き地を、誰でも使える広告枠に。
+   ================================================================ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --wall: #131316;
+  --wall-2: #0e0e11;
+  --fg: #e9e4d8;
+  --fg-dim: #a49e91;
+  --fg-faint: #6e695f;
+  --line: #2b2b31;
+  --amber: #e8b054;
+  --amber-ink: #2b2007;
+  --danger: #d05c4a;
+  --paper: #f2ede1;
+}
+
+html, body { height: 100%; }
+
+body {
+  font-family: 'Hiragino Sans', 'Noto Sans JP', -apple-system, 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(ellipse 90% 62% at 50% 38%, rgba(232, 176, 84, 0.05), transparent 70%),
+    linear-gradient(180deg, var(--wall) 0%, var(--wall-2) 100%);
+  color: var(--fg);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+
+a { color: inherit; }
+button { font-family: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
+::selection { background: rgba(232, 176, 84, 0.3); }
+
+/* 壁のざらつき */
+#grain {
+  position: fixed; inset: -50%; z-index: 1; pointer-events: none;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="240" height="240" filter="url(%23n)" opacity="0.05"/></svg>');
+}
+/* 街灯のあかりだまり */
+#vignette {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  box-shadow: inset 0 0 clamp(80px, 18vw, 240px) rgba(0, 0, 0, 0.55);
+}
+
+/* ===== アプリ骨格 ===== */
+#app {
+  position: relative; z-index: 2;
+  height: 100dvh;
+  display: flex; flex-direction: column;
+}
+
+/* ===== 上バー(新しいタブの空気) ===== */
+#top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: clamp(16px, 3vh, 30px) clamp(18px, 3.5vw, 44px) 0;
+  gap: 16px;
+}
+#clockwrap { line-height: 1.2; user-select: none; }
+#clock { font-size: clamp(26px, 3.6vw, 40px); font-weight: 200; letter-spacing: 0.06em; color: var(--fg); }
+#today { margin-top: 3px; font-size: 11px; color: var(--fg-faint); letter-spacing: 0.14em; }
+#top-right { display: flex; align-items: center; gap: 18px; }
+#poolcount { font-size: 11px; color: var(--fg-faint); letter-spacing: 0.1em; white-space: nowrap; }
+#btn-compose {
+  font-size: 13.5px; font-weight: 700;
+  background: var(--amber); color: var(--amber-ink);
+  padding: 10px 22px; border-radius: 8px;
+  transform: rotate(-1.2deg);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.55);
+  transition: transform .15s, box-shadow .15s;
+  white-space: nowrap;
+}
+#btn-compose:hover { transform: rotate(-1.2deg) translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.55); }
+
+/* ===== 舞台 ===== */
+#stage {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 8px clamp(14px, 3vw, 40px);
+  gap: 14px;
+}
+#slotwrap {
+  flex: 1; min-height: 0; width: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+#pscale { position: relative; flex: none; }
+#pscale > .poster { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+
+/* ===== 貼り紙 ===== */
+.poster {
+  position: relative;
+  background: var(--pbg, var(--paper));
+  color: var(--pink, #26241f);
+  border-radius: 3px;
+  box-shadow:
+    0 2px 3px rgba(0, 0, 0, 0.35),
+    0 14px 44px rgba(0, 0, 0, 0.5);
+  /* 色あせ: --fade 1=新品 0=はがれる寸前 */
+  filter:
+    saturate(calc(0.42 + 0.58 * var(--fade, 1)))
+    sepia(calc((1 - var(--fade, 1)) * 0.38))
+    brightness(calc(0.86 + 0.14 * var(--fade, 1)));
+  opacity: calc(0.68 + 0.32 * var(--fade, 1));
+}
+/* 紙の質感 */
+.poster::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; border-radius: inherit;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><filter id="p"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="200" height="200" filter="url(%23p)" opacity="0.07"/></svg>'),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.09), transparent 45%, rgba(0, 0, 0, 0.07));
+  pointer-events: none;
+}
+/* セロテープ */
+.tape {
+  position: absolute; z-index: 4;
+  width: 74px; height: 24px;
+  background: rgba(245, 240, 226, 0.36);
+  border-left: 1px dashed rgba(255, 255, 255, 0.28);
+  border-right: 1px dashed rgba(255, 255, 255, 0.28);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(1px);
+}
+.tape.tl { left: -18px; top: -9px; transform: rotate(-42deg); }
+.tape.tr { right: -18px; top: -9px; transform: rotate(42deg); }
+.size-xl .tape { display: none; }
+/* めくれ */
+.curl {
+  position: absolute; right: 0; bottom: 0; z-index: 5;
+  width: calc((1 - var(--fade, 1)) * 52px);
+  height: calc((1 - var(--fade, 1)) * 52px);
+  background: linear-gradient(315deg, var(--wall) 47%, rgba(0, 0, 0, 0.28) 50%, rgba(255, 255, 255, 0.34) 55%, rgba(255, 255, 255, 0.12) 100%);
+  border-radius: 0 0 3px 0;
+  box-shadow: -3px -3px 8px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+}
+/* ピン(のこされた印) */
+.pin {
+  position: absolute; top: -13px; left: 50%; transform: translateX(-50%) rotate(6deg);
+  z-index: 6; font-size: 22px;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4));
+}
+.pin.pop { animation: pinpop .45s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes pinpop { 0% { transform: translateX(-50%) translateY(-26px) rotate(30deg) scale(1.6); opacity: 0; } 100% { transform: translateX(-50%) rotate(6deg) scale(1); opacity: 1; } }
+
+.p-inner {
+  position: relative; z-index: 1;
+  height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  padding: 9% 8%;
+  gap: 4%;
+}
+.p-title { font-weight: 800; line-height: 1.45; letter-spacing: 0.03em; overflow-wrap: anywhere; }
+.p-body { line-height: 1.9; opacity: 0.82; font-weight: 500; overflow-wrap: anywhere; white-space: pre-wrap; }
+.size-s  .p-title { font-size: 25px; } .size-s  .p-body { font-size: 12.5px; }
+.size-m  .p-title { font-size: 34px; } .size-m  .p-body { font-size: 14px; }
+.size-w  .p-title { font-size: 32px; } .size-w  .p-body { font-size: 13.5px; }
+.size-xl .p-title { font-size: 62px; } .size-xl .p-body { font-size: 17px; }
+.size-w .p-inner { flex-direction: row; text-align: left; justify-content: flex-start; gap: 5%; padding: 5% 7%; }
+.size-w .p-inner .p-text { flex: 1; min-width: 0; }
+.size-w .p-inner .p-title + .p-body { margin-top: 8px; }
+
+.p-author {
+  position: absolute; right: 5%; bottom: 4.5%; z-index: 2;
+  font-size: 11px; font-style: italic; opacity: 0.55; letter-spacing: 0.04em;
+}
+.size-xl .p-author { font-size: 13px; }
+
+.stamp {
+  position: absolute; z-index: 3;
+  user-select: none; line-height: 1;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+}
+.doodle { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; }
+
+/* リンクカード */
+.p-link { position: relative; z-index: 1; display: block; text-decoration: none; flex: none; width: 84%; text-align: center; }
+.size-s .p-link { width: 80%; }
+.size-w .p-link { width: 36%; }
+.size-xl .p-link { width: 42%; }
+.p-link .yt {
+  position: relative; display: block; border-radius: 8px; overflow: hidden;
+  aspect-ratio: 16/9;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+  background: #17171b;
+}
+.p-link .yt img { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0.92; }
+.p-link .yt .play {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 30px; color: #fff; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  background: linear-gradient(transparent 55%, rgba(0, 0, 0, 0.45));
+}
+.p-link .yt-cap { margin-top: 6px; font-size: 11px; opacity: 0.65; text-align: center; }
+.p-link .chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 700;
+  background: rgba(0, 0, 0, 0.1);
+  border: 1.5px solid currentColor; border-radius: 999px;
+  padding: 7px 16px;
+  opacity: 0.85;
+}
+.p-link .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); flex: none; }
+.p-link .chip .host { opacity: 0.6; font-weight: 500; }
+.p-link:hover .chip { opacity: 1; }
+
+/* 貼られた瞬間 / はがれる瞬間 */
+.enter { animation: settle .55s cubic-bezier(.2, .9, .3, 1.05); }
+@keyframes settle {
+  0% { opacity: 0; transform: scale(var(--s, 1)) rotate(calc(var(--rot, 0deg) + 2.5deg)) translateY(-14px); }
+  100% { opacity: 1; }
+}
+.fall { animation: fall .75s cubic-bezier(.5, 0, .9, .4) forwards; }
+@keyframes fall {
+  20% { transform: scale(var(--s, 1)) rotate(calc(var(--rot, 0deg) - 4deg)); }
+  100% { transform: scale(var(--s, 1)) rotate(calc(var(--rot, 0deg) + 10deg)) translateY(75vh); opacity: 0; }
+}
+
+/* 空き枠 */
+#empty {
+  width: min(400px, 84vw); aspect-ratio: 1/1.1;
+  border: 2px dashed #3a3a42; border-radius: 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; text-align: center; padding: 30px;
+  color: var(--fg-faint);
+}
+#empty .big { font-size: 17px; font-weight: 700; color: var(--fg-dim); }
+#empty p { font-size: 12.5px; line-height: 2; }
+
+/* ===== キャプション(貼り紙の下の札) ===== */
+#caption {
+  flex: none;
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: 10px 16px;
+  font-size: 12px; color: var(--fg-dim);
+  min-height: 34px;
+  position: relative;
+}
+#caption .who b { color: var(--fg); font-weight: 700; }
+#caption .sizetag {
+  font-size: 10px; letter-spacing: 0.12em; color: var(--fg-faint);
+  border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px;
+}
+.life { width: 110px; height: 4px; border-radius: 999px; background: #26262c; overflow: hidden; }
+.life i { display: block; height: 100%; border-radius: inherit; background: var(--amber); transition: width .6s ease; }
+.life.low i { background: var(--danger); }
+#caption .remain { font-variant-numeric: tabular-nums; }
+.cap-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12.5px; font-weight: 700; color: var(--fg);
+  border: 1.5px solid #45454e; border-radius: 999px;
+  padding: 8px 18px;
+  transition: border-color .2s, background .2s, transform .15s;
+}
+.cap-btn:hover { border-color: var(--amber); transform: translateY(-1px); }
+.cap-btn.kept { border-color: var(--amber); background: rgba(232, 176, 84, 0.12); color: var(--amber); }
+.cap-btn.flag { padding: 8px 12px; color: var(--fg-faint); border-color: transparent; }
+.cap-btn.flag:hover { color: var(--danger); border-color: rgba(208, 92, 74, 0.5); transform: none; }
+
+/* 通報の確認 */
+#report-pop {
+  position: absolute; bottom: calc(100% + 10px); right: 0; z-index: 20;
+  background: var(--paper); color: #26241f;
+  border-radius: 10px; padding: 14px 16px;
+  width: 240px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5);
+  transform: rotate(-0.8deg);
+  display: none;
+}
+#report-pop.show { display: block; }
+#report-pop p { font-size: 12px; line-height: 1.8; font-weight: 600; }
+#report-pop .row { display: flex; gap: 8px; margin-top: 10px; }
+#report-pop button { font-size: 12px; font-weight: 700; border-radius: 7px; padding: 7px 12px; flex: 1; }
+#report-pop .yes { background: var(--danger); color: #fff; }
+#report-pop .no { background: rgba(0, 0, 0, 0.08); }
+
+/* ===== つぎのタブ ===== */
+#shufflewrap { flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; padding-bottom: 4px; }
+#btn-shuffle {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-size: 13px; font-weight: 700; color: var(--fg-dim);
+  border: 1.5px solid var(--line); border-radius: 999px;
+  padding: 10px 26px;
+  transition: color .2s, border-color .2s;
+}
+#btn-shuffle:hover { color: var(--fg); border-color: #4a4a52; }
+#btn-shuffle .r { display: inline-block; transition: transform .45s cubic-bezier(.3, .8, .3, 1); }
+#btn-shuffle.spin .r { transform: rotate(360deg); }
+#shuffle-hint { font-size: 10px; color: var(--fg-faint); letter-spacing: 0.08em; }
+
+/* ===== 下バー ===== */
+#foot {
+  flex: none;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 10px clamp(18px, 3.5vw, 44px) clamp(14px, 2.5vh, 22px);
+  font-size: 11.5px; color: var(--fg-faint);
+}
+#foot .links { display: flex; align-items: center; gap: 20px; }
+#foot a, #foot button.linky { font-size: 11.5px; color: var(--fg-faint); text-decoration: none; letter-spacing: 0.04em; position: relative; }
+#foot a:hover, #foot button.linky:hover { color: var(--fg); }
+#foot .wordmark { font-weight: 800; color: var(--fg-dim); letter-spacing: 0.12em; }
+#admin-dot {
+  display: none;
+  position: absolute; top: -4px; right: -12px;
+  min-width: 15px; height: 15px; padding: 0 4px;
+  background: var(--amber); color: var(--amber-ink);
+  font-size: 9.5px; font-weight: 800; line-height: 15px; text-align: center;
+  border-radius: 999px;
+}
+#admin-dot.on { display: block; animation: dotpulse 2.4s ease infinite; }
+@keyframes dotpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+
+/* ===== トースト(小さな紙切れ) ===== */
+#toast {
+  position: fixed; bottom: 64px; left: 50%; z-index: 200;
+  transform: translateX(-50%) translateY(90px) rotate(-1deg);
+  background: var(--paper); color: #26241f;
+  font-size: 12.5px; font-weight: 700;
+  padding: 11px 22px; border-radius: 4px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.5);
+  transition: transform .4s cubic-bezier(.2, .9, .3, 1.1);
+  max-width: 88vw;
+}
+#toast.show { transform: translateX(-50%) translateY(0) rotate(-1deg); }
+
+/* ===== オーバーレイ共通 ===== */
+.overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(8, 8, 10, 0.78);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  display: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.overlay.show { display: block; }
+
+/* ===== これはなに?(コンセプト) ===== */
+#about .card {
+  width: min(560px, calc(100vw - 32px));
+  margin: clamp(20px, 7vh, 80px) auto 40px;
+  background: var(--paper); color: #26241f;
+  border-radius: 6px;
+  padding: clamp(28px, 5vw, 46px);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  transform: rotate(-0.5deg);
+  position: relative;
+}
+#about .card .tape { background: rgba(232, 176, 84, 0.4); }
+#about .a-mark { font-size: 12px; font-weight: 800; letter-spacing: 0.3em; color: #b3342e; }
+#about .a-mark span { margin-left: 10px; letter-spacing: 0.08em; color: #8a8272; font-weight: 600; }
+#about h2 { font-size: clamp(24px, 4.6vw, 32px); font-weight: 800; line-height: 1.55; margin-top: 14px; }
+#about .lead { font-size: 13.5px; line-height: 2.1; margin-top: 16px; color: #4a453b; }
+#about ul { list-style: none; margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
+#about li {
+  font-size: 13px; line-height: 1.9; color: #4a453b;
+  padding-left: 20px; position: relative;
+}
+#about li::before { content: ''; position: absolute; left: 2px; top: 0.72em; width: 8px; height: 8px; background: var(--amber); border-radius: 2px; transform: rotate(45deg); }
+#about li b { color: #26241f; }
+#about .a-note {
+  margin-top: 22px; font-size: 11.5px; line-height: 1.9; color: #8a8272;
+  border-top: 1px dashed #d8d0bc; padding-top: 16px;
+}
+#about .a-cta { margin-top: 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+#about .a-go {
+  font-size: 14px; font-weight: 800;
+  background: #26241f; color: var(--paper);
+  padding: 13px 34px; border-radius: 8px;
+  box-shadow: 3px 3px 0 rgba(232, 176, 84, 0.9);
+  transition: transform .15s, box-shadow .15s;
+}
+#about .a-go:hover { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(232, 176, 84, 0.9); }
+#about .a-sub { font-size: 11px; color: #8a8272; }
+
+/* ===== 貼る(composer) ===== */
+#composer .frame {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 0;
+}
+#c-stage {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 30px; gap: 18px;
+  min-height: 320px;
+}
+#c-scale { position: relative; flex: none; }
+#c-scale > .poster { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+#c-scale canvas#c-pen {
+  position: absolute; left: 0; top: 0; z-index: 8;
+  transform-origin: 0 0;
+  touch-action: none;
+  pointer-events: none;
+}
+#c-scale.pen-on canvas#c-pen { pointer-events: auto; cursor: crosshair; }
+#c-hint { font-size: 11px; color: var(--fg-faint); letter-spacing: 0.06em; text-align: center; }
+#c-panel {
+  background: #1a1a1f;
+  border-left: 1px solid var(--line);
+  padding: 26px 26px 90px;
+  overflow-y: auto;
+  max-height: 100dvh;
+}
+#c-panel h3 { font-size: 16px; font-weight: 800; letter-spacing: 0.06em; display: flex; justify-content: space-between; align-items: center; }
+#c-close { font-size: 20px; color: var(--fg-faint); padding: 4px 10px; }
+#c-close:hover { color: var(--fg); }
+.c-group { margin-top: 24px; }
+.c-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.22em; color: var(--fg-faint); }
+.c-note { margin-top: 7px; font-size: 11px; color: var(--fg-faint); line-height: 1.8; }
+.c-note.warn { color: var(--danger); }
+.c-note.ok { color: #8fbf7a; }
+
+.size-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+.size-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  border: 1.5px solid var(--line); border-radius: 10px;
+  padding: 11px 4px 9px;
+  transition: border-color .2s, background .2s;
+}
+.size-chip .shape { background: #4a4a52; border-radius: 2px; }
+.size-chip[data-size="s"]  .shape { width: 16px; height: 16px; }
+.size-chip[data-size="m"]  .shape { width: 15px; height: 21px; }
+.size-chip[data-size="w"]  .shape { width: 26px; height: 10px; }
+.size-chip[data-size="xl"] .shape { width: 26px; height: 16px; }
+.size-chip .nm { font-size: 11px; font-weight: 700; color: var(--fg-dim); }
+.size-chip .hr { font-size: 9.5px; color: var(--fg-faint); font-variant-numeric: tabular-nums; }
+.size-chip.sel { border-color: var(--amber); background: rgba(232, 176, 84, 0.08); }
+.size-chip.sel .nm { color: var(--fg); }
+.size-chip.sel .shape { background: var(--amber); }
+
+.pal-chips { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 12px; }
+.pal-chip {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 2px solid transparent;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.18), 0 0 0 1.5px #3d3d45;
+  transition: transform .15s;
+}
+.pal-chip:hover { transform: scale(1.12); }
+.pal-chip.sel { border-color: var(--amber); transform: scale(1.12); }
+
+.c-input, .c-area {
+  width: 100%; margin-top: 10px;
+  background: #131317; color: var(--fg);
+  border: 1.5px solid var(--line); border-radius: 9px;
+  padding: 11px 13px; font-size: 14px; font-family: inherit;
+}
+.c-area { resize: none; height: 74px; line-height: 1.7; }
+.c-input:focus, .c-area:focus { outline: none; border-color: var(--amber); }
+.c-count { font-size: 10px; color: var(--fg-faint); text-align: right; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+.stamp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 12px; }
+.stamp-btn {
+  aspect-ratio: 1; border-radius: 8px; font-size: 17px;
+  border: 1.5px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color .15s, transform .15s;
+}
+.stamp-btn:hover { border-color: var(--amber); transform: scale(1.1); }
+
+.mode-row { display: flex; gap: 8px; margin-top: 12px; }
+.mode-btn {
+  flex: 1; font-size: 12px; font-weight: 700;
+  border: 1.5px solid var(--line); border-radius: 9px;
+  padding: 9px 6px; color: var(--fg-dim);
+}
+.mode-btn.sel { border-color: var(--amber); color: var(--fg); background: rgba(232, 176, 84, 0.08); }
+#pen-opts { display: none; margin-top: 12px; }
+#pen-opts.show { display: block; }
+.pen-colors { display: flex; gap: 8px; align-items: center; }
+.pen-c { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.14); }
+.pen-c.sel { border-color: var(--amber); }
+.pen-row2 { display: flex; gap: 8px; margin-top: 10px; }
+.pen-mini { font-size: 11px; font-weight: 700; border: 1.5px solid var(--line); border-radius: 7px; padding: 7px 12px; color: var(--fg-dim); }
+.pen-mini.sel { border-color: var(--amber); color: var(--fg); }
+.pen-mini:hover { color: var(--fg); }
+
+#c-link-status { margin-top: 8px; font-size: 11px; line-height: 1.8; }
+
+#c-submit {
+  width: 100%; margin-top: 30px;
+  font-size: 15px; font-weight: 800;
+  background: var(--amber); color: var(--amber-ink);
+  padding: 15px; border-radius: 10px;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.55);
+  transition: transform .15s, box-shadow .15s;
+}
+#c-submit:hover { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.55); }
+#c-submit-note { margin-top: 10px; font-size: 10.5px; color: var(--fg-faint); text-align: center; line-height: 1.8; }
+.shake { animation: shake .4s ease; }
+@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+/* composer プレビュー内のスタンプ操作 */
+#c-scale .stamp { cursor: grab; pointer-events: auto; }
+#c-scale .stamp.drag { cursor: grabbing; }
+#c-scale .stamp.sel-stamp { outline: 2px dashed var(--amber); outline-offset: 4px; border-radius: 6px; }
+#stamp-del {
+  position: absolute; z-index: 30;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--danger); color: #fff; font-size: 13px; font-weight: 800;
+  display: none; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+#stamp-del.show { display: flex; }
+
+/* ===== 管理人室 ===== */
+#admin-scrim { position: fixed; inset: 0; z-index: 140; background: rgba(8, 8, 10, 0.55); display: none; }
+#admin-scrim.show { display: block; }
+#admin {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 150;
+  width: min(430px, 100vw);
+  background: #1a1a1f; border-left: 1px solid var(--line);
+  transform: translateX(105%);
+  transition: transform .35s cubic-bezier(.2, .9, .3, 1);
+  display: flex; flex-direction: column;
+}
+#admin.show { transform: translateX(0); }
+#admin header {
+  flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid var(--line);
+}
+#admin header h3 { font-size: 15px; font-weight: 800; letter-spacing: 0.08em; }
+#admin header .sub { display: block; margin-top: 3px; font-size: 10px; color: var(--fg-faint); font-weight: 500; letter-spacing: 0.05em; }
+#admin-close { font-size: 20px; color: var(--fg-faint); padding: 4px 10px; }
+#admin-close:hover { color: var(--fg); }
+#admin .body { flex: 1; overflow-y: auto; padding: 18px 24px 40px; }
+.ad-sec { margin-top: 18px; }
+.ad-sec:first-child { margin-top: 0; }
+.ad-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.22em; color: var(--fg-faint); }
+.ad-empty { margin-top: 10px; font-size: 12px; color: var(--fg-faint); border: 1px dashed var(--line); border-radius: 9px; padding: 14px; text-align: center; }
+.ad-item {
+  margin-top: 12px;
+  border: 1px solid var(--line); border-radius: 12px;
+  padding: 13px;
+  display: flex; gap: 13px; align-items: center;
+}
+.ad-mini { flex: none; position: relative; overflow: hidden; border-radius: 4px; background: #101014; }
+.ad-mini .poster { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.ad-info { flex: 1; min-width: 0; }
+.ad-info .t { font-size: 12.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-info .m { margin-top: 3px; font-size: 10.5px; color: var(--fg-faint); }
+.ad-acts { display: flex; flex-direction: column; gap: 7px; }
+.ad-btn { font-size: 11.5px; font-weight: 800; border-radius: 8px; padding: 8px 13px; white-space: nowrap; }
+.ad-btn.ok { background: var(--amber); color: var(--amber-ink); }
+.ad-btn.no { border: 1.5px solid var(--line); color: var(--fg-dim); }
+.ad-btn.no:hover { color: var(--fg); border-color: #4a4a52; }
+.ad-tools { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+.ad-tool { font-size: 11.5px; font-weight: 700; border: 1.5px solid var(--line); border-radius: 8px; padding: 8px 13px; color: var(--fg-dim); }
+.ad-tool:hover { color: var(--fg); border-color: #4a4a52; }
+#ad-clock { font-size: 11px; color: var(--fg-faint); margin-top: 10px; font-variant-numeric: tabular-nums; }
+.ad-note { margin-top: 22px; font-size: 11px; line-height: 1.9; color: var(--fg-faint); border-top: 1px dashed var(--line); padding-top: 14px; }
+
+/* ===== レスポンシブ ===== */
+@media (max-width: 880px) {
+  #composer .frame { grid-template-columns: 1fr; }
+  #c-stage { min-height: 40dvh; padding: 20px 16px; }
+  #c-panel { border-left: none; border-top: 1px solid var(--line); max-height: none; }
+}
+@media (max-width: 560px) {
+  #clock { font-size: 24px; }
+  #btn-compose { padding: 9px 16px; font-size: 12.5px; }
+  #shuffle-hint { display: none; }
+  .stamp-grid { grid-template-columns: repeat(6, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div id="grain" aria-hidden="true"></div>
+<div id="vignette" aria-hidden="true"></div>
+
+<div id="app">
+  <header id="top">
+    <div id="clockwrap">
+      <div id="clock" class="mono">--:--</div>
+      <div id="today" class="mono"></div>
+    </div>
+    <div id="top-right">
+      <span id="poolcount" class="mono" aria-live="polite"></span>
+      <button id="btn-compose">＋ 貼る</button>
+    </div>
+  </header>
+
+  <main id="stage">
+    <div id="slotwrap"><div id="pscale"></div></div>
+    <div id="caption" aria-live="polite"></div>
+    <div id="shufflewrap">
+      <button id="btn-shuffle" aria-label="つぎのタブを開く(別の貼り紙を見る)"><span class="r">↻</span> つぎのタブ</button>
+      <span id="shuffle-hint">スペースキーでも · 本番では新しいタブを開くたびに1枚</span>
+    </div>
+  </main>
+
+  <footer id="foot">
+    <div class="links">
+      <span class="wordmark">ハリガミ <span class="mono" style="font-weight:500">β0</span></span>
+      <button class="linky" id="link-about">これはなに?</button>
+      <button class="linky" id="link-admin">管理人室<span id="admin-dot"></span></button>
+    </div>
+    <div class="mono" id="tabcount"></div>
+  </footer>
+</div>
+
+<div id="toast" role="status"></div>
+
+<!-- ===== これはなに? ===== -->
+<div class="overlay" id="about" role="dialog" aria-modal="true" aria-label="ハリガミについて">
+  <div class="card">
+    <span class="tape tl"></span><span class="tape tr"></span>
+    <div class="a-mark">ハリガミ <span>β — 見た目の試作</span></div>
+    <h2>新しいタブは、<br>みんなの広告枠。</h2>
+    <p class="lead">ブラウザの新しいタブは、インターネットでいちばん開かれる場所。なのに、ずっと空き地のままです。ハリガミは、そこを「誰でも使える広告枠」として開放する実験です。宣伝でも、絵でも、今日の夕飯の話でも。</p>
+    <ul>
+      <li><b>貼るのは無料。</b>そのかわり、枠はお金ではなく注目で買います。見た人が「のこす」を押した分だけ、長く貼られます。</li>
+      <li><b>のこされなかった貼り紙は、</b>すこしずつ色あせて、めくれて、はがれます。だから壁はいつも新鮮で、占拠もスパムもできません。</li>
+      <li><b>大きい貼り紙ほど、はやく色あせます。</b>全面に貼りつづけられるのは、みんなが何度ものこした一枚だけ。</li>
+      <li><b>貼られる前に、管理人がいちど見ます。</b>画像のアップロードはできません(ペンで描くのはできます)。リンクは許可リストのサイトだけ。</li>
+    </ul>
+    <p class="a-note">この試作はぜんぶあなたのブラウザの中で動いていて、貼り紙はまだ誰にも届きません。ゆくゆくは同じ貼り紙の流れを、新しいタブだけでなく、壁紙・メニューバー・ターミナルの起動画面にも流せるようにする構想です。</p>
+    <div class="a-cta">
+      <button class="a-go" id="about-go">まちを歩く</button>
+      <span class="a-sub">devnull studio の試作 №0</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 貼る ===== -->
+<div class="overlay" id="composer" role="dialog" aria-modal="true" aria-label="貼り紙をつくる">
+  <div class="frame">
+    <div id="c-stage">
+      <div id="c-scale"></div>
+      <div id="c-hint">プレビューがそのまま仕上がりです · スタンプはつまんで動かせます</div>
+    </div>
+    <div id="c-panel">
+      <h3>貼り紙をつくる <button id="c-close" aria-label="とじる">✕</button></h3>
+
+      <div class="c-group">
+        <div class="c-label">1 · おおきさ</div>
+        <div class="size-chips" id="c-sizes"></div>
+        <div class="c-note">おおきいほど、はやく色あせます。数字はのこされなかった場合の寿命。</div>
+      </div>
+
+      <div class="c-group">
+        <div class="c-label">2 · かみの色</div>
+        <div class="pal-chips" id="c-pals"></div>
+      </div>
+
+      <div class="c-group">
+        <div class="c-label">3 · ことば</div>
+        <input class="c-input" id="c-title" maxlength="24" placeholder="おおきな一言(例: ネコさがしてます)">
+        <textarea class="c-area" id="c-body" maxlength="90" placeholder="つづき(任意)"></textarea>
+        <div class="c-count"><span id="c-count-n">0</span>/90</div>
+      </div>
+
+      <div class="c-group">
+        <div class="c-label">4 · かざり</div>
+        <div class="mode-row">
+          <button class="mode-btn sel" id="mode-stamp">スタンプ</button>
+          <button class="mode-btn" id="mode-pen">ペンでかく</button>
+        </div>
+        <div class="stamp-grid" id="c-stamps"></div>
+        <div id="pen-opts">
+          <div class="pen-colors" id="pen-colors"></div>
+          <div class="pen-row2">
+            <button class="pen-mini sel" data-w="thin">ほそい</button>
+            <button class="pen-mini" data-w="thick">ふとい</button>
+            <button class="pen-mini" id="pen-undo">ひとつもどす</button>
+            <button class="pen-mini" id="pen-clear">ぜんぶけす</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="c-group">
+        <div class="c-label">5 · リンク(任意)</div>
+        <input class="c-input" id="c-url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…">
+        <input class="c-input" id="c-url-label" maxlength="20" placeholder="ひとこと(例: これ聴いて)">
+        <div id="c-link-status" class="c-note"></div>
+      </div>
+
+      <div class="c-group">
+        <div class="c-label">6 · なまえ(任意)</div>
+        <input class="c-input" id="c-author" maxlength="14">
+      </div>
+
+      <button id="c-submit">はりだす</button>
+      <div id="c-submit-note">管理人がひと目見てから、壁に貼られます。<br>この試作では「管理人室」からあなた自身が承認できます。</div>
+    </div>
+  </div>
+  <button id="stamp-del" aria-label="スタンプを削除">✕</button>
+</div>
+
+<!-- ===== 管理人室 ===== -->
+<div id="admin-scrim"></div>
+<aside id="admin" aria-label="管理人室">
+  <header>
+    <h3>管理人室<span class="sub">本番では管理人だけが入れます — 試作なのでご自由に</span></h3>
+    <button id="admin-close" aria-label="とじる">✕</button>
+  </header>
+  <div class="body">
+    <div class="ad-sec">
+      <div class="ad-label">審査まち <span id="ad-pending-n"></span></div>
+      <div id="ad-pending"></div>
+    </div>
+    <div class="ad-sec">
+      <div class="ad-label">通報あり <span id="ad-reported-n"></span></div>
+      <div id="ad-reported"></div>
+    </div>
+    <div class="ad-sec">
+      <div class="ad-label">デモ用: 時間をすすめる</div>
+      <div class="ad-tools">
+        <button class="ad-tool" data-ff="6">＋6時間</button>
+        <button class="ad-tool" data-ff="24">＋24時間</button>
+        <button class="ad-tool" data-ff="72">＋3日</button>
+        <button class="ad-tool" id="ad-reset">試作を初期化</button>
+      </div>
+      <div id="ad-clock"></div>
+    </div>
+    <div class="ad-note">承認はワンタップ、返すのもワンタップ。のこされなかった貼り紙は勝手にはがれるので、掃除はほとんど要りません。時間をすすめると、色あせ→めくれ→はがれ落ちる様子が見られます。</div>
+  </div>
+</aside>
+
+<script>
+'use strict';
+(() => {
+const $ = id => document.getElementById(id);
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ================= 基本定義 ================= */
+
+// サイズ: 設計解像度と寿命(時間)。大きいほど短命 = 空間コスト。
+const SIZES = {
+  s:  { nm: 'ふせん',   W: 300,  H: 300, life: 96 },
+  m:  { nm: 'ポスター', W: 410,  H: 560, life: 60 },
+  w:  { nm: 'よこ帯',   W: 780,  H: 250, life: 60 },
+  xl: { nm: '全面',     W: 1140, H: 640, life: 30 },
+};
+const KEEP_H = 8; // 「のこす」1回あたりの延命
+
+const PALS = [
+  { id: 'shiro',  bg: '#f2ede1', ink: '#26241f' },
+  { id: 'kraft',  bg: '#d3b98a', ink: '#3a2c17' },
+  { id: 'kuro',   bg: '#232226', ink: '#efe9d8' },
+  { id: 'aka',    bg: '#bf4033', ink: '#fff3e4' },
+  { id: 'ao',     bg: '#2e4e8f', ink: '#eef3ff' },
+  { id: 'ki',     bg: '#e6c14a', ink: '#332908' },
+  { id: 'midori', bg: '#3f6b4f', ink: '#ecf5e8' },
+  { id: 'pink',   bg: '#d98cab', ink: '#3d1b2b' },
+  { id: 'sora',   bg: '#8fb7cf', ink: '#1c2f38' },
+  { id: 'sumire', bg: '#6f5a9e', ink: '#f2edfc' },
+];
+const palOf = id => PALS.find(p => p.id === id) || PALS[0];
+
+const STAMPS = ['★','☆','●','▲','♥','♪','☕','🐈','🐸','🌙','🌸','🌱','⚡','🍜','✉','☎','✂','👀','🫠','🎸','📚','🧦','🛸','💡'];
+
+// リンク許可リスト(試作)
+const HOSTS = [
+  ['youtube.com', 'YouTube'], ['youtu.be', 'YouTube'],
+  ['open.spotify.com', 'Spotify'], ['spotify.com', 'Spotify'],
+  ['x.com', 'X'], ['twitter.com', 'X'],
+  ['github.com', 'GitHub'], ['soundcloud.com', 'SoundCloud'],
+  ['bandcamp.com', 'Bandcamp'], ['note.com', 'note'],
+  ['pixiv.net', 'pixiv'], ['twitch.tv', 'Twitch'], ['nicovideo.jp', 'ニコニコ'],
+];
+
+/* ================= 時間(デモ早送りつき) ================= */
+let ffH = 0; // デモ用オフセット(時間)
+const T = () => Date.now() + ffH * 3600e3;
+const H = 3600e3;
+
+/* ================= 永続化 ================= */
+const LS = 'harigami.v1';
+function loadStore() {
+  try { return JSON.parse(localStorage.getItem(LS) || '{}'); } catch (e) { return {}; }
+}
+let store = loadStore();
+store.user = store.user || [];      // 自分がつくった貼り紙
+store.ovr = store.ovr || {};        // シードへの上書き {id: {keeps, kept, status}}
+function save() {
+  try { localStorage.setItem(LS, JSON.stringify(store)); } catch (e) { /* 容量オーバー等は無視 */ }
+}
+
+/* ================= シード(街のみんなの貼り紙) ================= */
+// postedAgoH: 何時間まえに貼られたか / keeps: これまでにのこされた回数
+const SEED = [
+  { id: 'n01', size: 's', pal: 'shiro', title: '今日、ラーメン食べた。', body: 'うまかった。以上です。',
+    stamps: [{ ch: '🍜', x: 74, y: 20, r: 14, s: 1.2 }], author: '通りすがり#0412', postedAgoH: 3, keeps: 4 },
+  { id: 'n02', size: 's', pal: 'ki', title: '作業用。ずっと流してる', body: '',
+    link: { kind: 'yt', id: 'jfKfPfyJRdk', url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk', label: '夜どおし流せるやつ' },
+    stamps: [{ ch: '♪', x: 16, y: 14, r: -16, s: 1 }], author: '夜ふかし#2201', postedAgoH: 20, keeps: 9 },
+  { id: 'n03', size: 'm', pal: 'shiro', title: 'ネコさがしてます', body: '黒くて、目が黄色。\n名前は「ぬる」。呼ぶと来ます(来ないときもあります)。見かけたらおしえてください。',
+    stamps: [{ ch: '🐈', x: 50, y: 66, r: -8, s: 2.2 }, { ch: '●', x: 18, y: 16, r: 0, s: 0.6 }], author: '飼い主#0016', postedAgoH: 12, keeps: 21 },
+  { id: 'n04', size: 'm', pal: 'kraft', title: '自家焙煎、はじめました', body: '深煎りだけ、200gずつ。\n週末のあさ、駅の北口で売ってます。のぼりが目印。',
+    stamps: [{ ch: '☕', x: 50, y: 68, r: 6, s: 2 }], author: 'コーヒー見習い#0930', postedAgoH: 40, keeps: 6 },
+  { id: 'n05', size: 'w', pal: 'aka', title: 'ベース急募', body: 'バンドやろう。下手でも可。やる気も不問。機材は貸します。',
+    stamps: [{ ch: '🎸', x: 86, y: 30, r: 12, s: 1.7 }, { ch: '⚡', x: 78, y: 72, r: -10, s: 1 }], author: 'ギターの人#0093', postedAgoH: 8, keeps: 3 },
+  { id: 'n06', size: 'w', pal: 'ao', title: 'フリーマーケット', body: '日曜 10:00〜 / 雨なら中止 / 公園のすみっこ。値札はぜんぶ気分です。',
+    stamps: [{ ch: '🧦', x: 85, y: 34, r: -8, s: 1.4 }], author: 'じもと#0777', postedAgoH: 50, keeps: 2 },
+  { id: 'n07', size: 'xl', pal: 'kuro', title: '夜に泳ぐ', body: '新作、描きあがりました。ぜんぶ見てほしい。',
+    link: { kind: 'chip', url: 'https://www.pixiv.net/', host: 'pixiv', label: '作品はこちら' },
+    stamps: [
+      { ch: '☆', x: 12, y: 18, r: -14, s: 1.4 }, { ch: '★', x: 22, y: 72, r: 8, s: 0.9 },
+      { ch: '☆', x: 86, y: 24, r: 18, s: 1.1 }, { ch: '🌙', x: 78, y: 66, r: -10, s: 2.4 },
+      { ch: '★', x: 60, y: 12, r: 0, s: 0.7 }, { ch: '☆', x: 38, y: 82, r: 12, s: 0.8 },
+    ], author: '絵かき#0033', postedAgoH: 6, keeps: 18 },
+  { id: 'n08', size: 's', pal: 'pink', title: 'おばあちゃんがブログ始めた', body: '週1で漬物の話をしてます。見てあげてください。',
+    link: { kind: 'chip', url: 'https://note.com/', host: 'note', label: 'つけもの日記' },
+    stamps: [], author: '孫#1030', postedAgoH: 30, keeps: 11 },
+  { id: 'n09', size: 'm', pal: 'midori', title: '植物あげます', body: '増えすぎたポトス。つよい。かわいい。手渡し希望、鉢ごとどうぞ。',
+    stamps: [{ ch: '🌱', x: 50, y: 70, r: -6, s: 2 }, { ch: '🌱', x: 24, y: 62, r: 10, s: 1.2 }], author: 'ベランダ#0505', postedAgoH: 55, keeps: 1 },
+  { id: 'n10', size: 'w', pal: 'ki', title: '同人誌、できました', body: '3年かかった。全128ページ。とにかく読んでほしい、それだけです。',
+    stamps: [{ ch: '📚', x: 86, y: 32, r: 8, s: 1.6 }, { ch: '★', x: 79, y: 74, r: -12, s: 0.8 }], author: 'サークル灯り#1201', postedAgoH: 2, keeps: 7 },
+];
+const loadT = Date.now();
+
+/* ================= 貼り紙モデル ================= */
+function allPosters() {
+  const seeded = SEED.map(s => {
+    const o = store.ovr[s.id] || {};
+    return {
+      ...s,
+      postedAt: loadT - s.postedAgoH * H,
+      keeps: (o.keeps != null) ? o.keeps : s.keeps,
+      kept: !!o.kept,
+      status: o.status || 'live',
+    };
+  });
+  return seeded.concat(store.user);
+}
+function expiresAt(p) { return p.postedAt + (SIZES[p.size].life + p.keeps * KEEP_H) * H; }
+function fadeOf(p) {
+  const total = expiresAt(p) - p.postedAt;
+  return Math.max(0, Math.min(1, (expiresAt(p) - T()) / total));
+}
+function isLive(p) { return p.status === 'live' && expiresAt(p) > T(); }
+function livePosters() { return allPosters().filter(isLive); }
+
+function setOvr(p, patch) {
+  if (String(p.id).startsWith('u')) {
+    const u = store.user.find(x => x.id === p.id);
+    if (u) Object.assign(u, patch);
+  } else {
+    store.ovr[p.id] = Object.assign(store.ovr[p.id] || {}, patch);
+  }
+  save();
+}
+
+/* ================= 貼り紙レンダラ(壁/プレビュー/管理室 共用) ================= */
+function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function rotOf(id) { // idから決まる、貼った人の手つき(微傾き)
+  let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return ((h % 7) - 3) * 0.55;
+}
+
+function renderPoster(p, opts = {}) {
+  const sz = SIZES[p.size];
+  const pal = palOf(p.pal);
+  const el = document.createElement('div');
+  el.className = 'poster size-' + p.size;
+  el.style.width = sz.W + 'px';
+  el.style.height = sz.H + 'px';
+  el.style.setProperty('--pbg', pal.bg);
+  el.style.setProperty('--pink', pal.ink);
+  el.style.color = pal.ink;
+  el.style.setProperty('--fade', opts.fresh ? 1 : fadeOf(p).toFixed(3));
+
+  let inner = '';
+  const title = p.title ? '<div class="p-title">' + esc(p.title) + '</div>' : '';
+  const body = p.body ? '<div class="p-body">' + esc(p.body) + '</div>' : '';
+  let link = '';
+  if (p.link) {
+    if (p.link.kind === 'yt') {
+      link = '<a class="p-link" href="' + esc(p.link.url) + '" target="_blank" rel="noopener noreferrer">' +
+        '<span class="yt"><img src="https://i.ytimg.com/vi/' + esc(p.link.id) + '/hqdefault.jpg" alt="" loading="lazy" onerror="this.parentNode.parentNode.innerHTML=\'<span class=chip><span class=dot></span>YouTube<span class=host>' + esc(p.link.label || '') + '</span></span>\'"><span class="play">▶</span></span>' +
+        (p.link.label ? '<span class="yt-cap">' + esc(p.link.label) + '</span>' : '') + '</a>';
+    } else {
+      link = '<a class="p-link" href="' + esc(p.link.url) + '" target="_blank" rel="noopener noreferrer">' +
+        '<span class="chip"><span class="dot"></span>' + esc(p.link.label || 'リンク') + '<span class="host">' + esc(p.link.host || '') + '</span></span></a>';
+    }
+  }
+  if (p.size === 'w') {
+    inner = '<div class="p-inner"><div class="p-text">' + title + body + '</div>' + link + '</div>';
+  } else {
+    inner = '<div class="p-inner">' + title + body + link + '</div>';
+  }
+
+  el.innerHTML =
+    '<span class="tape tl"></span><span class="tape tr"></span>' +
+    inner +
+    (p.doodle ? '<img class="doodle" src="' + p.doodle + '" alt="">' : '') +
+    '<div class="p-author">— ' + esc(p.author || '名無し') + '</div>' +
+    '<span class="curl"></span>';
+
+  for (const st of (p.stamps || [])) {
+    const s = document.createElement('span');
+    s.className = 'stamp';
+    s.textContent = st.ch;
+    s.style.left = st.x + '%';
+    s.style.top = st.y + '%';
+    s.style.fontSize = Math.round(26 * (st.s || 1) * (p.size === 'xl' ? 1.7 : 1)) + 'px';
+    s.style.transform = 'translate(-50%,-50%) rotate(' + (st.r || 0) + 'deg)';
+    el.appendChild(s);
+  }
+  if (p.kept && !opts.noPin) {
+    const pin = document.createElement('span');
+    pin.className = 'pin';
+    pin.textContent = '📌';
+    el.appendChild(pin);
+  }
+  // リンクは壁でだけ踏める(プレビュー等では無効)
+  if (!opts.clickable) el.querySelectorAll('a').forEach(a => a.addEventListener('click', e => e.preventDefault()));
+  return el;
+}
+
+/* ================= 壁: 表示と入れ替え ================= */
+let current = null;   // いま貼られている貼り紙
+let tabsOpened = 0;
+
+function fitInto(scaleBox, poster, availW, availH, size) {
+  const sz = SIZES[size];
+  const maxS = size === 'xl' ? 99 : 1.12;
+  const s = Math.min(availW / sz.W, availH / sz.H, maxS);
+  scaleBox.style.width = (sz.W * s) + 'px';
+  scaleBox.style.height = (sz.H * s) + 'px';
+  poster.style.transform = 'scale(' + s + ') rotate(' + (size === 'xl' ? 0 : rotOf(poster.dataset.pid || '')) + 'deg)';
+  poster.style.setProperty('--s', s);
+  poster.style.setProperty('--rot', (size === 'xl' ? 0 : rotOf(poster.dataset.pid || '')) + 'deg');
+}
+function fitCurrent() {
+  const box = $('pscale');
+  const po = box.querySelector('.poster');
+  if (!po || !current) return;
+  const slot = $('slotwrap');
+  fitInto(box, po, slot.clientWidth - 20, slot.clientHeight - 20, current.size);
+}
+addEventListener('resize', fitCurrent);
+
+function ageStr(p) {
+  const h = (T() - p.postedAt) / H;
+  if (h < 1) return 'さっき';
+  if (h < 24) return Math.floor(h) + '時間まえ';
+  return Math.floor(h / 24) + '日まえ';
+}
+function remainStr(p) {
+  const h = (expiresAt(p) - T()) / H;
+  if (h <= 1) return 'のこりわずか';
+  if (h < 48) return 'のこり' + Math.floor(h) + '時間';
+  return 'のこり' + Math.floor(h / 24) + '日';
+}
+
+function renderCaption() {
+  const cap = $('caption');
+  if (!current) { cap.innerHTML = ''; return; }
+  const p = current;
+  const fade = fadeOf(p);
+  cap.innerHTML =
+    '<span class="sizetag">' + SIZES[p.size].nm + '</span>' +
+    '<span class="who"><b>' + esc(p.author || '名無し') + '</b> · ' + ageStr(p) + '</span>' +
+    '<span class="life' + (fade < 0.25 ? ' low' : '') + '"><i style="width:' + Math.round(fade * 100) + '%"></i></span>' +
+    '<span class="remain mono">' + remainStr(p) + ' · 📌' + p.keeps + '</span>' +
+    '<button class="cap-btn' + (p.kept ? ' kept' : '') + '" id="btn-keep">📌 ' + (p.kept ? 'のこした' : 'のこす') + '</button>' +
+    '<button class="cap-btn flag" id="btn-flag" aria-label="この貼り紙を通報する">⚑</button>' +
+    '<div id="report-pop" role="dialog"><p>この貼り紙を隠して、管理人に知らせますか?</p><div class="row"><button class="no" id="rep-no">やめる</button><button class="yes" id="rep-yes">通報する</button></div></div>';
+
+  $('btn-keep').addEventListener('click', () => {
+    if (p.kept) { toast('もう、のこしてあります'); return; }
+    p.kept = true; p.keeps += 1;
+    setOvr(p, { kept: true, keeps: p.keeps });
+    renderCaption();
+    const po = $('pscale').querySelector('.poster');
+    if (po) {
+      po.style.setProperty('--fade', fadeOf(p).toFixed(3));
+      const pin = document.createElement('span');
+      pin.className = 'pin pop'; pin.textContent = '📌';
+      po.appendChild(pin);
+    }
+    toast('のこしました。+' + KEEP_H + '時間、はがれにくくなります');
+  });
+  $('btn-flag').addEventListener('click', () => $('report-pop').classList.toggle('show'));
+  $('rep-no').addEventListener('click', () => $('report-pop').classList.remove('show'));
+  $('rep-yes').addEventListener('click', () => {
+    setOvr(p, { status: 'hidden' });
+    p.status = 'hidden';
+    $('report-pop').classList.remove('show');
+    toast('通報しました。壁からは下げて、管理人に知らせます');
+    fallAndNext();
+    renderAdmin();
+  });
+}
+
+function updatePoolCount() {
+  const n = livePosters().length;
+  $('poolcount').textContent = 'いま、' + n + '枚 貼られています';
+}
+
+function showPoster(p, opts = {}) {
+  current = p;
+  const box = $('pscale');
+  box.innerHTML = '';
+  $('caption').innerHTML = '';
+  if (!p) { // 空き壁
+    const e = document.createElement('div');
+    e.id = 'empty';
+    e.innerHTML = '<div class="big">いま、なにも貼られていません</div><p>ぜんぶ、はがれてしまいました。<br>最初のいちまいを、あなたが。</p>';
+    const b = document.createElement('button');
+    b.className = 'cap-btn'; b.textContent = '＋ 貼る';
+    b.addEventListener('click', openComposer);
+    e.appendChild(b);
+    box.style.width = ''; box.style.height = '';
+    box.appendChild(e);
+    updatePoolCount();
+    return;
+  }
+  const el = renderPoster(p, { clickable: true });
+  el.dataset.pid = p.id;
+  if (!calm && !opts.still) el.classList.add('enter');
+  box.appendChild(el);
+  fitCurrent();
+  renderCaption();
+  updatePoolCount();
+}
+
+function drawNext(opts = {}) {
+  const pool = livePosters().filter(p => !current || p.id !== current.id);
+  const pick = pool.length ? pool[Math.floor(Math.random() * pool.length)]
+    : (current && isLive(current) ? current : null);
+  tabsOpened++;
+  $('tabcount').textContent = 'このセッションで開いたタブ: ' + tabsOpened;
+  showPoster(pick, opts);
+}
+
+function fallAndNext() {
+  const po = $('pscale').querySelector('.poster');
+  if (po && !calm) {
+    po.classList.add('fall');
+    setTimeout(() => drawNext(), 650);
+  } else {
+    drawNext();
+  }
+}
+
+/* ================= のこり時間の監視(色あせ・はがれ) ================= */
+function tickDecay() {
+  if (!current) return;
+  if (!isLive(current)) { // 目の前ではがれた
+    toast('一枚、はがれ落ちました');
+    fallAndNext();
+    return;
+  }
+  const po = $('pscale').querySelector('.poster');
+  if (po) po.style.setProperty('--fade', fadeOf(current).toFixed(3));
+  renderCaption();
+}
+setInterval(() => { tickDecay(); updatePoolCount(); }, 60e3);
+
+/* ================= 上バー: 時計 ================= */
+function tickClock() {
+  const d = new Date();
+  $('clock').textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  $('today').textContent = (d.getMonth() + 1) + '/' + d.getDate() + ' ' + '日月火水木金土'[d.getDay()] + '曜日';
+}
+tickClock();
+setInterval(tickClock, 5e3);
+
+/* ================= トースト ================= */
+let toastT = null;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ================= composer ================= */
+const cp = { size: 'm', pal: 'shiro', stamps: [], strokes: [], link: null };
+let penMode = false, penColor = null, penW = 'thin';
+let selStamp = -1;
+
+function openComposer() {
+  $('composer').classList.add('show');
+  cp.size = 'm'; cp.pal = 'shiro'; cp.stamps = []; cp.strokes = []; cp.link = null;
+  $('c-title').value = ''; $('c-body').value = ''; $('c-url').value = ''; $('c-url-label').value = '';
+  $('c-author').value = '';
+  $('c-author').placeholder = '通りすがり#' + String(1000 + Math.floor(Math.random() * 9000));
+  $('c-count-n').textContent = '0';
+  $('c-link-status').textContent = '貼れるのは許可リストのサイトだけ: YouTube / Spotify / X / GitHub / pixiv / note / Twitch / SoundCloud / Bandcamp / ニコニコ';
+  $('c-link-status').className = 'c-note';
+  setPenMode(false);
+  penColor = null;
+  buildSizeChips(); buildPalChips();
+  rebuildPreview();
+  $('c-title').focus();
+}
+function closeComposer() { $('composer').classList.remove('show'); hideStampDel(); }
+
+$('btn-compose').addEventListener('click', openComposer);
+$('c-close').addEventListener('click', closeComposer);
+
+function buildSizeChips() {
+  const wrap = $('c-sizes');
+  wrap.innerHTML = '';
+  for (const k of Object.keys(SIZES)) {
+    const b = document.createElement('button');
+    b.className = 'size-chip' + (cp.size === k ? ' sel' : '');
+    b.dataset.size = k;
+    b.innerHTML = '<span class="shape"></span><span class="nm">' + SIZES[k].nm + '</span><span class="hr mono">' + SIZES[k].life + 'h</span>';
+    b.addEventListener('click', () => { cp.size = k; buildSizeChips(); rebuildPreview(); });
+    wrap.appendChild(b);
+  }
+}
+function buildPalChips() {
+  const wrap = $('c-pals');
+  wrap.innerHTML = '';
+  for (const p of PALS) {
+    const b = document.createElement('button');
+    b.className = 'pal-chip' + (cp.pal === p.id ? ' sel' : '');
+    b.style.background = p.bg;
+    b.setAttribute('aria-label', '紙の色 ' + p.id);
+    b.addEventListener('click', () => { cp.pal = p.id; buildPalChips(); rebuildPreview(); });
+    wrap.appendChild(b);
+  }
+}
+// スタンプパレット
+(() => {
+  const wrap = $('c-stamps');
+  for (const ch of STAMPS) {
+    const b = document.createElement('button');
+    b.className = 'stamp-btn';
+    b.textContent = ch;
+    b.addEventListener('click', () => {
+      if (cp.stamps.length >= 12) { toast('スタンプは12個まで'); return; }
+      cp.stamps.push({ ch, x: 30 + Math.random() * 40, y: 25 + Math.random() * 50, r: Math.round(Math.random() * 36 - 18), s: 1 + Math.random() * 0.5 });
+      setPenMode(false);
+      rebuildPreview();
+    });
+    wrap.appendChild(b);
+  }
+})();
+
+// ペン
+const PEN_COLORS = ['#26241f', '#f2ede1', '#bf4033', '#2e4e8f', '#e8b054'];
+(() => {
+  const wrap = $('pen-colors');
+  PEN_COLORS.forEach((c, i) => {
+    const b = document.createElement('button');
+    b.className = 'pen-c' + (i === 0 ? ' sel' : '');
+    b.style.background = c;
+    b.setAttribute('aria-label', 'ペンの色');
+    b.addEventListener('click', () => {
+      penColor = c;
+      wrap.querySelectorAll('.pen-c').forEach(x => x.classList.remove('sel'));
+      b.classList.add('sel');
+    });
+    wrap.appendChild(b);
+  });
+})();
+document.querySelectorAll('.pen-mini[data-w]').forEach(b => {
+  b.addEventListener('click', () => {
+    penW = b.dataset.w;
+    document.querySelectorAll('.pen-mini[data-w]').forEach(x => x.classList.remove('sel'));
+    b.classList.add('sel');
+  });
+});
+$('pen-undo').addEventListener('click', () => { cp.strokes.pop(); redrawPen(); });
+$('pen-clear').addEventListener('click', () => { cp.strokes = []; redrawPen(); });
+$('mode-stamp').addEventListener('click', () => setPenMode(false));
+$('mode-pen').addEventListener('click', () => setPenMode(true));
+function setPenMode(on) {
+  penMode = on;
+  $('mode-pen').classList.toggle('sel', on);
+  $('mode-stamp').classList.toggle('sel', !on);
+  $('pen-opts').classList.toggle('show', on);
+  $('c-scale').classList.toggle('pen-on', on);
+  if (on) hideStampDel();
+  if (on && !penColor) penColor = PEN_COLORS[0];
+}
+
+// テキスト
+$('c-title').addEventListener('input', rebuildPreviewSoft);
+$('c-body').addEventListener('input', () => { $('c-count-n').textContent = $('c-body').value.length; rebuildPreviewSoft(); });
+$('c-author').addEventListener('input', rebuildPreviewSoft);
+
+// リンク
+function parseLink() {
+  const raw = $('c-url').value.trim();
+  const label = $('c-url-label').value.trim();
+  const st = $('c-link-status');
+  if (!raw) { cp.link = null; st.textContent = '貼れるのは許可リストのサイトだけ: YouTube / Spotify / X / GitHub / pixiv / note / Twitch / SoundCloud / Bandcamp / ニコニコ'; st.className = 'c-note'; return; }
+  let u;
+  try { u = new URL(raw.match(/^https?:\/\//) ? raw : 'https://' + raw); } catch (e) {
+    cp.link = null; st.textContent = 'URLとして読めませんでした'; st.className = 'c-note warn'; return;
+  }
+  const host = u.hostname.replace(/^www\./, '');
+  const hit = HOSTS.find(([d]) => host === d || host.endsWith('.' + d));
+  if (!hit) { cp.link = null; st.textContent = '「' + host + '」は許可リスト外です(試作では貼れません)'; st.className = 'c-note warn'; return; }
+  const yt = (u.href.match(/(?:youtube\.com\/(?:watch\?[^#]*v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/) || [])[1];
+  if (yt) {
+    cp.link = { kind: 'yt', id: yt, url: u.href, label };
+    st.textContent = '✓ YouTubeのカードとして貼られます';
+  } else {
+    cp.link = { kind: 'chip', url: u.href, host: hit[1], label: label || hit[1] };
+    st.textContent = '✓ ' + hit[1] + ' へのリンク札として貼られます';
+  }
+  st.className = 'c-note ok';
+}
+$('c-url').addEventListener('input', () => { parseLink(); rebuildPreviewSoft(); });
+$('c-url-label').addEventListener('input', () => { parseLink(); rebuildPreviewSoft(); });
+
+/* --- プレビュー描画 --- */
+let softT = null;
+function rebuildPreviewSoft() { clearTimeout(softT); softT = setTimeout(rebuildPreview, 60); }
+
+function cpPoster() {
+  return {
+    id: 'preview', size: cp.size, pal: cp.pal,
+    title: $('c-title').value, body: $('c-body').value,
+    stamps: cp.stamps, link: cp.link, doodle: null,
+    author: $('c-author').value || $('c-author').placeholder,
+    postedAt: T(), keeps: 0, kept: false, status: 'live',
+  };
+}
+let penCanvas = null;
+function rebuildPreview() {
+  const box = $('c-scale');
+  box.querySelectorAll('.poster').forEach(x => x.remove());
+  const p = cpPoster();
+  const el = renderPoster(p, { fresh: true, noPin: true });
+  el.dataset.pid = 'preview';
+  box.prepend(el);
+  // ペンキャンバス(常駐・スケール追従)
+  if (!penCanvas) {
+    penCanvas = document.createElement('canvas');
+    penCanvas.id = 'c-pen';
+    box.appendChild(penCanvas);
+    bindPen(penCanvas);
+    bindStampDrag(box);
+  }
+  const sz = SIZES[cp.size];
+  penCanvas.width = sz.W * 2; penCanvas.height = sz.H * 2;
+  penCanvas.style.width = sz.W + 'px'; penCanvas.style.height = sz.H + 'px';
+  fitComposer();
+  redrawPen();
+  hideStampDel();
+}
+function fitComposer() {
+  const box = $('c-scale');
+  const po = box.querySelector('.poster');
+  if (!po) return;
+  const stage = $('c-stage');
+  const availW = stage.clientWidth - 44, availH = stage.clientHeight - 70;
+  const sz = SIZES[cp.size];
+  const s = Math.min(availW / sz.W, availH / sz.H, 1.05);
+  box.style.width = (sz.W * s) + 'px';
+  box.style.height = (sz.H * s) + 'px';
+  po.style.transform = 'scale(' + s + ')';
+  po.style.setProperty('--s', s);
+  if (penCanvas) penCanvas.style.transform = 'scale(' + s + ')';
+  box.dataset.s = s;
+}
+addEventListener('resize', () => { if ($('composer').classList.contains('show')) fitComposer(); });
+
+/* --- ペン(正規化座標で保存 → サイズ変更に追従) --- */
+function redrawPen() {
+  if (!penCanvas) return;
+  const ctx = penCanvas.getContext('2d');
+  ctx.clearRect(0, 0, penCanvas.width, penCanvas.height);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const W = penCanvas.width, Hh = penCanvas.height;
+  for (const st of cp.strokes) {
+    ctx.strokeStyle = st.c;
+    ctx.lineWidth = st.w * W;
+    ctx.beginPath();
+    const pts = st.pts;
+    if (pts.length === 1) {
+      ctx.arc(pts[0][0] * W, pts[0][1] * Hh, st.w * W / 2, 0, 7);
+      ctx.fillStyle = st.c; ctx.fill();
+      continue;
+    }
+    ctx.moveTo(pts[0][0] * W, pts[0][1] * Hh);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const mx = (pts[i][0] + pts[i + 1][0]) / 2 * W, my = (pts[i][1] + pts[i + 1][1]) / 2 * Hh;
+      ctx.quadraticCurveTo(pts[i][0] * W, pts[i][1] * Hh, mx, my);
+    }
+    const last = pts[pts.length - 1];
+    ctx.lineTo(last[0] * W, last[1] * Hh);
+    ctx.stroke();
+  }
+}
+function bindPen(cv) {
+  let stroke = null;
+  const norm = e => {
+    const r = cv.getBoundingClientRect();
+    return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height];
+  };
+  cv.addEventListener('pointerdown', e => {
+    if (!penMode) return;
+    cv.setPointerCapture(e.pointerId);
+    stroke = { c: penColor, w: (penW === 'thin' ? 3 : 8) / SIZES[cp.size].W, pts: [norm(e)] };
+    cp.strokes.push(stroke);
+    redrawPen();
+    e.preventDefault();
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!stroke) return;
+    stroke.pts.push(norm(e));
+    redrawPen();
+  });
+  const up = () => { stroke = null; };
+  cv.addEventListener('pointerup', up);
+  cv.addEventListener('pointercancel', up);
+}
+
+/* --- スタンプのドラッグ・選択・削除 --- */
+function hideStampDel() { selStamp = -1; $('stamp-del').classList.remove('show'); $('c-scale').querySelectorAll('.stamp').forEach(s => s.classList.remove('sel-stamp')); }
+function bindStampDrag(box) {
+  let drag = null;
+  box.addEventListener('pointerdown', e => {
+    if (penMode) return;
+    const st = e.target.closest('.stamp');
+    if (!st) { hideStampDel(); return; }
+    const stamps = [...box.querySelectorAll('.stamp')];
+    const idx = stamps.indexOf(st);
+    if (idx < 0) return;
+    drag = { idx, el: st, moved: false, sx: e.clientX, sy: e.clientY };
+    st.classList.add('drag');
+    st.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  box.addEventListener('pointermove', e => {
+    if (!drag) return;
+    if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 4) drag.moved = true;
+    if (!drag.moved) return;
+    const po = box.querySelector('.poster');
+    const r = po.getBoundingClientRect();
+    const x = Math.max(2, Math.min(98, (e.clientX - r.left) / r.width * 100));
+    const y = Math.max(2, Math.min(98, (e.clientY - r.top) / r.height * 100));
+    cp.stamps[drag.idx].x = x; cp.stamps[drag.idx].y = y;
+    drag.el.style.left = x + '%'; drag.el.style.top = y + '%';
+    positionStampDel(drag.el);
+  });
+  const end = e => {
+    if (!drag) return;
+    drag.el.classList.remove('drag');
+    if (!drag.moved) { // タップ = 選択(削除ボタンを出す)
+      hideStampDel();
+      selStamp = drag.idx;
+      drag.el.classList.add('sel-stamp');
+      positionStampDel(drag.el);
+      $('stamp-del').classList.add('show');
+    }
+    drag = null;
+  };
+  box.addEventListener('pointerup', end);
+  box.addEventListener('pointercancel', end);
+}
+function positionStampDel(el) {
+  if (selStamp < 0) return;
+  const r = el.getBoundingClientRect();
+  const d = $('stamp-del');
+  d.style.left = (r.right - 4) + 'px';
+  d.style.top = (r.top - 22) + 'px';
+}
+$('stamp-del').addEventListener('click', () => {
+  if (selStamp >= 0) { cp.stamps.splice(selStamp, 1); rebuildPreview(); }
+});
+
+/* --- はりだす --- */
+$('c-submit').addEventListener('click', () => {
+  const hasContent = $('c-title').value.trim() || $('c-body').value.trim() || cp.stamps.length || cp.strokes.length || cp.link;
+  if (!hasContent) {
+    $('c-panel').classList.add('shake');
+    setTimeout(() => $('c-panel').classList.remove('shake'), 450);
+    toast('まっしろのままです。なにか、ひとこと');
+    return;
+  }
+  let doodle = null;
+  if (cp.strokes.length) doodle = penCanvas.toDataURL('image/png');
+  const p = {
+    id: 'u' + Date.now().toString(36),
+    size: cp.size, pal: cp.pal,
+    title: $('c-title').value.trim(), body: $('c-body').value.trim(),
+    stamps: cp.stamps.slice(), doodle, link: cp.link,
+    author: ($('c-author').value.trim() || $('c-author').placeholder),
+    postedAt: T(), keeps: 0, kept: false, status: 'pending',
+  };
+  store.user.push(p);
+  save();
+  closeComposer();
+  toast('管理人に届けました。OKが出たら、壁に貼られます');
+  renderAdmin();
+  updateAdminDot();
+});
+
+/* ================= 管理人室 ================= */
+function openAdmin() { $('admin').classList.add('show'); $('admin-scrim').classList.add('show'); renderAdmin(); }
+function closeAdmin() { $('admin').classList.remove('show'); $('admin-scrim').classList.remove('show'); }
+$('link-admin').addEventListener('click', openAdmin);
+$('admin-close').addEventListener('click', closeAdmin);
+$('admin-scrim').addEventListener('click', closeAdmin);
+
+function updateAdminDot() {
+  const n = allPosters().filter(p => p.status === 'pending').length;
+  const d = $('admin-dot');
+  d.textContent = n;
+  d.classList.toggle('on', n > 0);
+}
+
+function miniOf(p) {
+  const sz = SIZES[p.size];
+  const k = Math.min(96 / sz.W, 72 / sz.H);
+  const wrap = document.createElement('div');
+  wrap.className = 'ad-mini';
+  wrap.style.width = (sz.W * k) + 'px';
+  wrap.style.height = (sz.H * k) + 'px';
+  const el = renderPoster(p, { fresh: p.status === 'pending', noPin: true });
+  el.style.transform = 'scale(' + k + ')';
+  el.querySelectorAll('.tape').forEach(t => t.remove());
+  wrap.appendChild(el);
+  return wrap;
+}
+
+function adminItem(p, acts) {
+  const it = document.createElement('div');
+  it.className = 'ad-item';
+  it.appendChild(miniOf(p));
+  const info = document.createElement('div');
+  info.className = 'ad-info';
+  info.innerHTML = '<div class="t">' + esc(p.title || p.body || '(ことばなし)') + '</div>' +
+    '<div class="m">' + esc(p.author || '名無し') + ' · ' + SIZES[p.size].nm +
+    (p.link ? ' · リンク: ' + esc(p.link.kind === 'yt' ? 'YouTube' : (p.link.host || '')) : '') + '</div>';
+  it.appendChild(info);
+  const acol = document.createElement('div');
+  acol.className = 'ad-acts';
+  for (const [label, cls, fn] of acts) {
+    const b = document.createElement('button');
+    b.className = 'ad-btn ' + cls;
+    b.textContent = label;
+    b.addEventListener('click', fn);
+    acol.appendChild(b);
+  }
+  it.appendChild(acol);
+  return it;
+}
+
+function renderAdmin() {
+  const all = allPosters();
+  const pend = all.filter(p => p.status === 'pending');
+  const rep = all.filter(p => p.status === 'hidden');
+
+  const pWrap = $('ad-pending');
+  pWrap.innerHTML = '';
+  $('ad-pending-n').textContent = pend.length ? '· ' + pend.length + '件' : '';
+  if (!pend.length) pWrap.innerHTML = '<div class="ad-empty">いまは、なにも待っていません</div>';
+  for (const p of pend) {
+    pWrap.appendChild(adminItem(p, [
+      ['✓ 貼る', 'ok', () => {
+        setOvr(p, { status: 'live', postedAt: T() });
+        const u = store.user.find(x => x.id === p.id);
+        if (u) { u.status = 'live'; u.postedAt = T(); save(); }
+        toast('貼りました。壁に流れはじめます');
+        renderAdmin(); updateAdminDot(); updatePoolCount();
+      }],
+      ['✕ 返す', 'no', () => {
+        if (String(p.id).startsWith('u')) { store.user = store.user.filter(x => x.id !== p.id); save(); }
+        else setOvr(p, { status: 'rejected' });
+        toast('そっと、お返ししました');
+        renderAdmin(); updateAdminDot();
+      }],
+    ]));
+  }
+
+  const rWrap = $('ad-reported');
+  rWrap.innerHTML = '';
+  $('ad-reported-n').textContent = rep.length ? '· ' + rep.length + '件' : '';
+  if (!rep.length) rWrap.innerHTML = '<div class="ad-empty">通報はありません。平和です</div>';
+  for (const p of rep) {
+    rWrap.appendChild(adminItem(p, [
+      ['もどす', 'ok', () => {
+        setOvr(p, { status: 'live' });
+        const u = store.user.find(x => x.id === p.id);
+        if (u) { u.status = 'live'; save(); }
+        toast('壁にもどしました');
+        renderAdmin(); updatePoolCount();
+      }],
+      ['はがす', 'no', () => {
+        if (String(p.id).startsWith('u')) { store.user = store.user.filter(x => x.id !== p.id); save(); }
+        else setOvr(p, { status: 'removed' });
+        toast('はがしました');
+        renderAdmin(); updatePoolCount();
+      }],
+    ]));
+  }
+
+  $('ad-clock').textContent = ffH ? 'デモ時間: いまから +' + ffH + '時間の世界を見ています' : 'デモ時間: 現在時刻どおり';
+}
+
+document.querySelectorAll('.ad-tool[data-ff]').forEach(b => {
+  b.addEventListener('click', () => {
+    ffH += Number(b.dataset.ff);
+    renderAdmin();
+    updatePoolCount();
+    if (current && !isLive(current)) { toast('目の前で一枚、はがれ落ちました'); closeAdmin(); fallAndNext(); }
+    else if (current) { tickDecay(); toast('+' + b.dataset.ff + '時間。壁が少し、色あせました'); }
+  });
+});
+$('ad-reset').addEventListener('click', () => {
+  localStorage.removeItem(LS);
+  location.reload();
+});
+
+/* ================= これはなに? ================= */
+function openAbout() { $('about').classList.add('show'); }
+function closeAbout() {
+  $('about').classList.remove('show');
+  if (!store.introSeen) { store.introSeen = 1; save(); }
+}
+$('link-about').addEventListener('click', openAbout);
+$('about-go').addEventListener('click', closeAbout);
+$('about').addEventListener('click', e => { if (e.target === $('about')) closeAbout(); });
+
+/* ================= シャッフル & キーボード ================= */
+$('btn-shuffle').addEventListener('click', () => {
+  const b = $('btn-shuffle');
+  b.classList.add('spin');
+  setTimeout(() => b.classList.remove('spin'), 480);
+  drawNext();
+});
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea')) return;
+  if (e.key === 'Escape') {
+    if ($('composer').classList.contains('show')) closeComposer();
+    else if ($('admin').classList.contains('show')) closeAdmin();
+    else if ($('about').classList.contains('show')) closeAbout();
+    else $('report-pop') && $('report-pop').classList.remove('show');
+    return;
+  }
+  if ($('composer').classList.contains('show') || $('about').classList.contains('show') || $('admin').classList.contains('show')) return;
+  if (e.key === ' ' || e.key === 'n' || e.key === 'N') { e.preventDefault(); $('btn-shuffle').click(); }
+  if (e.key === 'p' || e.key === 'P') openComposer();
+});
+
+/* ================= 起動 ================= */
+updateAdminDot();
+drawNext({ still: true });
+if (!store.introSeen) openAbout();
+
+// 本番構想メモ: この pool を API に置き換えれば、そのまま
+// 新しいタブ拡張 / 壁紙 / メニューバー / ターミナルMOTD の共有壁になる。
+})();
+</script>
+</body>
+</html>
