@@ -6,7 +6,7 @@
 <title>/dev/ad — 誰でも書き込める広告枠(試作)</title>
 <meta name="description" content="広告枠はずっと読み取り専用だった。/dev/ad は、ひとつの共有広告スロットに誰でも無料で出稿できる実験。枠はお金ではなく注目で買う。ブーストされない広告は信号が弱り、SIGNAL LOST。">
 <meta name="theme-color" content="#0b0b0e">
-<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="%230b0b0e"/><rect x="7" y="20" width="10" height="3.4" rx="1" fill="%237ce38b"/><path d="M8 8 L14 13 L8 18" stroke="%237ce38b" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'>
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="%23131314"/><rect x="7" y="20" width="10" height="3.4" rx="1" fill="%23d8d5cc"/><path d="M8 8 L14 13 L8 18" stroke="%23d8d5cc" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'>
 <style>
 /* ================================================================
    /dev/ad β — 動く試作(共有なし・全部ローカル)
@@ -16,41 +16,36 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg: #0b0b0e;
-  --bg-2: #101014;
-  --fg: #e8e8e6;
-  --fg-dim: #9a9aa0;
-  --fg-faint: #62626a;
-  --line: #232329;
-  --sys: #7ce38b;           /* システム色: 端末グリーン */
-  --sys-ink: #04220c;
-  --danger: #e05c4a;
+  --bg: #131314;
+  --fg: #e4e2dd;
+  --fg-dim: #98968f;
+  --fg-faint: #616058;
+  --line: #262628;
+  --sys: #d8d5cc;           /* システム色: 骨白 */
+  --sys-ink: #161616;
+  --danger: #b4544a;
 }
 
 html, body { height: 100%; }
 
 body {
   font-family: 'Hiragino Sans', 'Noto Sans JP', -apple-system, 'Segoe UI', sans-serif;
-  background:
-    radial-gradient(circle at 50% 30%, #121218, var(--bg) 70%);
+  background: var(--bg);
   color: var(--fg);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
-/* ドットグリッド(機材室の壁) */
+/* しずかなヴィネット */
 #grid {
   position: fixed; inset: 0; z-index: 1; pointer-events: none;
-  background-image: radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px);
-  background-size: 26px 26px;
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 42%, #000 30%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 42%, #000 30%, transparent 75%);
+  box-shadow: inset 0 0 clamp(90px, 20vw, 280px) rgba(0, 0, 0, 0.5);
 }
 
 .mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
 a { color: inherit; }
 button { font-family: inherit; color: inherit; background: none; border: none; cursor: pointer; }
-:focus-visible { outline: 2px solid var(--sys); outline-offset: 3px; border-radius: 4px; }
-::selection { background: rgba(124, 227, 139, 0.25); }
+:focus-visible { outline: 1.5px solid var(--sys); outline-offset: 3px; }
+::selection { background: rgba(228, 226, 221, 0.2); }
 input, textarea, select { font-family: inherit; }
 
 /* ===== 骨格 ===== */
@@ -67,14 +62,13 @@ input, textarea, select { font-family: inherit; }
 #top-right { display: flex; align-items: center; gap: 18px; }
 #poolcount { font-size: 11px; color: var(--fg-faint); letter-spacing: 0.08em; white-space: nowrap; }
 #btn-compose {
-  font-size: 13px; font-weight: 800; letter-spacing: 0.04em;
+  font-size: 12.5px; font-weight: 700; letter-spacing: 0.1em;
   background: var(--sys); color: var(--sys-ink);
-  padding: 10px 22px; border-radius: 8px;
-  box-shadow: 0 0 22px rgba(124, 227, 139, 0.25);
-  transition: transform .15s, box-shadow .15s;
+  padding: 10px 24px; border-radius: 3px;
+  transition: background .2s;
   white-space: nowrap;
 }
-#btn-compose:hover { transform: translateY(-1px); box-shadow: 0 0 34px rgba(124, 227, 139, 0.4); }
+#btn-compose:hover { background: #fff; }
 
 /* ===== 舞台 ===== */
 #stage {
@@ -91,14 +85,13 @@ input, textarea, select { font-family: inherit; }
 /* ===== 広告スクリーン ===== */
 .screen {
   position: relative;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
-  /* --sig 1=満点 0=消灯 / --glow 広告自身の色 */
+  /* --sig 1=満点 0=消灯 */
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 24px 70px rgba(0, 0, 0, 0.55),
-    0 0 calc(30px + 90px * var(--sig, 1)) color-mix(in srgb, var(--glow, #444) calc(16% * var(--sig, 1)), transparent);
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 30px 80px rgba(0, 0, 0, 0.5);
   filter:
     brightness(calc(0.52 + 0.48 * var(--sig, 1)))
     saturate(calc(0.55 + 0.45 * var(--sig, 1)));
@@ -125,7 +118,7 @@ input, textarea, select { font-family: inherit; }
 .t-block {
   position: absolute; z-index: 2;
   transform: translate(-50%, -50%);
-  max-width: 88%;
+  width: max-content; max-width: 88%;
   text-align: center; line-height: 1.5;
   white-space: pre-wrap; overflow-wrap: anywhere;
 }
@@ -218,20 +211,19 @@ input, textarea, select { font-family: inherit; }
   font-size: 9.5px; letter-spacing: 0.14em; color: var(--fg-faint);
   border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px;
 }
-.sig-meter { display: inline-flex; align-items: center; gap: 8px; font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; }
-.sig-meter .bars { display: inline-flex; gap: 2.5px; }
-.sig-meter .bars i { width: 5px; height: 12px; border-radius: 1.5px; background: #26262c; }
-.sig-meter .bars i.on { background: var(--sys); box-shadow: 0 0 6px rgba(124, 227, 139, 0.5); }
-.sig-meter.low .bars i.on { background: var(--danger); box-shadow: 0 0 6px rgba(224, 92, 74, 0.5); }
+.sig-meter { display: inline-flex; align-items: center; gap: 9px; font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: 0.08em; }
+.sig-meter .track { width: 64px; height: 2px; background: #2c2c2e; position: relative; }
+.sig-meter .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--fg); transition: width .5s ease; }
+.sig-meter.low .track i { background: var(--danger); }
 .cap-btn {
   display: inline-flex; align-items: center; gap: 7px;
-  font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: var(--fg);
-  border: 1.5px solid #3b3b44; border-radius: 8px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--fg);
+  border: 1px solid #3d3d40; border-radius: 3px;
   padding: 8px 18px;
-  transition: border-color .2s, background .2s, box-shadow .2s;
+  transition: border-color .2s, background .2s, color .2s;
 }
-.cap-btn:hover { border-color: var(--sys); box-shadow: 0 0 14px rgba(124, 227, 139, 0.18); }
-.cap-btn.boosted { border-color: var(--sys); background: rgba(124, 227, 139, 0.1); color: var(--sys); }
+.cap-btn:hover { border-color: var(--sys); }
+.cap-btn.boosted { background: var(--sys); border-color: var(--sys); color: var(--sys-ink); }
 .cap-btn.flag { padding: 8px 12px; color: var(--fg-faint); border-color: transparent; }
 .cap-btn.flag:hover { color: var(--danger); border-color: rgba(224, 92, 74, 0.5); box-shadow: none; }
 
@@ -257,23 +249,23 @@ input, textarea, select { font-family: inherit; }
   gap: 8px;
   padding: 2px 14px 4px;
 }
-#surfbar .lbl { font-family: ui-monospace, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.22em; color: var(--fg-faint); margin-right: 4px; }
+#surfbar { gap: 18px; }
+#surfbar .lbl { font-family: ui-monospace, Menlo, monospace; font-size: 9px; letter-spacing: 0.26em; color: var(--fg-faint); margin-right: 2px; }
 .surf-chip {
-  font-size: 11px; font-weight: 700; color: var(--fg-dim);
-  border: 1px solid var(--line); border-radius: 999px;
-  padding: 7px 14px;
-  transition: color .2s, border-color .2s, background .2s;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--fg-faint);
+  padding: 6px 1px;
+  border-bottom: 1px solid transparent;
+  transition: color .2s, border-color .2s;
 }
-.surf-chip:hover { color: var(--fg); border-color: #3b3b44; }
-.surf-chip.sel { color: var(--sys); border-color: rgba(124, 227, 139, 0.5); background: rgba(124, 227, 139, 0.07); }
+.surf-chip:hover { color: var(--fg-dim); }
+.surf-chip.sel { color: var(--fg); border-bottom-color: var(--fg); }
 #btn-next {
   display: inline-flex; align-items: center; gap: 8px;
-  font-family: ui-monospace, Menlo, monospace;
-  font-size: 11px; font-weight: 700; color: var(--fg);
-  border: 1px solid #3b3b44; border-radius: 999px;
-  padding: 7px 18px; margin-left: 10px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; color: var(--fg);
+  padding: 6px 1px; margin-left: 14px;
+  border-bottom: 1px solid transparent;
 }
-#btn-next:hover { border-color: var(--sys); color: var(--sys); }
+#btn-next:hover { border-bottom-color: var(--fg); }
 
 /* ===== 下バー ===== */
 #foot {
@@ -291,22 +283,21 @@ input, textarea, select { font-family: inherit; }
 #queue-dot {
   display: none;
   position: absolute; top: -5px; right: -13px;
-  min-width: 15px; height: 15px; padding: 0 4px;
+  min-width: 14px; height: 14px; padding: 0 4px;
   background: var(--sys); color: var(--sys-ink);
-  font-size: 9.5px; font-weight: 800; line-height: 15px; text-align: center;
+  font-size: 9px; font-weight: 800; line-height: 14px; text-align: center;
   border-radius: 999px;
 }
-#queue-dot.on { display: block; animation: dotpulse 2.4s ease infinite; }
-@keyframes dotpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+#queue-dot.on { display: block; }
 
 /* ===== トースト ===== */
 #toast {
   position: fixed; bottom: 64px; left: 50%; z-index: 200;
   transform: translateX(-50%) translateY(90px);
-  background: #17171c; color: var(--fg);
-  border: 1px solid #2c2c34; border-left: 3px solid var(--sys);
+  background: #1a1a1b; color: var(--fg);
+  border: 1px solid #2e2e30;
   font-size: 12.5px; font-weight: 600;
-  padding: 11px 20px; border-radius: 8px;
+  padding: 11px 20px; border-radius: 3px;
   box-shadow: 0 10px 34px rgba(0, 0, 0, 0.6);
   transition: transform .35s cubic-bezier(.2, .9, .3, 1.1);
   max-width: 88vw;
@@ -347,7 +338,7 @@ body[data-surface]:not([data-surface="newtab"]) #grid { display: none; }
   padding: 8px 8px 8px 16px;
   font-size: 11px; color: rgba(255, 255, 255, 0.8);
 }
-.sf-wall-cap button { font-size: 11px; font-weight: 800; background: var(--sys); color: var(--sys-ink); border-radius: 999px; padding: 6px 14px; }
+.sf-wall-cap button { font-size: 11px; font-weight: 700; background: var(--sys); color: var(--sys-ink); border-radius: 3px; padding: 6px 14px; }
 
 /* --- ティッカー(タスクバー) --- */
 .sf-plain-desk { position: absolute; inset: 0; background: linear-gradient(160deg, #1a1d26, #0e1016 60%); }
@@ -360,15 +351,15 @@ body[data-surface]:not([data-surface="newtab"]) #grid { display: none; }
   padding: 0 10px 0 8px;
   overflow: hidden;
 }
-.sf-ticker .sq { width: 18px; height: 18px; border-radius: 4px; flex: none; box-shadow: 0 0 10px var(--glow, transparent); }
+.sf-ticker .sq { width: 18px; height: 18px; border-radius: 3px; flex: none; }
 .sf-ticker .tag { font-family: ui-monospace, Menlo, monospace; font-size: 8.5px; letter-spacing: 0.18em; color: rgba(255, 255, 255, 0.45); flex: none; }
 .sf-ticker .win { flex: 1; min-width: 0; overflow: hidden; position: relative; height: 100%; display: flex; align-items: center;
   mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
 .sf-ticker .tape { display: inline-block; white-space: nowrap; font-size: 12px; color: rgba(255, 255, 255, 0.88); animation: tick 16s linear infinite; padding-left: 100%; }
 @keyframes tick { to { transform: translateX(-100%); } }
-.sf-ticker .bst { display: inline-flex; align-items: center; gap: 5px; font-family: ui-monospace, Menlo, monospace; font-size: 10px; color: var(--sys); flex: none; border: 1px solid rgba(124, 227, 139, 0.35); border-radius: 5px; padding: 3px 8px; cursor: pointer; }
-.sf-ticker .bst:hover { background: rgba(124, 227, 139, 0.12); }
+.sf-ticker .bst { display: inline-flex; align-items: center; gap: 5px; font-family: ui-monospace, Menlo, monospace; font-size: 10px; color: rgba(255, 255, 255, 0.75); flex: none; border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 3px; padding: 3px 8px; cursor: pointer; }
+.sf-ticker .bst:hover { background: rgba(255, 255, 255, 0.1); }
 
 /* --- ターミナル --- */
 .sf-term-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, #14161c, #0b0c10); }
@@ -392,27 +383,27 @@ body[data-surface]:not([data-surface="newtab"]) #grid { display: none; }
   color: #b8bec8;
   white-space: pre-wrap; overflow-wrap: anywhere;
 }
-.sf-term .g { color: var(--sys); }
+.sf-term .g { color: #8fae88; }
 .sf-term .c { color: #5a5f68; }
 .sf-term .hl { font-weight: 700; }
 
 /* --- 配信オーバーレイ --- */
-.sf-stream { position: absolute; inset: 0; background: linear-gradient(200deg, #232a3f, #131722 55%, #0d0f16); overflow: hidden; }
-.sf-stream .blob { position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.5; animation: blobf 14s ease-in-out infinite alternate; }
-@keyframes blobf { to { transform: translate(40px, -30px) scale(1.15); } }
+.sf-stream { position: absolute; inset: 0; background: linear-gradient(185deg, #1c1d21, #101013 60%); overflow: hidden; }
+.sf-stream::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 55% 45% at 44% 38%, rgba(255, 255, 255, 0.05), transparent 70%); }
 .sf-live {
   position: absolute; left: 18px; top: 16px; z-index: 5;
   display: flex; align-items: center; gap: 10px;
-  font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: rgba(255, 255, 255, 0.85);
+  font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: rgba(255, 255, 255, 0.8);
 }
-.sf-live .rec { background: #e0604f; color: #fff; font-weight: 800; border-radius: 5px; padding: 3px 9px; letter-spacing: 0.12em; animation: ns-flick 1.6s steps(2) infinite; }
+.sf-live .rec { background: #a13a30; color: #fff; font-weight: 700; border-radius: 3px; padding: 3px 9px; letter-spacing: 0.12em; }
 .sf-cam {
   position: absolute; left: 18px; bottom: 18px; z-index: 5;
   width: 190px; aspect-ratio: 16/10;
   border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.14);
   background: linear-gradient(180deg, #1b1e28, #12141c);
   display: flex; align-items: center; justify-content: center;
-  color: rgba(255, 255, 255, 0.25); font-size: 28px;
+  color: rgba(255, 255, 255, 0.22); font-size: 11px;
+  font-family: ui-monospace, Menlo, monospace; letter-spacing: 0.3em;
 }
 .sf-ovl {
   position: absolute; right: 18px; bottom: 18px; z-index: 6;
@@ -442,7 +433,7 @@ body[data-surface]:not([data-surface="newtab"]) #grid { display: none; }
   padding: clamp(28px, 5vw, 44px);
   box-shadow: 0 30px 90px rgba(0, 0, 0, 0.7);
 }
-#about .a-mark { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--sys); letter-spacing: 0.05em; }
+#about .a-mark { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--fg); letter-spacing: 0.05em; }
 #about .a-mark span { margin-left: 12px; color: var(--fg-faint); letter-spacing: 0.14em; }
 #about h2 { font-size: clamp(23px, 4.4vw, 31px); font-weight: 800; line-height: 1.55; margin-top: 16px; }
 #about .lead { font-size: 13.5px; line-height: 2.1; margin-top: 14px; color: var(--fg-dim); }
@@ -452,22 +443,21 @@ body[data-surface]:not([data-surface="newtab"]) #grid { display: none; }
   background: #0c0e10; border: 1px solid #26282c; border-radius: 8px;
   padding: 13px 16px; color: #b8bec8;
 }
-#about .term-line .g { color: var(--sys); }
+#about .term-line .g { color: #8fae88; }
 #about h3 { margin-top: 26px; font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; letter-spacing: 0.24em; color: var(--fg-faint); font-weight: 700; }
 #about ul { list-style: none; margin-top: 12px; display: flex; flex-direction: column; gap: 11px; }
 #about li { font-size: 13px; line-height: 1.9; color: var(--fg-dim); padding-left: 18px; position: relative; }
-#about li::before { content: '▸'; position: absolute; left: 0; color: var(--sys); }
+#about li::before { content: '—'; position: absolute; left: 0; color: var(--fg-faint); }
 #about li b { color: var(--fg); }
 #about .a-note { margin-top: 24px; font-size: 11.5px; line-height: 1.9; color: var(--fg-faint); border-top: 1px dashed #2a2a32; padding-top: 16px; }
 #about .a-cta { margin-top: 26px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 #about .a-go {
-  font-size: 14px; font-weight: 800;
+  font-size: 13.5px; font-weight: 700; letter-spacing: 0.08em;
   background: var(--sys); color: var(--sys-ink);
-  padding: 13px 34px; border-radius: 9px;
-  box-shadow: 0 0 26px rgba(124, 227, 139, 0.3);
-  transition: transform .15s, box-shadow .15s;
+  padding: 13px 36px; border-radius: 3px;
+  transition: background .2s;
 }
-#about .a-go:hover { transform: translateY(-1px); box-shadow: 0 0 40px rgba(124, 227, 139, 0.45); }
+#about .a-go:hover { background: #fff; }
 #about .a-sub { font-size: 11px; color: var(--fg-faint); }
 
 /* ===== 出稿(composer) ===== */
@@ -511,7 +501,7 @@ body[data-surface]:not([data-surface="newtab"]) #grid { display: none; }
 .size-chip[data-size="xl"] .shape { width: 26px; height: 16px; }
 .size-chip .nm { font-size: 11px; font-weight: 700; color: var(--fg-dim); }
 .size-chip .hr { font-family: ui-monospace, Menlo, monospace; font-size: 9px; color: var(--fg-faint); }
-.size-chip.sel { border-color: var(--sys); background: rgba(124, 227, 139, 0.06); }
+.size-chip.sel { border-color: var(--sys); background: rgba(255, 255, 255, 0.04); }
 .size-chip.sel .nm { color: var(--fg); }
 .size-chip.sel .shape { background: var(--sys); }
 
@@ -526,7 +516,7 @@ input[type="color"]::-webkit-color-swatch-wrapper { padding: 3px; }
 input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
 .seg { display: inline-flex; border: 1.5px solid var(--line); border-radius: 8px; overflow: hidden; }
 .seg button { font-size: 11px; font-weight: 700; color: var(--fg-dim); padding: 8px 13px; }
-.seg button.sel { background: rgba(124, 227, 139, 0.1); color: var(--sys); }
+.seg button.sel { background: rgba(255, 255, 255, 0.1); color: var(--fg); }
 #bg-ang { width: 90px; accent-color: var(--sys); }
 .preset-row { display: flex; gap: 7px; margin-top: 12px; flex-wrap: wrap; }
 .preset {
@@ -566,7 +556,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
 /* かざり */
 .mode-row { display: flex; gap: 8px; margin-top: 12px; }
 .mode-btn { flex: 1; font-size: 12px; font-weight: 700; border: 1.5px solid var(--line); border-radius: 9px; padding: 9px 6px; color: var(--fg-dim); }
-.mode-btn.sel { border-color: var(--sys); color: var(--fg); background: rgba(124, 227, 139, 0.06); }
+.mode-btn.sel { border-color: var(--sys); color: var(--fg); background: rgba(255, 255, 255, 0.04); }
 .stamp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 12px; }
 .stamp-btn {
   aspect-ratio: 1; border-radius: 8px; font-size: 17px;
@@ -596,11 +586,10 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
   width: 100%; margin-top: 28px;
   font-size: 15px; font-weight: 800; letter-spacing: 0.06em;
   background: var(--sys); color: var(--sys-ink);
-  padding: 15px; border-radius: 10px;
-  box-shadow: 0 0 26px rgba(124, 227, 139, 0.25);
-  transition: transform .15s, box-shadow .15s;
+  padding: 15px; border-radius: 3px;
+  transition: background .2s;
 }
-#c-submit:hover { transform: translateY(-1px); box-shadow: 0 0 40px rgba(124, 227, 139, 0.4); }
+#c-submit:hover { background: #fff; }
 #c-submit-note { margin-top: 10px; font-size: 10.5px; color: var(--fg-faint); text-align: center; line-height: 1.8; }
 .shakeit { animation: shakeit .4s ease; }
 @keyframes shakeit { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
@@ -722,7 +711,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
     <button class="surf-chip" data-surf="ticker">タスクバー</button>
     <button class="surf-chip" data-surf="terminal">ターミナル</button>
     <button class="surf-chip" data-surf="stream">配信</button>
-    <button id="btn-next" aria-label="次のスロットへ">▶ NEXT</button>
+    <button id="btn-next" aria-label="次のスロットへ">次へ →</button>
   </div>
 
   <footer id="foot">
@@ -749,6 +738,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
       <li><b>出稿は無料。枠は注目で買う。</b>見た人がブーストすると掲載+8時間。ブーストされない広告は信号が弱り、やがて SIGNAL LOST。だからスロットはいつも新鮮で、占拠もスパムもできません。</li>
       <li><b>大きい枠ほど信号の減りが速い。</b>フルスクリーンで残りつづけられるのは、みんなが何度もブーストした一本だけ。</li>
       <li><b>掲載前に管理人がワンタップ審査。</b>画像アップロードはできません(描くのは自由)。リンクは許可リストのサイトだけ。</li>
+      <li><b>「みんなの枠」がいくつか常設。</b>誰のものでもなく、誰でも書き換えられる枠。消灯せず、前の人の上に上書きされ続けます。</li>
     </ul>
     <h3>SURFACES</h3>
     <ul>
@@ -771,7 +761,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
       <div id="c-hint">プレビューがそのまま仕上がり · テキストもスタンプもつまんで動かせます</div>
     </div>
     <div id="c-panel">
-      <h3><span>出稿する <span class="mono">— write</span></span> <button id="c-close" aria-label="とじる">✕</button></h3>
+      <h3><span id="c-headline">出稿する <span class="mono">— write</span></span> <button id="c-close" aria-label="とじる">✕</button></h3>
 
       <div class="c-group">
         <div class="c-label">01 SIZE</div>
@@ -998,6 +988,33 @@ const SEED = [
     ],
     stamps: [{ ch: '📚', x: 84, y: 36, r: 8, s: 1.7 }, { ch: '★', x: 75, y: 72, r: -12, s: 0.8 }],
     author: 'サークル灯り#1201', postedAgoH: 2, keeps: 7 },
+  // ---- みんなの枠(常設・誰でも上書き可・消灯しない) ----
+  { id: 'c01', size: 'm', communal: true, bg: { c1: '#232426', c2: '', grad: false, ang: 0 },
+    texts: [
+      { t: 'みんなの枠', x: 50, y: 14, s: 1, c: '#8d8b84', f: 'm' },
+      { t: 'ここは誰のものでもない。\n好きに書き換えていい。', x: 50, y: 42, s: 2, c: '#e4e2dd', f: 'g' },
+      { t: '↑ これも消していい', x: 64, y: 64, s: 1, c: '#9a988f', f: 'r' },
+    ],
+    stamps: [{ ch: '●', x: 18, y: 82, r: 0, s: 0.8 }, { ch: '★', x: 80, y: 84, r: 14, s: 1 }],
+    author: 'みんな', postedAgoH: 0, keeps: 0, editedBy: 47, lastEditor: '誰か#0021' },
+  { id: 'c02', size: 'w', communal: true, bg: { c1: '#e9e6df', c2: '', grad: false, ang: 0 },
+    texts: [
+      { t: 'おはよう。今日もぼちぼちいこう', x: 44, y: 40, s: 3, c: '#1e1d1b', f: 'g' },
+      { t: 'この帯は誰でも書き換えられます。前の人のことばを消して、どうぞ。', x: 40, y: 72, s: 1, c: '#8d8a80', f: 'g' },
+    ],
+    stamps: [{ ch: '☕', x: 88, y: 38, r: 6, s: 1.4 }],
+    author: 'みんな', postedAgoH: 0, keeps: 0, editedBy: 132, lastEditor: 'ねぼすけ#0666' },
+  { id: 'c03', size: 'xl', communal: true, bg: { c1: '#1a1b1f', c2: '#101013', grad: true, ang: 180 },
+    texts: [
+      { t: 'ここは共有の壁', x: 50, y: 32, s: 4, c: '#e4e2dd', f: 'g' },
+      { t: '前の人のを消して、描いて、また誰かに消される。それでいい。', x: 50, y: 52, s: 1, c: '#8d8b84', f: 'g' },
+    ],
+    stamps: [
+      { ch: '●', x: 12, y: 16, r: 0, s: 0.7 }, { ch: '▲', x: 88, y: 20, r: 20, s: 0.9 },
+      { ch: '★', x: 20, y: 78, r: -10, s: 1.1 }, { ch: '☆', x: 76, y: 74, r: 8, s: 0.8 },
+      { ch: '👀', x: 90, y: 86, r: 0, s: 1 },
+    ],
+    author: 'みんな', postedAgoH: 0, keeps: 0, editedBy: 208, lastEditor: '通行人#1440' },
 ];
 const loadT = Date.now();
 
@@ -1005,18 +1022,25 @@ const loadT = Date.now();
 function allAds() {
   const seeded = SEED.map(sd => {
     const o = store.ovr[sd.id] || {};
-    return {
+    const base = {
       ...sd,
       postedAt: loadT - sd.postedAgoH * H,
       keeps: (o.keeps != null) ? o.keeps : sd.keeps,
       kept: !!o.kept,
       status: o.status || 'live',
     };
+    if (sd.communal) { // みんなの枠は中身ごと上書きされる
+      for (const k of ['bg', 'texts', 'stamps', 'doodle', 'link', 'editedBy', 'lastEditor']) {
+        if (o[k] !== undefined) base[k] = o[k];
+      }
+    }
+    return base;
   });
   return seeded.concat(store.user);
 }
-function expiresAt(p) { return p.postedAt + (SIZES[p.size].life + p.keeps * BOOST_H) * H; }
+function expiresAt(p) { return p.communal ? Infinity : p.postedAt + (SIZES[p.size].life + p.keeps * BOOST_H) * H; }
 function sigOf(p) {
+  if (p.communal) return 1;
   const total = expiresAt(p) - p.postedAt;
   return Math.max(0, Math.min(1, (expiresAt(p) - T()) / total));
 }
@@ -1045,7 +1069,7 @@ function renderAd(p, opts = {}) {
   el.style.width = sz.W + 'px';
   el.style.height = sz.H + 'px';
   el.style.background = bgCss(p.bg);
-  el.style.setProperty('--glow', p.bg.c1);
+  el.style.color = isDark(p.bg.c1) ? '#eceae4' : '#22211f'; // 無指定要素(署名・チップ・記号スタンプ)の色
   const sig = opts.fresh ? 1 : sigOf(p);
   el.style.setProperty('--sig', sig.toFixed(3));
   if (!opts.fresh && !calm && sig < 0.22) el.classList.add('weak');
@@ -1095,7 +1119,7 @@ function renderAd(p, opts = {}) {
   }
   const by = document.createElement('div');
   by.className = 'byline';
-  by.textContent = 'by ' + (p.author || 'anonymous');
+  by.textContent = p.communal ? 'みんなの枠 — 誰でも書き換え可' : 'by ' + (p.author || 'anonymous');
   el.appendChild(by);
   return el;
 }
@@ -1127,39 +1151,53 @@ function remainStr(p) {
   if (h < 48) return 'あと' + Math.floor(h) + 'h';
   return 'あと' + Math.floor(h / 24) + '日';
 }
-function sigBars(sig, n = 8) {
-  let out = '';
-  for (let i = 0; i < n; i++) out += '<i class="' + (i < Math.round(sig * n) ? 'on' : '') + '"></i>';
-  return out;
-}
 
 function boost(p, after) {
+  if (p.communal) return;
   if (p.kept) { toast('もう、ブーストしてあります'); return; }
   p.kept = true; p.keeps += 1;
   setOvr(p, { kept: true, keeps: p.keeps });
-  toast('BOOST +' + BOOST_H + 'h — 信号が強くなりました');
+  toast('ブースト +' + BOOST_H + '時間 — 信号が強くなりました');
   if (after) after();
 }
+
+const REPORT_POP = '<div id="report-pop" role="dialog"><p>この広告を非表示にして、管理人に知らせますか?</p><div class="row"><button class="no" id="rep-no">やめる</button><button class="yes" id="rep-yes">通報する</button></div></div>';
 
 function renderCaption() {
   const cap = $('caption');
   if (!current || surface !== 'newtab') { cap.innerHTML = ''; return; }
   const p = current;
+  if (p.communal) {
+    cap.innerHTML =
+      '<span class="sizetag">' + SIZES[p.size].tag + '</span>' +
+      '<span class="sizetag">みんなの枠</span>' +
+      '<span class="who">これまで <b>' + (p.editedBy || 0) + '人</b>が上書き' + (p.lastEditor ? ' · 直近: ' + esc(p.lastEditor) : '') + '</span>' +
+      '<span class="mono">常設 — 消灯しない</span>' +
+      '<button class="cap-btn" id="btn-edit">この枠を書き換える</button>' +
+      '<button class="cap-btn flag" id="btn-flag" aria-label="この枠を通報する">⚑</button>' +
+      REPORT_POP;
+    $('btn-edit').addEventListener('click', () => openComposer(p));
+    bindReport(p);
+    return;
+  }
   const sig = sigOf(p);
   cap.innerHTML =
     '<span class="sizetag">' + SIZES[p.size].tag + '</span>' +
     '<span class="who"><b>' + esc(p.author || 'anonymous') + '</b> · ' + ageStr(p) + '</span>' +
-    '<span class="sig-meter' + (sig < 0.25 ? ' low' : '') + '">SIGNAL <span class="bars">' + sigBars(sig) + '</span> ' + Math.round(sig * 100) + '%</span>' +
-    '<span class="mono">' + remainStr(p) + ' · BOOST ' + p.keeps + '</span>' +
-    '<button class="cap-btn' + (p.kept ? ' boosted' : '') + '" id="btn-boost">⚡ ' + (p.kept ? 'BOOSTED' : 'ブースト') + '</button>' +
+    '<span class="sig-meter' + (sig < 0.25 ? ' low' : '') + '">SIGNAL <span class="track"><i style="width:' + Math.round(sig * 100) + '%"></i></span> ' + Math.round(sig * 100) + '%</span>' +
+    '<span class="mono">' + remainStr(p) + ' · +' + p.keeps + '</span>' +
+    '<button class="cap-btn' + (p.kept ? ' boosted' : '') + '" id="btn-boost">' + (p.kept ? 'ブースト済' : 'ブースト +8h') + '</button>' +
     '<button class="cap-btn flag" id="btn-flag" aria-label="この広告を通報する">⚑</button>' +
-    '<div id="report-pop" role="dialog"><p>この広告を非表示にして、管理人に知らせますか?</p><div class="row"><button class="no" id="rep-no">やめる</button><button class="yes" id="rep-yes">通報する</button></div></div>';
+    REPORT_POP;
 
   $('btn-boost').addEventListener('click', () => boost(p, () => {
     renderCaption();
     const sc = $('pscale').querySelector('.screen');
     if (sc) sc.style.setProperty('--sig', sigOf(p).toFixed(3));
   }));
+  bindReport(p);
+}
+function bindReport(p) {
   $('btn-flag').addEventListener('click', () => $('report-pop').classList.toggle('show'));
   $('rep-no').addEventListener('click', () => $('report-pop').classList.remove('show'));
   $('rep-yes').addEventListener('click', () => {
@@ -1173,7 +1211,7 @@ function renderCaption() {
 }
 
 function updatePool() {
-  $('poolcount').textContent = 'ON AIR ' + liveAds().length + '本';
+  $('poolcount').textContent = '掲載中 ' + liveAds().length;
 }
 
 /* --- 各サーフェスの描画 --- */
@@ -1268,10 +1306,16 @@ function showWallpaper(p) {
   mockBar(r);
   const cap = document.createElement('div');
   cap.className = 'sf-wall-cap';
-  cap.innerHTML = '<span>壁紙: <b>' + esc(p.author || 'anonymous') + '</b> の広告 · BOOST ' + p.keeps + '</span>';
   const b = document.createElement('button');
-  b.textContent = p.kept ? 'BOOSTED' : '⚡ ブースト';
-  b.addEventListener('click', () => boost(p, () => show(p, { still: true })));
+  if (p.communal) {
+    cap.innerHTML = '<span>壁紙: みんなの枠 · <b>' + (p.editedBy || 0) + '人</b>が上書き</span>';
+    b.textContent = '書き換える';
+    b.addEventListener('click', () => openComposer(p));
+  } else {
+    cap.innerHTML = '<span>壁紙: <b>' + esc(p.author || 'anonymous') + '</b> の広告 · +' + p.keeps + '</span>';
+    b.textContent = p.kept ? 'ブースト済' : 'ブースト';
+    b.addEventListener('click', () => boost(p, () => show(p, { still: true })));
+  }
   cap.appendChild(b);
   r.appendChild(cap);
 }
@@ -1284,17 +1328,22 @@ function showTicker(p) {
   const bar = mockBar(r);
   const tick = document.createElement('div');
   tick.className = 'sf-ticker';
-  tick.style.setProperty('--glow', p.bg.c1);
   const words = (p.texts || []).map(t => t.t).filter(Boolean).join(' — ').replace(/\n/g, ' ');
   tick.innerHTML =
     '<span class="sq" style="background:' + bgCss(p.bg).replace(/"/g, '') + '"></span>' +
     '<span class="tag">AD</span>' +
-    '<span class="win"><span class="tape">' + esc(words || '(ことばのない広告)') + '　— ' + esc(p.author || 'anonymous') + '</span></span>';
+    '<span class="win"><span class="tape">' + esc(words || '(ことばのない広告)') + '　— ' + esc(p.communal ? 'みんなの枠' : (p.author || 'anonymous')) + '</span></span>';
   const b = document.createElement('button');
   b.className = 'bst';
-  b.innerHTML = '⚡' + p.keeps;
-  b.title = 'ブースト';
-  b.addEventListener('click', () => boost(p, () => show(p, { still: true })));
+  if (p.communal) {
+    b.textContent = '書換';
+    b.title = 'この枠を書き換える';
+    b.addEventListener('click', () => openComposer(p));
+  } else {
+    b.textContent = '+' + p.keeps;
+    b.title = 'ブースト';
+    b.addEventListener('click', () => boost(p, () => show(p, { still: true })));
+  }
   tick.appendChild(b);
   bar.insertBefore(tick, bar.querySelector('.clk'));
 }
@@ -1330,11 +1379,17 @@ function showTerminal(p) {
   lines.push('  <span class="hl" style="color:' + esc(p.bg.grad && isDark(p.bg.c1) === false ? p.bg.c1 : '#e8e8e6') + '">── ' + esc(title) + ' ──────</span>');
   for (const l of wrapJa(rest, 40)) if (l) lines.push('  ' + esc(l));
   if (p.link) lines.push('  <span class="c">link:</span> ' + esc(p.link.url));
-  lines.push('  <span class="c">by</span> ' + esc(p.author || 'anonymous'));
+  lines.push('  <span class="c">by</span> ' + esc(p.communal ? 'みんなの枠' : (p.author || 'anonymous')));
   lines.push('');
-  lines.push('  SIGNAL ' + sig + '% <span class="g">[' + bars + ']</span>  BOOST ' + p.keeps + '  ' + SIZES[p.size].tag);
-  lines.push('');
-  lines.push('<span class="c">$</span> <span class="g">devad</span> boost ' + esc(p.id) + '   <span class="c"># ⚡ +8h</span>');
+  if (p.communal) {
+    lines.push('  PERMANENT  EDITS ' + (p.editedBy || 0) + '  ' + SIZES[p.size].tag);
+    lines.push('');
+    lines.push('<span class="c">$</span> <span class="g">devad</span> edit ' + esc(p.id) + '    <span class="c"># この枠を書き換える</span>');
+  } else {
+    lines.push('  SIGNAL ' + sig + '% <span class="g">[' + bars + ']</span>  BOOST ' + p.keeps + '  ' + SIZES[p.size].tag);
+    lines.push('');
+    lines.push('<span class="c">$</span> <span class="g">devad</span> boost ' + esc(p.id) + '   <span class="c"># +8h</span>');
+  }
   lines.push('<span class="c">$</span> <span class="g">devad</span> post          <span class="c"># あなたの広告を出稿</span>');
   term.innerHTML = '<div class="bar"><i></i><i></i><i></i><span>devnull@studio: ~ — devad</span></div><pre>' + lines.join('\n') + '</pre>';
   wrap.appendChild(term);
@@ -1356,7 +1411,7 @@ function showStream(p) {
     '<div class="blob" style="left:18%; top:14%; width:320px; height:320px; background:#4a5fd0"></div>' +
     '<div class="blob" style="right:12%; bottom:20%; width:280px; height:280px; background:#7ce38b; animation-delay:-6s"></div>' +
     '<div class="sf-live"><span class="rec">LIVE</span><span>1,204 viewers · OBSブラウザソース(モック)</span></div>' +
-    '<div class="sf-cam">☺</div>';
+    '<div class="sf-cam">CAM</div>';
   const ovl = document.createElement('div');
   ovl.className = 'sf-ovl';
   const cap = document.createElement('div');
@@ -1385,7 +1440,7 @@ function drawNext(opts = {}) {
   const pick = pool.length ? pool[Math.floor(Math.random() * pool.length)]
     : (current && isLive(current) ? current : null);
   tabsOpened++;
-  $('tabcount').textContent = 'SESSION VIEWS ' + tabsOpened;
+  $('tabcount').textContent = 'VIEWS ' + tabsOpened;
   show(pick, opts);
 }
 function lostAndNext() {
@@ -1457,28 +1512,54 @@ const cp = { size: 'm', bg: { c1: '#1c2440', c2: '#0d1120', grad: true, ang: 160
 let penMode = false, penW = 2, penErase = false;
 let sel = null; // {kind:'stamp'|'text', idx}
 let penCanvas = null;
+let editTarget = null;    // みんなの枠を書き換え中ならその枠
+let baseDoodle = null;    // 書き換え時: 前の人のペン跡(この上に描く/消せる)
 
-function openComposer() {
+function openComposer(edit) {
+  editTarget = (edit && edit.communal) ? edit : null;
   $('composer').classList.add('show');
-  cp.size = 'm';
-  cp.bg = { c1: '#1c2440', c2: '#0d1120', grad: true, ang: 160 };
-  cp.texts = [{ t: '', x: 50, y: 38, s: 3, c: '#ffffff', f: 'g' }];
-  cp.stamps = []; cp.strokes = []; cp.link = null;
-  $('bg-c1').value = cp.bg.c1; $('bg-c2').value = cp.bg.c2; $('bg-ang').value = cp.bg.ang;
-  setBgMode(true);
-  $('c-url').value = ''; $('c-url-label').value = '';
+  baseDoodle = null;
+  if (editTarget) {
+    cp.size = editTarget.size;
+    cp.bg = { ...editTarget.bg };
+    cp.texts = (editTarget.texts || []).map(t => ({ ...t }));
+    if (!cp.texts.length) cp.texts = [{ t: '', x: 50, y: 38, s: 3, c: '#ffffff', f: 'g' }];
+    cp.stamps = (editTarget.stamps || []).map(s => ({ ...s }));
+    cp.strokes = [];
+    cp.link = editTarget.link ? { ...editTarget.link } : null;
+    $('c-url').value = editTarget.link ? editTarget.link.url : '';
+    $('c-url-label').value = editTarget.link ? (editTarget.link.label || '') : '';
+    if (editTarget.doodle) {
+      baseDoodle = new Image();
+      baseDoodle.onload = () => redrawPen();
+      baseDoodle.src = editTarget.doodle;
+    }
+  } else {
+    cp.size = 'm';
+    cp.bg = { c1: '#1c2440', c2: '#0d1120', grad: true, ang: 160 };
+    cp.texts = [{ t: '', x: 50, y: 38, s: 3, c: '#ffffff', f: 'g' }];
+    cp.stamps = []; cp.strokes = []; cp.link = null;
+    $('c-url').value = ''; $('c-url-label').value = '';
+  }
+  $('bg-c1').value = cp.bg.c1; $('bg-c2').value = cp.bg.c2 || '#101013'; $('bg-ang').value = cp.bg.ang || 0;
+  setBgMode(!!cp.bg.grad);
   $('c-author').value = '';
   $('c-author').placeholder = 'anonymous#' + String(1000 + Math.floor(Math.random() * 9000));
   parseLink();
   setPenMode(false);
   penErase = false;
+  $('c-headline').innerHTML = editTarget ? 'みんなの枠を書き換える <span class="mono">— rewrite</span>' : '出稿する <span class="mono">— write</span>';
+  $('c-submit').textContent = editTarget ? 'この枠を上書きする' : '出稿する';
+  $('c-submit-note').innerHTML = editTarget
+    ? '誰でも書き換えられる常設枠への上書きです。前の人のものは消えます。<br>この試作では即時反映(本番では審査をはさみます)。'
+    : '管理人がひと目見てから掲載されます。<br>この試作では「管理コンソール」からあなた自身が承認できます。';
   buildSizeChips();
   buildTbRows();
   rebuildPreview();
   const firstTa = document.querySelector('.tb-row textarea');
   if (firstTa) firstTa.focus();
 }
-function closeComposer() { $('composer').classList.remove('show'); hideTools(); }
+function closeComposer() { $('composer').classList.remove('show'); hideTools(); editTarget = null; baseDoodle = null; }
 $('btn-compose').addEventListener('click', openComposer);
 $('c-close').addEventListener('click', closeComposer);
 
@@ -1490,7 +1571,13 @@ function buildSizeChips() {
     b.className = 'size-chip' + (cp.size === k ? ' sel' : '');
     b.dataset.size = k;
     b.innerHTML = '<span class="shape"></span><span class="nm">' + SIZES[k].nm + '</span><span class="hr">' + SIZES[k].tag + ' · ' + SIZES[k].life + 'h</span>';
-    b.addEventListener('click', () => { cp.size = k; buildSizeChips(); rebuildPreview(); });
+    if (editTarget) { // みんなの枠はサイズ固定
+      b.disabled = true;
+      b.style.pointerEvents = 'none';
+      if (cp.size !== k) b.style.opacity = '0.3';
+    } else {
+      b.addEventListener('click', () => { cp.size = k; buildSizeChips(); rebuildPreview(); });
+    }
     wrap.appendChild(b);
   }
 }
@@ -1706,6 +1793,10 @@ function redrawPen() {
   ctx.clearRect(0, 0, penCanvas.width, penCanvas.height);
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   const W = penCanvas.width, Hh = penCanvas.height;
+  // 書き換えモード: 前の人のペン跡を下敷きに(上から描ける・消しゴムで消せる)
+  if (baseDoodle && baseDoodle.complete && baseDoodle.naturalWidth) {
+    ctx.drawImage(baseDoodle, 0, 0, W, Hh);
+  }
   for (const st of cp.strokes) {
     ctx.globalCompositeOperation = st.e ? 'destination-out' : 'source-over';
     ctx.strokeStyle = st.c;
@@ -1854,9 +1945,9 @@ function bindDrag(box) {
   box.addEventListener('pointercancel', end);
 }
 
-/* --- 出稿 --- */
+/* --- 出稿 / みんなの枠への上書き --- */
 $('c-submit').addEventListener('click', () => {
-  const hasContent = cp.texts.some(t => t.t.trim()) || cp.stamps.length || cp.strokes.length || cp.link;
+  const hasContent = cp.texts.some(t => t.t.trim()) || cp.stamps.length || cp.strokes.length || cp.link || baseDoodle;
   if (!hasContent) {
     $('c-panel').classList.add('shakeit');
     setTimeout(() => $('c-panel').classList.remove('shakeit'), 450);
@@ -1864,7 +1955,27 @@ $('c-submit').addEventListener('click', () => {
     return;
   }
   let doodle = null;
-  if (cp.strokes.length) doodle = penCanvas.toDataURL('image/png');
+  if (cp.strokes.length || baseDoodle) doodle = penCanvas.toDataURL('image/png');
+  const name = ($('c-author').value.trim() || $('c-author').placeholder);
+
+  if (editTarget) { // みんなの枠を上書き
+    const patch = {
+      bg: { ...cp.bg },
+      texts: cp.texts.filter(t => t.t.trim()).map(t => ({ ...t })),
+      stamps: cp.stamps.map(s => ({ ...s })),
+      doodle, link: cp.link,
+      editedBy: (editTarget.editedBy || 0) + 1,
+      lastEditor: name,
+    };
+    setOvr(editTarget, patch);
+    Object.assign(editTarget, patch);
+    const t = editTarget;
+    closeComposer();
+    toast('上書きしました — 本番では審査をはさんでから反映されます');
+    if (current && current.id === t.id) show(t, { still: true });
+    return;
+  }
+
   const p = {
     id: 'u' + Date.now().toString(36),
     size: cp.size,
@@ -1872,7 +1983,7 @@ $('c-submit').addEventListener('click', () => {
     texts: cp.texts.filter(t => t.t.trim()).map(t => ({ ...t })),
     stamps: cp.stamps.map(s => ({ ...s })),
     doodle, link: cp.link,
-    author: ($('c-author').value.trim() || $('c-author').placeholder),
+    author: name,
     postedAt: T(), keeps: 0, kept: false, status: 'pending',
   };
   store.user.push(p);
