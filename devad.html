@@ -1,0 +1,2042 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>/dev/ad — 誰でも書き込める広告枠(試作)</title>
+<meta name="description" content="広告枠はずっと読み取り専用だった。/dev/ad は、ひとつの共有広告スロットに誰でも無料で出稿できる実験。枠はお金ではなく注目で買う。ブーストされない広告は信号が弱り、SIGNAL LOST。">
+<meta name="theme-color" content="#0b0b0e">
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="%230b0b0e"/><rect x="7" y="20" width="10" height="3.4" rx="1" fill="%237ce38b"/><path d="M8 8 L14 13 L8 18" stroke="%237ce38b" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'>
+<style>
+/* ================================================================
+   /dev/ad β — 動く試作(共有なし・全部ローカル)
+   コンセプト: 読み取り専用だった広告枠に、全員の write 権限を配る。
+   同じ広告プールを 新しいタブ/壁紙/ティッカー/ターミナル/配信 に流す。
+   ================================================================ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0b0b0e;
+  --bg-2: #101014;
+  --fg: #e8e8e6;
+  --fg-dim: #9a9aa0;
+  --fg-faint: #62626a;
+  --line: #232329;
+  --sys: #7ce38b;           /* システム色: 端末グリーン */
+  --sys-ink: #04220c;
+  --danger: #e05c4a;
+}
+
+html, body { height: 100%; }
+
+body {
+  font-family: 'Hiragino Sans', 'Noto Sans JP', -apple-system, 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(circle at 50% 30%, #121218, var(--bg) 70%);
+  color: var(--fg);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+/* ドットグリッド(機材室の壁) */
+#grid {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background-image: radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 42%, #000 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 42%, #000 30%, transparent 75%);
+}
+
+.mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
+a { color: inherit; }
+button { font-family: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--sys); outline-offset: 3px; border-radius: 4px; }
+::selection { background: rgba(124, 227, 139, 0.25); }
+input, textarea, select { font-family: inherit; }
+
+/* ===== 骨格 ===== */
+#app { position: relative; z-index: 2; height: 100dvh; display: flex; flex-direction: column; }
+
+/* ===== 上バー ===== */
+#top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: clamp(14px, 2.6vh, 26px) clamp(18px, 3.5vw, 44px) 0;
+  gap: 16px;
+}
+#clock { font-size: clamp(24px, 3.4vw, 38px); font-weight: 200; letter-spacing: 0.05em; line-height: 1.15; }
+#today { margin-top: 3px; font-size: 10.5px; color: var(--fg-faint); letter-spacing: 0.16em; }
+#top-right { display: flex; align-items: center; gap: 18px; }
+#poolcount { font-size: 11px; color: var(--fg-faint); letter-spacing: 0.08em; white-space: nowrap; }
+#btn-compose {
+  font-size: 13px; font-weight: 800; letter-spacing: 0.04em;
+  background: var(--sys); color: var(--sys-ink);
+  padding: 10px 22px; border-radius: 8px;
+  box-shadow: 0 0 22px rgba(124, 227, 139, 0.25);
+  transition: transform .15s, box-shadow .15s;
+  white-space: nowrap;
+}
+#btn-compose:hover { transform: translateY(-1px); box-shadow: 0 0 34px rgba(124, 227, 139, 0.4); }
+
+/* ===== 舞台 ===== */
+#stage {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 6px clamp(14px, 3vw, 40px);
+  gap: 14px;
+  position: relative;
+}
+#slotwrap { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; }
+#pscale { position: relative; flex: none; }
+#pscale > .screen { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+
+/* ===== 広告スクリーン ===== */
+.screen {
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  overflow: hidden;
+  /* --sig 1=満点 0=消灯 / --glow 広告自身の色 */
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 24px 70px rgba(0, 0, 0, 0.55),
+    0 0 calc(30px + 90px * var(--sig, 1)) color-mix(in srgb, var(--glow, #444) calc(16% * var(--sig, 1)), transparent);
+  filter:
+    brightness(calc(0.52 + 0.48 * var(--sig, 1)))
+    saturate(calc(0.55 + 0.45 * var(--sig, 1)));
+}
+/* 画面のツヤ */
+.screen::before {
+  content: ''; position: absolute; inset: 0; z-index: 5; pointer-events: none;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.07), transparent 38%);
+}
+/* 信号ノイズ(弱ると砂嵐) */
+.screen::after {
+  content: ''; position: absolute; inset: 0; z-index: 6; pointer-events: none;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="220" height="220" filter="url(%23n)"/></svg>');
+  opacity: calc((1 - var(--sig, 1)) * 0.42);
+  mix-blend-mode: overlay;
+}
+.screen.weak { animation: flick 5s steps(1, end) infinite; }
+@keyframes flick {
+  0%, 91%, 94%, 100% { opacity: 1; }
+  92% { opacity: 0.72; }
+  93% { opacity: 0.9; }
+}
+
+.t-block {
+  position: absolute; z-index: 2;
+  transform: translate(-50%, -50%);
+  max-width: 88%;
+  text-align: center; line-height: 1.5;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.t-block.f-g { font-weight: 900; letter-spacing: 0.02em; }
+.t-block.f-m { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-weight: 700; }
+.t-block.f-r { font-weight: 800; letter-spacing: 0.1em; }
+
+.stamp { position: absolute; z-index: 3; user-select: none; line-height: 1; }
+.doodle { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; pointer-events: none; }
+
+.byline {
+  position: absolute; right: 4.5%; bottom: 4%; z-index: 4;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10.5px; opacity: 0.6; letter-spacing: 0.05em;
+}
+.size-xl .byline { font-size: 12.5px; }
+
+/* リンクカード */
+.p-link { position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); z-index: 4; display: block; text-decoration: none; width: 62%; text-align: center; }
+.size-s .p-link { width: 74%; }
+.size-w .p-link { width: 30%; bottom: 10%; }
+.size-xl .p-link { width: 30%; }
+.p-link .yt {
+  position: relative; display: block; border-radius: 8px; overflow: hidden;
+  aspect-ratio: 16/9;
+  background: #101013;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+.p-link .yt img { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0.94; }
+.p-link .yt .play {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 28px; color: #fff; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  background: linear-gradient(transparent 55%, rgba(0, 0, 0, 0.5));
+}
+.p-link .yt-cap { margin-top: 6px; font-size: 11px; opacity: 0.7; }
+.p-link .chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 700;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 999px;
+  padding: 8px 16px;
+  backdrop-filter: blur(3px);
+}
+.p-link .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sys); flex: none; }
+.p-link .chip .host { opacity: 0.6; font-weight: 500; }
+.p-link:hover .chip { border-color: rgba(255, 255, 255, 0.7); }
+
+/* 入場・消灯 */
+.enter { animation: pwron .5s cubic-bezier(.2, .9, .3, 1); }
+@keyframes pwron {
+  0% { opacity: 0; transform: scale(calc(var(--s, 1) * 0.97)); filter: brightness(2.2) saturate(0); }
+  60% { filter: brightness(1.15); }
+  100% { opacity: 1; }
+}
+#nosignal {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  border-radius: 12px; border: 1px solid var(--line);
+  background: repeating-linear-gradient(0deg, #0d0d10 0 3px, #101015 3px 6px);
+  color: var(--fg-faint);
+  font-family: ui-monospace, Menlo, monospace;
+  animation: ns-flick .12s steps(2) infinite;
+}
+#nosignal .t { font-size: 20px; letter-spacing: 0.35em; font-weight: 700; }
+#nosignal .d { font-size: 11px; letter-spacing: 0.1em; }
+@keyframes ns-flick { 50% { opacity: 0.86; } }
+
+/* 空きスロット */
+#empty {
+  width: min(420px, 84vw); aspect-ratio: 1.25;
+  border: 1.5px dashed #303038; border-radius: 12px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; text-align: center; padding: 30px;
+  color: var(--fg-faint);
+}
+#empty .big { font-size: 16px; font-weight: 700; color: var(--fg-dim); letter-spacing: 0.06em; }
+#empty p { font-size: 12px; line-height: 2; }
+
+/* ===== キャプション(計器) ===== */
+#caption {
+  flex: none;
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: 10px 18px;
+  font-size: 11.5px; color: var(--fg-dim);
+  min-height: 36px;
+  position: relative;
+}
+#caption .who b { color: var(--fg); font-weight: 700; }
+#caption .sizetag {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 9.5px; letter-spacing: 0.14em; color: var(--fg-faint);
+  border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px;
+}
+.sig-meter { display: inline-flex; align-items: center; gap: 8px; font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; }
+.sig-meter .bars { display: inline-flex; gap: 2.5px; }
+.sig-meter .bars i { width: 5px; height: 12px; border-radius: 1.5px; background: #26262c; }
+.sig-meter .bars i.on { background: var(--sys); box-shadow: 0 0 6px rgba(124, 227, 139, 0.5); }
+.sig-meter.low .bars i.on { background: var(--danger); box-shadow: 0 0 6px rgba(224, 92, 74, 0.5); }
+.cap-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: var(--fg);
+  border: 1.5px solid #3b3b44; border-radius: 8px;
+  padding: 8px 18px;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+}
+.cap-btn:hover { border-color: var(--sys); box-shadow: 0 0 14px rgba(124, 227, 139, 0.18); }
+.cap-btn.boosted { border-color: var(--sys); background: rgba(124, 227, 139, 0.1); color: var(--sys); }
+.cap-btn.flag { padding: 8px 12px; color: var(--fg-faint); border-color: transparent; }
+.cap-btn.flag:hover { color: var(--danger); border-color: rgba(224, 92, 74, 0.5); box-shadow: none; }
+
+#report-pop {
+  position: absolute; bottom: calc(100% + 10px); right: 0; z-index: 20;
+  background: #17171c; color: var(--fg);
+  border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+  width: 250px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+  display: none;
+}
+#report-pop.show { display: block; }
+#report-pop p { font-size: 12px; line-height: 1.8; font-weight: 600; }
+#report-pop .row { display: flex; gap: 8px; margin-top: 10px; }
+#report-pop button { font-size: 12px; font-weight: 700; border-radius: 7px; padding: 7px 12px; flex: 1; }
+#report-pop .yes { background: var(--danger); color: #fff; }
+#report-pop .no { background: rgba(255, 255, 255, 0.07); }
+
+/* ===== SURFACE 切替バー ===== */
+#surfbar {
+  flex: none;
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+  gap: 8px;
+  padding: 2px 14px 4px;
+}
+#surfbar .lbl { font-family: ui-monospace, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.22em; color: var(--fg-faint); margin-right: 4px; }
+.surf-chip {
+  font-size: 11px; font-weight: 700; color: var(--fg-dim);
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 7px 14px;
+  transition: color .2s, border-color .2s, background .2s;
+}
+.surf-chip:hover { color: var(--fg); border-color: #3b3b44; }
+.surf-chip.sel { color: var(--sys); border-color: rgba(124, 227, 139, 0.5); background: rgba(124, 227, 139, 0.07); }
+#btn-next {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11px; font-weight: 700; color: var(--fg);
+  border: 1px solid #3b3b44; border-radius: 999px;
+  padding: 7px 18px; margin-left: 10px;
+}
+#btn-next:hover { border-color: var(--sys); color: var(--sys); }
+
+/* ===== 下バー ===== */
+#foot {
+  flex: none;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 8px clamp(18px, 3.5vw, 44px) clamp(12px, 2.2vh, 20px);
+  font-size: 11px; color: var(--fg-faint);
+}
+#foot .links { display: flex; align-items: center; gap: 20px; }
+#foot button.linky { font-size: 11px; color: var(--fg-faint); letter-spacing: 0.04em; position: relative; }
+#foot button.linky:hover { color: var(--fg); }
+#foot .wordmark { font-family: ui-monospace, Menlo, monospace; font-weight: 700; color: var(--fg-dim); letter-spacing: 0.04em; }
+#foot .wordmark .b { color: var(--sys); }
+#queue-dot {
+  display: none;
+  position: absolute; top: -5px; right: -13px;
+  min-width: 15px; height: 15px; padding: 0 4px;
+  background: var(--sys); color: var(--sys-ink);
+  font-size: 9.5px; font-weight: 800; line-height: 15px; text-align: center;
+  border-radius: 999px;
+}
+#queue-dot.on { display: block; animation: dotpulse 2.4s ease infinite; }
+@keyframes dotpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+
+/* ===== トースト ===== */
+#toast {
+  position: fixed; bottom: 64px; left: 50%; z-index: 200;
+  transform: translateX(-50%) translateY(90px);
+  background: #17171c; color: var(--fg);
+  border: 1px solid #2c2c34; border-left: 3px solid var(--sys);
+  font-size: 12.5px; font-weight: 600;
+  padding: 11px 20px; border-radius: 8px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.6);
+  transition: transform .35s cubic-bezier(.2, .9, .3, 1.1);
+  max-width: 88vw;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ===== SURFACES: モック ===== */
+body[data-surface]:not([data-surface="newtab"]) #top,
+body[data-surface]:not([data-surface="newtab"]) #caption { display: none; }
+body[data-surface]:not([data-surface="newtab"]) #foot { position: relative; z-index: 40; }
+body[data-surface]:not([data-surface="newtab"]) #grid { display: none; }
+
+.sf-fill { position: absolute; inset: 0; overflow: hidden; }
+
+/* --- 壁紙 --- */
+.sf-desk-icons { position: absolute; left: 26px; top: 24px; display: flex; flex-direction: column; gap: 20px; z-index: 3; }
+.sf-icon { width: 62px; text-align: center; color: rgba(255, 255, 255, 0.85); font-size: 10px; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
+.sf-icon .bx { width: 40px; height: 40px; margin: 0 auto 5px; border-radius: 9px; background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.22); backdrop-filter: blur(2px); }
+.sf-bar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 46px; z-index: 4;
+  background: rgba(12, 12, 16, 0.78);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 14px;
+  font-size: 11px; color: rgba(255, 255, 255, 0.75);
+}
+.sf-bar .st { width: 26px; height: 26px; border-radius: 6px; background: linear-gradient(135deg, #4a8df0, #7ce38b); flex: none; }
+.sf-bar .app { width: 26px; height: 26px; border-radius: 6px; background: rgba(255, 255, 255, 0.12); flex: none; }
+.sf-bar .sp { flex: 1; }
+.sf-bar .clk { font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: 0.04em; white-space: nowrap; }
+.sf-wall-screen { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 1; }
+.sf-wall-cap {
+  position: absolute; right: 16px; bottom: 58px; z-index: 5;
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(12, 12, 16, 0.72); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 999px;
+  padding: 8px 8px 8px 16px;
+  font-size: 11px; color: rgba(255, 255, 255, 0.8);
+}
+.sf-wall-cap button { font-size: 11px; font-weight: 800; background: var(--sys); color: var(--sys-ink); border-radius: 999px; padding: 6px 14px; }
+
+/* --- ティッカー(タスクバー) --- */
+.sf-plain-desk { position: absolute; inset: 0; background: linear-gradient(160deg, #1a1d26, #0e1016 60%); }
+.sf-plain-desk::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 60% 35%, rgba(90, 120, 200, 0.15), transparent 70%); }
+.sf-ticker {
+  display: flex; align-items: center; gap: 10px;
+  height: 34px; width: min(400px, 52vw);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;
+  padding: 0 10px 0 8px;
+  overflow: hidden;
+}
+.sf-ticker .sq { width: 18px; height: 18px; border-radius: 4px; flex: none; box-shadow: 0 0 10px var(--glow, transparent); }
+.sf-ticker .tag { font-family: ui-monospace, Menlo, monospace; font-size: 8.5px; letter-spacing: 0.18em; color: rgba(255, 255, 255, 0.45); flex: none; }
+.sf-ticker .win { flex: 1; min-width: 0; overflow: hidden; position: relative; height: 100%; display: flex; align-items: center;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.sf-ticker .tape { display: inline-block; white-space: nowrap; font-size: 12px; color: rgba(255, 255, 255, 0.88); animation: tick 16s linear infinite; padding-left: 100%; }
+@keyframes tick { to { transform: translateX(-100%); } }
+.sf-ticker .bst { display: inline-flex; align-items: center; gap: 5px; font-family: ui-monospace, Menlo, monospace; font-size: 10px; color: var(--sys); flex: none; border: 1px solid rgba(124, 227, 139, 0.35); border-radius: 5px; padding: 3px 8px; cursor: pointer; }
+.sf-ticker .bst:hover { background: rgba(124, 227, 139, 0.12); }
+
+/* --- ターミナル --- */
+.sf-term-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, #14161c, #0b0c10); }
+.sf-term {
+  width: min(660px, 92vw);
+  background: #0c0e10;
+  border: 1px solid #26282c; border-radius: 10px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+.sf-term .bar { display: flex; align-items: center; gap: 7px; padding: 10px 14px; background: #16181c; border-bottom: 1px solid #26282c; }
+.sf-term .bar i { width: 11px; height: 11px; border-radius: 50%; background: #3a3d44; }
+.sf-term .bar i:nth-child(1) { background: #e0604f; }
+.sf-term .bar i:nth-child(2) { background: #e0b34f; }
+.sf-term .bar i:nth-child(3) { background: #6cc860; }
+.sf-term .bar span { margin-left: 8px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #6a6e76; }
+.sf-term pre {
+  padding: 18px 22px 22px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12.5px; line-height: 1.75;
+  color: #b8bec8;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.sf-term .g { color: var(--sys); }
+.sf-term .c { color: #5a5f68; }
+.sf-term .hl { font-weight: 700; }
+
+/* --- 配信オーバーレイ --- */
+.sf-stream { position: absolute; inset: 0; background: linear-gradient(200deg, #232a3f, #131722 55%, #0d0f16); overflow: hidden; }
+.sf-stream .blob { position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.5; animation: blobf 14s ease-in-out infinite alternate; }
+@keyframes blobf { to { transform: translate(40px, -30px) scale(1.15); } }
+.sf-live {
+  position: absolute; left: 18px; top: 16px; z-index: 5;
+  display: flex; align-items: center; gap: 10px;
+  font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: rgba(255, 255, 255, 0.85);
+}
+.sf-live .rec { background: #e0604f; color: #fff; font-weight: 800; border-radius: 5px; padding: 3px 9px; letter-spacing: 0.12em; animation: ns-flick 1.6s steps(2) infinite; }
+.sf-cam {
+  position: absolute; left: 18px; bottom: 18px; z-index: 5;
+  width: 190px; aspect-ratio: 16/10;
+  border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, #1b1e28, #12141c);
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255, 255, 255, 0.25); font-size: 28px;
+}
+.sf-ovl {
+  position: absolute; right: 18px; bottom: 18px; z-index: 6;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 7px;
+}
+.sf-ovl .ovl-cap { font-family: ui-monospace, Menlo, monospace; font-size: 9.5px; letter-spacing: 0.14em; color: rgba(255, 255, 255, 0.5); }
+.sf-ovl .holder { position: relative; }
+
+/* ===== オーバーレイ共通 ===== */
+.overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(5, 5, 8, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.overlay.show { display: block; }
+
+/* ===== これはなに? ===== */
+#about .card {
+  width: min(600px, calc(100vw - 32px));
+  margin: clamp(20px, 6vh, 70px) auto 40px;
+  background: #131318;
+  border: 1px solid #26262e; border-radius: 14px;
+  padding: clamp(28px, 5vw, 44px);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.7);
+}
+#about .a-mark { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--sys); letter-spacing: 0.05em; }
+#about .a-mark span { margin-left: 12px; color: var(--fg-faint); letter-spacing: 0.14em; }
+#about h2 { font-size: clamp(23px, 4.4vw, 31px); font-weight: 800; line-height: 1.55; margin-top: 16px; }
+#about .lead { font-size: 13.5px; line-height: 2.1; margin-top: 14px; color: var(--fg-dim); }
+#about .term-line {
+  margin-top: 18px;
+  font-family: ui-monospace, Menlo, monospace; font-size: 13px;
+  background: #0c0e10; border: 1px solid #26282c; border-radius: 8px;
+  padding: 13px 16px; color: #b8bec8;
+}
+#about .term-line .g { color: var(--sys); }
+#about h3 { margin-top: 26px; font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; letter-spacing: 0.24em; color: var(--fg-faint); font-weight: 700; }
+#about ul { list-style: none; margin-top: 12px; display: flex; flex-direction: column; gap: 11px; }
+#about li { font-size: 13px; line-height: 1.9; color: var(--fg-dim); padding-left: 18px; position: relative; }
+#about li::before { content: '▸'; position: absolute; left: 0; color: var(--sys); }
+#about li b { color: var(--fg); }
+#about .a-note { margin-top: 24px; font-size: 11.5px; line-height: 1.9; color: var(--fg-faint); border-top: 1px dashed #2a2a32; padding-top: 16px; }
+#about .a-cta { margin-top: 26px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+#about .a-go {
+  font-size: 14px; font-weight: 800;
+  background: var(--sys); color: var(--sys-ink);
+  padding: 13px 34px; border-radius: 9px;
+  box-shadow: 0 0 26px rgba(124, 227, 139, 0.3);
+  transition: transform .15s, box-shadow .15s;
+}
+#about .a-go:hover { transform: translateY(-1px); box-shadow: 0 0 40px rgba(124, 227, 139, 0.45); }
+#about .a-sub { font-size: 11px; color: var(--fg-faint); }
+
+/* ===== 出稿(composer) ===== */
+#composer .frame { min-height: 100dvh; display: grid; grid-template-columns: 1fr 372px; }
+#c-stage {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 30px; gap: 16px; min-height: 320px;
+}
+#c-scale { position: relative; flex: none; }
+#c-scale > .screen { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+#c-scale canvas#c-pen { position: absolute; left: 0; top: 0; z-index: 8; transform-origin: 0 0; touch-action: none; pointer-events: none; }
+#c-scale.pen-on canvas#c-pen { pointer-events: auto; cursor: crosshair; }
+#c-hint { font-size: 11px; color: var(--fg-faint); letter-spacing: 0.05em; text-align: center; }
+#c-panel {
+  background: #121216;
+  border-left: 1px solid var(--line);
+  padding: 24px 24px 90px;
+  overflow-y: auto; max-height: 100dvh;
+}
+#c-panel h3 { font-size: 15px; font-weight: 800; letter-spacing: 0.04em; display: flex; justify-content: space-between; align-items: center; }
+#c-panel h3 .mono { color: var(--sys); font-weight: 700; }
+#c-close { font-size: 20px; color: var(--fg-faint); padding: 4px 10px; }
+#c-close:hover { color: var(--fg); }
+.c-group { margin-top: 22px; }
+.c-label { font-family: ui-monospace, Menlo, monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.24em; color: var(--fg-faint); }
+.c-note { margin-top: 7px; font-size: 11px; color: var(--fg-faint); line-height: 1.8; }
+.c-note.warn { color: var(--danger); }
+.c-note.ok { color: var(--sys); }
+
+.size-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+.size-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  border: 1.5px solid var(--line); border-radius: 10px;
+  padding: 11px 4px 9px;
+  transition: border-color .2s, background .2s;
+}
+.size-chip .shape { background: #45454e; border-radius: 2px; }
+.size-chip[data-size="s"]  .shape { width: 16px; height: 16px; }
+.size-chip[data-size="m"]  .shape { width: 15px; height: 21px; }
+.size-chip[data-size="w"]  .shape { width: 26px; height: 10px; }
+.size-chip[data-size="xl"] .shape { width: 26px; height: 16px; }
+.size-chip .nm { font-size: 11px; font-weight: 700; color: var(--fg-dim); }
+.size-chip .hr { font-family: ui-monospace, Menlo, monospace; font-size: 9px; color: var(--fg-faint); }
+.size-chip.sel { border-color: var(--sys); background: rgba(124, 227, 139, 0.06); }
+.size-chip.sel .nm { color: var(--fg); }
+.size-chip.sel .shape { background: var(--sys); }
+
+/* 背景 */
+.bg-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.bg-row label { font-size: 11px; color: var(--fg-dim); display: inline-flex; align-items: center; gap: 7px; }
+input[type="color"] {
+  width: 34px; height: 34px; padding: 0; border: 1.5px solid var(--line); border-radius: 8px;
+  background: none; cursor: pointer;
+}
+input[type="color"]::-webkit-color-swatch-wrapper { padding: 3px; }
+input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+.seg { display: inline-flex; border: 1.5px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { font-size: 11px; font-weight: 700; color: var(--fg-dim); padding: 8px 13px; }
+.seg button.sel { background: rgba(124, 227, 139, 0.1); color: var(--sys); }
+#bg-ang { width: 90px; accent-color: var(--sys); }
+.preset-row { display: flex; gap: 7px; margin-top: 12px; flex-wrap: wrap; }
+.preset {
+  width: 26px; height: 26px; border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: transform .15s;
+}
+.preset:hover { transform: scale(1.15); }
+
+/* テキストブロック編集 */
+.tb-row {
+  margin-top: 10px;
+  border: 1.5px solid var(--line); border-radius: 10px;
+  padding: 10px;
+  transition: border-color .2s;
+}
+.tb-row.sel { border-color: var(--sys); }
+.tb-row textarea {
+  width: 100%;
+  background: #0d0d11; color: var(--fg);
+  border: 1px solid #26262e; border-radius: 7px;
+  padding: 8px 10px; font-size: 13px; line-height: 1.6; resize: none; height: 52px;
+}
+.tb-row textarea:focus { outline: none; border-color: var(--sys); }
+.tb-ctrl { display: flex; align-items: center; gap: 7px; margin-top: 8px; flex-wrap: wrap; }
+.tb-ctrl .seg button { padding: 5px 9px; font-size: 10px; }
+.tb-ctrl input[type="color"] { width: 26px; height: 26px; border-radius: 6px; }
+.tb-del { margin-left: auto; font-size: 11px; color: var(--fg-faint); }
+.tb-del:hover { color: var(--danger); }
+#tb-add {
+  margin-top: 10px; width: 100%;
+  font-size: 11.5px; font-weight: 700; color: var(--fg-dim);
+  border: 1.5px dashed var(--line); border-radius: 10px; padding: 9px;
+}
+#tb-add:hover { color: var(--fg); border-color: #3b3b44; }
+
+/* かざり */
+.mode-row { display: flex; gap: 8px; margin-top: 12px; }
+.mode-btn { flex: 1; font-size: 12px; font-weight: 700; border: 1.5px solid var(--line); border-radius: 9px; padding: 9px 6px; color: var(--fg-dim); }
+.mode-btn.sel { border-color: var(--sys); color: var(--fg); background: rgba(124, 227, 139, 0.06); }
+.stamp-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 12px; }
+.stamp-btn {
+  aspect-ratio: 1; border-radius: 8px; font-size: 17px;
+  border: 1.5px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color .15s, transform .15s;
+}
+.stamp-btn:hover { border-color: var(--sys); transform: scale(1.1); }
+#pen-opts { display: none; margin-top: 12px; }
+#pen-opts.show { display: block; }
+.pen-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pen-row + .pen-row { margin-top: 10px; }
+.pen-mini { font-size: 11px; font-weight: 700; border: 1.5px solid var(--line); border-radius: 7px; padding: 7px 12px; color: var(--fg-dim); }
+.pen-mini.sel { border-color: var(--sys); color: var(--fg); }
+.pen-mini:hover { color: var(--fg); }
+
+.c-input {
+  width: 100%; margin-top: 10px;
+  background: #0d0d11; color: var(--fg);
+  border: 1.5px solid var(--line); border-radius: 9px;
+  padding: 11px 13px; font-size: 13.5px;
+}
+.c-input:focus { outline: none; border-color: var(--sys); }
+#c-link-status { margin-top: 8px; font-size: 11px; line-height: 1.8; }
+
+#c-submit {
+  width: 100%; margin-top: 28px;
+  font-size: 15px; font-weight: 800; letter-spacing: 0.06em;
+  background: var(--sys); color: var(--sys-ink);
+  padding: 15px; border-radius: 10px;
+  box-shadow: 0 0 26px rgba(124, 227, 139, 0.25);
+  transition: transform .15s, box-shadow .15s;
+}
+#c-submit:hover { transform: translateY(-1px); box-shadow: 0 0 40px rgba(124, 227, 139, 0.4); }
+#c-submit-note { margin-top: 10px; font-size: 10.5px; color: var(--fg-faint); text-align: center; line-height: 1.8; }
+.shakeit { animation: shakeit .4s ease; }
+@keyframes shakeit { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+/* composer 内の選択/ドラッグ */
+#c-scale .stamp, #c-scale .t-block { cursor: grab; pointer-events: auto; }
+#c-scale .drag { cursor: grabbing; }
+#c-scale .sel-el { outline: 2px dashed var(--sys); outline-offset: 5px; border-radius: 6px; }
+#el-tools {
+  position: fixed; z-index: 130;
+  display: none; align-items: center; gap: 4px;
+  background: #17171c; border: 1px solid #2c2c34; border-radius: 9px;
+  padding: 4px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
+}
+#el-tools.show { display: flex; }
+#el-tools button {
+  width: 30px; height: 30px; border-radius: 6px;
+  font-size: 13px; color: var(--fg-dim);
+  display: flex; align-items: center; justify-content: center;
+}
+#el-tools button:hover { background: rgba(255, 255, 255, 0.08); color: var(--fg); }
+#el-tools button.del:hover { color: var(--danger); }
+
+/* ===== 管理コンソール ===== */
+#console-scrim { position: fixed; inset: 0; z-index: 140; background: rgba(5, 5, 8, 0.6); display: none; }
+#console-scrim.show { display: block; }
+#console {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 150;
+  width: min(440px, 100vw);
+  background: #121216; border-left: 1px solid var(--line);
+  transform: translateX(105%);
+  transition: transform .35s cubic-bezier(.2, .9, .3, 1);
+  display: flex; flex-direction: column;
+}
+#console.show { transform: translateX(0); }
+#console header {
+  flex: none; display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid var(--line);
+}
+#console header h3 { font-size: 14px; font-weight: 800; letter-spacing: 0.06em; }
+#console header h3 .mono { color: var(--sys); }
+#console header .sub { display: block; margin-top: 3px; font-size: 10px; color: var(--fg-faint); font-weight: 500; }
+#console-close { font-size: 20px; color: var(--fg-faint); padding: 4px 10px; }
+#console-close:hover { color: var(--fg); }
+#console .body { flex: 1; overflow-y: auto; padding: 18px 24px 40px; }
+.q-sec { margin-top: 18px; }
+.q-sec:first-child { margin-top: 0; }
+.q-label { font-family: ui-monospace, Menlo, monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.24em; color: var(--fg-faint); }
+.q-empty { margin-top: 10px; font-size: 12px; color: var(--fg-faint); border: 1px dashed var(--line); border-radius: 9px; padding: 14px; text-align: center; }
+.q-item {
+  margin-top: 12px;
+  border: 1px solid var(--line); border-radius: 12px;
+  padding: 13px;
+  display: flex; gap: 13px; align-items: center;
+}
+.q-mini { flex: none; position: relative; overflow: hidden; border-radius: 6px; background: #0d0d11; }
+.q-mini .screen { position: absolute; left: 0; top: 0; transform-origin: 0 0; border-radius: 4px; }
+.q-info { flex: 1; min-width: 0; }
+.q-info .t { font-size: 12.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.q-info .m { margin-top: 3px; font-size: 10.5px; color: var(--fg-faint); }
+.q-acts { display: flex; flex-direction: column; gap: 7px; }
+.q-btn { font-size: 11.5px; font-weight: 800; border-radius: 8px; padding: 8px 13px; white-space: nowrap; }
+.q-btn.ok { background: var(--sys); color: var(--sys-ink); }
+.q-btn.no { border: 1.5px solid var(--line); color: var(--fg-dim); }
+.q-btn.no:hover { color: var(--fg); border-color: #45454e; }
+.q-tools { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+.q-tool { font-size: 11.5px; font-weight: 700; border: 1.5px solid var(--line); border-radius: 8px; padding: 8px 13px; color: var(--fg-dim); }
+.q-tool:hover { color: var(--fg); border-color: #45454e; }
+#q-clock { font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: var(--fg-faint); margin-top: 10px; }
+.q-note { margin-top: 22px; font-size: 11px; line-height: 1.9; color: var(--fg-faint); border-top: 1px dashed #2a2a32; padding-top: 14px; }
+
+/* ===== レスポンシブ ===== */
+@media (max-width: 900px) {
+  #composer .frame { grid-template-columns: 1fr; }
+  #c-stage { min-height: 40dvh; padding: 20px 16px; }
+  #c-panel { border-left: none; border-top: 1px solid var(--line); max-height: none; }
+}
+@media (max-width: 600px) {
+  #clock { font-size: 22px; }
+  #btn-compose { padding: 9px 16px; font-size: 12px; }
+  .stamp-grid { grid-template-columns: repeat(6, 1fr); }
+  #surfbar .lbl { display: none; }
+  .surf-chip { padding: 6px 10px; font-size: 10px; }
+  .sf-cam { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body data-surface="newtab">
+
+<div id="grid" aria-hidden="true"></div>
+
+<div id="app">
+  <header id="top">
+    <div>
+      <div id="clock" class="mono">--:--</div>
+      <div id="today" class="mono"></div>
+    </div>
+    <div id="top-right">
+      <span id="poolcount" class="mono" aria-live="polite"></span>
+      <button id="btn-compose">＋ 出稿</button>
+    </div>
+  </header>
+
+  <main id="stage">
+    <div id="slotwrap"><div id="pscale"></div></div>
+    <div id="caption" aria-live="polite"></div>
+  </main>
+
+  <div id="surfbar" role="group" aria-label="表示サーフェスの切り替え">
+    <span class="lbl">SURFACE</span>
+    <button class="surf-chip sel" data-surf="newtab">新しいタブ</button>
+    <button class="surf-chip" data-surf="wallpaper">壁紙</button>
+    <button class="surf-chip" data-surf="ticker">タスクバー</button>
+    <button class="surf-chip" data-surf="terminal">ターミナル</button>
+    <button class="surf-chip" data-surf="stream">配信</button>
+    <button id="btn-next" aria-label="次のスロットへ">▶ NEXT</button>
+  </div>
+
+  <footer id="foot">
+    <div class="links">
+      <span class="wordmark"><span class="b">/dev/ad</span> β0</span>
+      <button class="linky" id="link-about">これはなに?</button>
+      <button class="linky" id="link-console">管理コンソール<span id="queue-dot"></span></button>
+    </div>
+    <div class="mono" id="tabcount"></div>
+  </footer>
+</div>
+
+<div id="toast" role="status"></div>
+
+<!-- ===== これはなに? ===== -->
+<div class="overlay" id="about" role="dialog" aria-modal="true" aria-label="/dev/ad について">
+  <div class="card">
+    <div class="a-mark">/dev/ad <span>β — 動く試作</span></div>
+    <h2>広告枠に、<br>全員の write 権限を。</h2>
+    <p class="lead">ネットの広告枠は、ずっと読み取り専用でした。買えるのはお金を持つ誰かだけ。/dev/ad はそれをひっくり返す実験です。ひとつの共有スロットに、誰でも無料で出稿できる。宣伝でも、絵でも、今日の夕飯の話でも。</p>
+    <div class="term-line">$ echo yours &gt; <span class="g">/dev/ad</span></div>
+    <h3>RULES</h3>
+    <ul>
+      <li><b>出稿は無料。枠は注目で買う。</b>見た人がブーストすると掲載+8時間。ブーストされない広告は信号が弱り、やがて SIGNAL LOST。だからスロットはいつも新鮮で、占拠もスパムもできません。</li>
+      <li><b>大きい枠ほど信号の減りが速い。</b>フルスクリーンで残りつづけられるのは、みんなが何度もブーストした一本だけ。</li>
+      <li><b>掲載前に管理人がワンタップ審査。</b>画像アップロードはできません(描くのは自由)。リンクは許可リストのサイトだけ。</li>
+    </ul>
+    <h3>SURFACES</h3>
+    <ul>
+      <li><b>同じ広告プールを、どの画面にも差せます。</b>新しいタブ / 壁紙 / タスクバーのティッカー / ターミナル / 配信オーバーレイ。画面下の SURFACE で切り替えて試せます。</li>
+      <li><b>壁紙と配信は、実物にも今日から挿せる設計。</b>Lively Wallpaper は URL をそのまま動く壁紙にでき、OBS のブラウザソースは URL を貼るだけで配信に載ります。</li>
+    </ul>
+    <p class="a-note">この試作はぜんぶブラウザの中で動いていて、出稿はまだ誰にも届きません。管理コンソールの「時間をすすめる」で、信号が弱って消灯するまでを早送りで見られます。</p>
+    <div class="a-cta">
+      <button class="a-go" id="about-go">スロットを見る</button>
+      <span class="a-sub">devnull studio の試作 №0</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 出稿 ===== -->
+<div class="overlay" id="composer" role="dialog" aria-modal="true" aria-label="広告をつくる">
+  <div class="frame">
+    <div id="c-stage">
+      <div id="c-scale"></div>
+      <div id="c-hint">プレビューがそのまま仕上がり · テキストもスタンプもつまんで動かせます</div>
+    </div>
+    <div id="c-panel">
+      <h3><span>出稿する <span class="mono">— write</span></span> <button id="c-close" aria-label="とじる">✕</button></h3>
+
+      <div class="c-group">
+        <div class="c-label">01 SIZE</div>
+        <div class="size-chips" id="c-sizes"></div>
+        <div class="c-note">大きいほど信号の減りが速い。数字はブーストゼロの場合の掲載時間。</div>
+      </div>
+
+      <div class="c-group">
+        <div class="c-label">02 BACKGROUND</div>
+        <div class="bg-row">
+          <label><input type="color" id="bg-c1" value="#1c2440">色1</label>
+          <label id="bg-c2-wrap"><input type="color" id="bg-c2" value="#0d1120">色2</label>
+          <span class="seg" id="bg-mode">
+            <button data-m="solid">単色</button>
+            <button data-m="grad" class="sel">グラデ</button>
+          </span>
+          <input type="range" id="bg-ang" min="0" max="360" value="160" aria-label="グラデーションの角度">
+        </div>
+        <div class="preset-row" id="bg-presets"></div>
+      </div>
+
+      <div class="c-group">
+        <div class="c-label">03 TEXT</div>
+        <div id="tb-list"></div>
+        <button id="tb-add">＋ テキストを追加</button>
+      </div>
+
+      <div class="c-group">
+        <div class="c-label">04 DRAW / STAMP</div>
+        <div class="mode-row">
+          <button class="mode-btn sel" id="mode-stamp">スタンプ</button>
+          <button class="mode-btn" id="mode-pen">ペン</button>
+        </div>
+        <div class="stamp-grid" id="c-stamps"></div>
+        <div id="pen-opts">
+          <div class="pen-row">
+            <label><input type="color" id="pen-color" value="#ffffff" aria-label="ペンの色"></label>
+            <button class="pen-mini sel" data-w="2">細</button>
+            <button class="pen-mini" data-w="5">中</button>
+            <button class="pen-mini" data-w="11">太</button>
+            <button class="pen-mini" id="pen-erase">消しゴム</button>
+          </div>
+          <div class="pen-row">
+            <button class="pen-mini" id="pen-undo">ひとつ戻す</button>
+            <button class="pen-mini" id="pen-clear">全部消す</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="c-group">
+        <div class="c-label">05 LINK <span style="letter-spacing:0.05em; opacity:.7">(任意)</span></div>
+        <input class="c-input" id="c-url" inputmode="url" placeholder="https://www.youtube.com/watch?v=…">
+        <input class="c-input" id="c-url-label" maxlength="20" placeholder="ひとこと(例: これ観て)">
+        <div id="c-link-status" class="c-note"></div>
+      </div>
+
+      <div class="c-group">
+        <div class="c-label">06 NAME <span style="letter-spacing:0.05em; opacity:.7">(任意)</span></div>
+        <input class="c-input" id="c-author" maxlength="14">
+      </div>
+
+      <button id="c-submit">出稿する</button>
+      <div id="c-submit-note">管理人がひと目見てから掲載されます。<br>この試作では「管理コンソール」からあなた自身が承認できます。</div>
+    </div>
+  </div>
+  <div id="el-tools" role="toolbar" aria-label="選択中の要素">
+    <button id="et-minus" aria-label="小さく">－</button>
+    <button id="et-plus" aria-label="大きく">＋</button>
+    <button id="et-rotl" aria-label="左に回す">↺</button>
+    <button id="et-rotr" aria-label="右に回す">↻</button>
+    <button id="et-del" class="del" aria-label="削除">✕</button>
+  </div>
+</div>
+
+<!-- ===== 管理コンソール ===== -->
+<div id="console-scrim"></div>
+<aside id="console" aria-label="管理コンソール">
+  <header>
+    <h3><span class="mono">/dev/ad</span> 管理コンソール<span class="sub">本番では管理人だけが入れます — 試作なのでご自由に</span></h3>
+    <button id="console-close" aria-label="とじる">✕</button>
+  </header>
+  <div class="body">
+    <div class="q-sec">
+      <div class="q-label">審査キュー <span id="q-pending-n"></span></div>
+      <div id="q-pending"></div>
+    </div>
+    <div class="q-sec">
+      <div class="q-label">通報 <span id="q-reported-n"></span></div>
+      <div id="q-reported"></div>
+    </div>
+    <div class="q-sec">
+      <div class="q-label">DEMO: 時間をすすめる</div>
+      <div class="q-tools">
+        <button class="q-tool" data-ff="6">＋6時間</button>
+        <button class="q-tool" data-ff="24">＋24時間</button>
+        <button class="q-tool" data-ff="72">＋3日</button>
+        <button class="q-tool" id="q-reset">試作を初期化</button>
+      </div>
+      <div id="q-clock"></div>
+    </div>
+    <div class="q-note">承認も返却もワンタップ。ブーストされない広告は勝手に消灯するので、掃除はほとんど要りません。時間をすすめると、信号が弱る→砂嵐→SIGNAL LOST までを見られます。</div>
+  </div>
+</aside>
+
+<script>
+'use strict';
+(() => {
+const $ = id => document.getElementById(id);
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ================= 基本定義 ================= */
+const SIZES = {
+  s:  { nm: 'スクエア', tag: 'SQ',   W: 300,  H: 300, life: 96,  tf: 1 },
+  m:  { nm: 'タテ',     tag: 'PT',   W: 410,  H: 560, life: 60,  tf: 1.15 },
+  w:  { nm: 'ワイド',   tag: 'WIDE', W: 780,  H: 250, life: 60,  tf: 1.05 },
+  xl: { nm: 'フル',     tag: 'FULL', W: 1140, H: 640, life: 30,  tf: 1.9 },
+};
+const BOOST_H = 8;
+const T_PX = [15, 22, 32, 46]; // t.s 1..4 の基準px
+
+const BG_PRESETS = [
+  ['#1c2440', '#0d1120'], ['#3b1120', '#12060c'], ['#0d2b1c', '#071510'],
+  ['#3d2a10', '#181008'], ['#2b2b31', '#141417'], ['#f2ede1', '#ddd2ba'],
+  ['#e8564a', '#8e2a22'], ['#2e6ee0', '#15347a'], ['#e6c14a', '#c9932a'], ['#d98cab', '#9c5578'],
+];
+const STAMPS = ['★','☆','●','▲','♥','♪','☕','🐈','🐸','🌙','🌸','🌱','⚡','🍜','✉','☎','✂','👀','🫠','🎸','📚','🧦','🛸','💡'];
+const HOSTS = [
+  ['youtube.com', 'YouTube'], ['youtu.be', 'YouTube'],
+  ['open.spotify.com', 'Spotify'], ['spotify.com', 'Spotify'],
+  ['x.com', 'X'], ['twitter.com', 'X'],
+  ['github.com', 'GitHub'], ['soundcloud.com', 'SoundCloud'],
+  ['bandcamp.com', 'Bandcamp'], ['note.com', 'note'],
+  ['pixiv.net', 'pixiv'], ['twitch.tv', 'Twitch'], ['nicovideo.jp', 'ニコニコ'],
+];
+
+/* ================= 時間(デモ早送り) ================= */
+let ffH = 0;
+const T = () => Date.now() + ffH * 3600e3;
+const H = 3600e3;
+
+/* ================= 永続化 ================= */
+const LS = 'devad.v1';
+let store;
+try { store = JSON.parse(localStorage.getItem(LS) || '{}'); } catch (e) { store = {}; }
+store.user = store.user || [];
+store.ovr = store.ovr || {};
+function save() { try { localStorage.setItem(LS, JSON.stringify(store)); } catch (e) {} }
+
+/* ================= シード ================= */
+// bg: {c1,c2,grad,ang} / texts: [{t,x,y,s,c,f}] f: g=ゴシック m=モノ r=ラウンド
+const SEED = [
+  { id: 'a01', size: 's', bg: { c1: '#f2ede1', c2: '', grad: false, ang: 0 },
+    texts: [
+      { t: '今日、ラーメン食べた。', x: 50, y: 38, s: 3, c: '#1c1b1e', f: 'g' },
+      { t: 'うまかった。以上です。', x: 50, y: 62, s: 1, c: '#55504a', f: 'g' },
+    ],
+    stamps: [{ ch: '🍜', x: 76, y: 18, r: 12, s: 1.2 }],
+    author: '通りすがり#0412', postedAgoH: 3, keeps: 4 },
+  { id: 'a02', size: 's', bg: { c1: '#1b2a4a', c2: '#0d1424', grad: true, ang: 170 },
+    texts: [{ t: 'ずっと流してる\n作業用', x: 50, y: 28, s: 2, c: '#e8ecf8', f: 'g' }],
+    link: { kind: 'yt', id: 'jfKfPfyJRdk', url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk', label: '夜どおし流せるやつ' },
+    stamps: [{ ch: '♪', x: 14, y: 13, r: -16, s: 1 }],
+    author: '夜ふかし#2201', postedAgoH: 20, keeps: 9 },
+  { id: 'a03', size: 'm', bg: { c1: '#f5efe2', c2: '', grad: false, ang: 0 },
+    texts: [
+      { t: 'ネコ\nさがしてます', x: 50, y: 26, s: 4, c: '#1c1b1e', f: 'g' },
+      { t: '黒くて、目が黄色。名前は「ぬる」。\n呼ぶと来ます(来ないときもあります)。\n見かけたらおしえてください。', x: 50, y: 55, s: 1, c: '#55504a', f: 'g' },
+    ],
+    stamps: [{ ch: '🐈', x: 50, y: 76, r: -8, s: 2.4 }],
+    author: '飼い主#0016', postedAgoH: 12, keeps: 21 },
+  { id: 'a04', size: 'm', bg: { c1: '#2e2018', c2: '#140e0a', grad: true, ang: 180 },
+    texts: [
+      { t: 'COFFEE', x: 50, y: 22, s: 2, c: '#d3b98a', f: 'm' },
+      { t: '自家焙煎、\nはじめました', x: 50, y: 40, s: 3, c: '#f3ead9', f: 'g' },
+      { t: '深煎りだけ、200gずつ。\n週末のあさ、駅の北口で。', x: 50, y: 63, s: 1, c: '#b5a48c', f: 'g' },
+    ],
+    stamps: [{ ch: '☕', x: 50, y: 82, r: 6, s: 1.8 }],
+    author: 'コーヒー見習い#0930', postedAgoH: 40, keeps: 6 },
+  { id: 'a05', size: 'w', bg: { c1: '#c73535', c2: '#77170f', grad: true, ang: 120 },
+    texts: [
+      { t: 'ベース急募', x: 32, y: 38, s: 4, c: '#fff3e4', f: 'g' },
+      { t: 'バンドやろう。下手でも可。やる気も不問。機材は貸します。', x: 34, y: 70, s: 1, c: '#ffd9cc', f: 'g' },
+    ],
+    stamps: [{ ch: '🎸', x: 82, y: 36, r: 12, s: 2 }, { ch: '⚡', x: 71, y: 68, r: -10, s: 1.1 }],
+    author: 'ギターの人#0093', postedAgoH: 8, keeps: 3 },
+  { id: 'a06', size: 'w', bg: { c1: '#2e4e8f', c2: '#1b2f5c', grad: true, ang: 100 },
+    texts: [
+      { t: 'フリーマーケット', x: 34, y: 38, s: 3, c: '#eef3ff', f: 'g' },
+      { t: '日曜 10:00〜 / 雨なら中止 / 公園のすみっこ。値札はぜんぶ気分です。', x: 36, y: 68, s: 1, c: '#c3d2f2', f: 'g' },
+    ],
+    stamps: [{ ch: '🧦', x: 84, y: 42, r: -8, s: 1.5 }],
+    author: 'じもと#0777', postedAgoH: 50, keeps: 2 },
+  { id: 'a07', size: 'xl', bg: { c1: '#2b1e4d', c2: '#0c1024', grad: true, ang: 160 },
+    texts: [
+      { t: '夜に泳ぐ', x: 50, y: 40, s: 4, c: '#f0ecff', f: 'g' },
+      { t: '新作、描きあがりました。ぜんぶ見てほしい。', x: 50, y: 58, s: 1, c: '#b9aede', f: 'g' },
+    ],
+    link: { kind: 'chip', url: 'https://www.pixiv.net/', host: 'pixiv', label: '作品はこちら' },
+    stamps: [
+      { ch: '☆', x: 12, y: 18, r: -14, s: 1.4 }, { ch: '★', x: 22, y: 74, r: 8, s: 0.9 },
+      { ch: '☆', x: 86, y: 22, r: 18, s: 1.1 }, { ch: '🌙', x: 79, y: 66, r: -10, s: 2.6 },
+      { ch: '★', x: 60, y: 12, r: 0, s: 0.7 }, { ch: '☆', x: 38, y: 84, r: 12, s: 0.8 },
+    ],
+    author: '絵かき#0033', postedAgoH: 6, keeps: 18 },
+  { id: 'a08', size: 's', bg: { c1: '#d98cab', c2: '#a15c7c', grad: true, ang: 150 },
+    texts: [
+      { t: 'おばあちゃんが\nブログ始めた', x: 50, y: 30, s: 2, c: '#3d1b2b', f: 'g' },
+      { t: '週1で漬物の話をしてます。\n見てあげてください。', x: 50, y: 56, s: 1, c: '#5c3345', f: 'g' },
+    ],
+    link: { kind: 'chip', url: 'https://note.com/', host: 'note', label: 'つけもの日記' },
+    stamps: [],
+    author: '孫#1030', postedAgoH: 30, keeps: 11 },
+  { id: 'a09', size: 'm', bg: { c1: '#23422e', c2: '#10231a', grad: true, ang: 180 },
+    texts: [
+      { t: '植物あげます', x: 50, y: 30, s: 3, c: '#ecf5e8', f: 'g' },
+      { t: '増えすぎたポトス。つよい。かわいい。\n手渡し希望、鉢ごとどうぞ。', x: 50, y: 52, s: 1, c: '#b8d3ba', f: 'g' },
+    ],
+    stamps: [{ ch: '🌱', x: 50, y: 74, r: -6, s: 2.2 }, { ch: '🌱', x: 26, y: 66, r: 10, s: 1.2 }],
+    author: 'ベランダ#0505', postedAgoH: 55, keeps: 1 },
+  { id: 'a10', size: 'w', bg: { c1: '#e6c14a', c2: '#c9932a', grad: true, ang: 110 },
+    texts: [
+      { t: '同人誌、できました', x: 35, y: 36, s: 3, c: '#33280a', f: 'g' },
+      { t: '3年かかった。全128ページ。とにかく読んでほしい、それだけです。', x: 37, y: 68, s: 1, c: '#5c4a17', f: 'g' },
+    ],
+    stamps: [{ ch: '📚', x: 84, y: 36, r: 8, s: 1.7 }, { ch: '★', x: 75, y: 72, r: -12, s: 0.8 }],
+    author: 'サークル灯り#1201', postedAgoH: 2, keeps: 7 },
+];
+const loadT = Date.now();
+
+/* ================= モデル ================= */
+function allAds() {
+  const seeded = SEED.map(sd => {
+    const o = store.ovr[sd.id] || {};
+    return {
+      ...sd,
+      postedAt: loadT - sd.postedAgoH * H,
+      keeps: (o.keeps != null) ? o.keeps : sd.keeps,
+      kept: !!o.kept,
+      status: o.status || 'live',
+    };
+  });
+  return seeded.concat(store.user);
+}
+function expiresAt(p) { return p.postedAt + (SIZES[p.size].life + p.keeps * BOOST_H) * H; }
+function sigOf(p) {
+  const total = expiresAt(p) - p.postedAt;
+  return Math.max(0, Math.min(1, (expiresAt(p) - T()) / total));
+}
+function isLive(p) { return p.status === 'live' && expiresAt(p) > T(); }
+function liveAds() { return allAds().filter(isLive); }
+function setOvr(p, patch) {
+  if (String(p.id).startsWith('u')) {
+    const u = store.user.find(x => x.id === p.id);
+    if (u) Object.assign(u, patch);
+  } else {
+    store.ovr[p.id] = Object.assign(store.ovr[p.id] || {}, patch);
+  }
+  save();
+}
+
+/* ================= レンダラ(全サーフェス共用) ================= */
+function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function bgCss(bg) {
+  return bg.grad && bg.c2 ? 'linear-gradient(' + (bg.ang || 0) + 'deg, ' + bg.c1 + ', ' + bg.c2 + ')' : bg.c1;
+}
+
+function renderAd(p, opts = {}) {
+  const sz = SIZES[p.size];
+  const el = document.createElement('div');
+  el.className = 'screen size-' + p.size;
+  el.style.width = sz.W + 'px';
+  el.style.height = sz.H + 'px';
+  el.style.background = bgCss(p.bg);
+  el.style.setProperty('--glow', p.bg.c1);
+  const sig = opts.fresh ? 1 : sigOf(p);
+  el.style.setProperty('--sig', sig.toFixed(3));
+  if (!opts.fresh && !calm && sig < 0.22) el.classList.add('weak');
+
+  for (const [i, tb] of (p.texts || []).entries()) {
+    if (!tb.t && !opts.editable) continue;
+    const t = document.createElement('div');
+    t.className = 't-block f-' + (tb.f || 'g');
+    t.textContent = tb.t;
+    t.style.left = tb.x + '%';
+    t.style.top = tb.y + '%';
+    t.style.fontSize = Math.round(T_PX[(tb.s || 2) - 1] * sz.tf) + 'px';
+    t.style.color = tb.c || '#fff';
+    t.dataset.kind = 'text'; t.dataset.idx = i;
+    el.appendChild(t);
+  }
+  for (const [i, st] of (p.stamps || []).entries()) {
+    const s = document.createElement('span');
+    s.className = 'stamp';
+    s.textContent = st.ch;
+    s.style.left = st.x + '%';
+    s.style.top = st.y + '%';
+    s.style.fontSize = Math.round(26 * (st.s || 1) * (p.size === 'xl' ? 1.7 : 1)) + 'px';
+    s.style.transform = 'translate(-50%,-50%) rotate(' + (st.r || 0) + 'deg)';
+    s.dataset.kind = 'stamp'; s.dataset.idx = i;
+    el.appendChild(s);
+  }
+  if (p.doodle) {
+    const d = document.createElement('img');
+    d.className = 'doodle'; d.alt = ''; d.src = p.doodle;
+    el.appendChild(d);
+  }
+  if (p.link) {
+    const a = document.createElement('a');
+    a.className = 'p-link';
+    a.href = p.link.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    if (p.link.kind === 'yt') {
+      a.innerHTML = '<span class="yt"><img src="https://i.ytimg.com/vi/' + esc(p.link.id) + '/hqdefault.jpg" alt="" loading="lazy"><span class="play">▶</span></span>' +
+        (p.link.label ? '<span class="yt-cap">' + esc(p.link.label) + '</span>' : '');
+      const img = a.querySelector('img');
+      img.addEventListener('error', () => { img.remove(); });
+    } else {
+      a.innerHTML = '<span class="chip"><span class="dot"></span>' + esc(p.link.label || 'リンク') + '<span class="host">' + esc(p.link.host || '') + '</span></span>';
+    }
+    if (!opts.clickable) a.addEventListener('click', e => e.preventDefault());
+    el.appendChild(a);
+  }
+  const by = document.createElement('div');
+  by.className = 'byline';
+  by.textContent = 'by ' + (p.author || 'anonymous');
+  el.appendChild(by);
+  return el;
+}
+
+/* ================= サーフェス ================= */
+let surface = 'newtab';
+let current = null;
+let tabsOpened = 0;
+
+function fitBox(box, screenEl, availW, availH, size, maxS) {
+  const sz = SIZES[size];
+  const s = Math.min(availW / sz.W, availH / sz.H, maxS);
+  box.style.width = (sz.W * s) + 'px';
+  box.style.height = (sz.H * s) + 'px';
+  screenEl.style.transform = 'scale(' + s + ')';
+  screenEl.style.setProperty('--s', s);
+  return s;
+}
+
+function ageStr(p) {
+  const h = (T() - p.postedAt) / H;
+  if (h < 1) return 'さっき';
+  if (h < 24) return Math.floor(h) + '時間まえ';
+  return Math.floor(h / 24) + '日まえ';
+}
+function remainStr(p) {
+  const h = (expiresAt(p) - T()) / H;
+  if (h <= 1) return 'あと僅か';
+  if (h < 48) return 'あと' + Math.floor(h) + 'h';
+  return 'あと' + Math.floor(h / 24) + '日';
+}
+function sigBars(sig, n = 8) {
+  let out = '';
+  for (let i = 0; i < n; i++) out += '<i class="' + (i < Math.round(sig * n) ? 'on' : '') + '"></i>';
+  return out;
+}
+
+function boost(p, after) {
+  if (p.kept) { toast('もう、ブーストしてあります'); return; }
+  p.kept = true; p.keeps += 1;
+  setOvr(p, { kept: true, keeps: p.keeps });
+  toast('BOOST +' + BOOST_H + 'h — 信号が強くなりました');
+  if (after) after();
+}
+
+function renderCaption() {
+  const cap = $('caption');
+  if (!current || surface !== 'newtab') { cap.innerHTML = ''; return; }
+  const p = current;
+  const sig = sigOf(p);
+  cap.innerHTML =
+    '<span class="sizetag">' + SIZES[p.size].tag + '</span>' +
+    '<span class="who"><b>' + esc(p.author || 'anonymous') + '</b> · ' + ageStr(p) + '</span>' +
+    '<span class="sig-meter' + (sig < 0.25 ? ' low' : '') + '">SIGNAL <span class="bars">' + sigBars(sig) + '</span> ' + Math.round(sig * 100) + '%</span>' +
+    '<span class="mono">' + remainStr(p) + ' · BOOST ' + p.keeps + '</span>' +
+    '<button class="cap-btn' + (p.kept ? ' boosted' : '') + '" id="btn-boost">⚡ ' + (p.kept ? 'BOOSTED' : 'ブースト') + '</button>' +
+    '<button class="cap-btn flag" id="btn-flag" aria-label="この広告を通報する">⚑</button>' +
+    '<div id="report-pop" role="dialog"><p>この広告を非表示にして、管理人に知らせますか?</p><div class="row"><button class="no" id="rep-no">やめる</button><button class="yes" id="rep-yes">通報する</button></div></div>';
+
+  $('btn-boost').addEventListener('click', () => boost(p, () => {
+    renderCaption();
+    const sc = $('pscale').querySelector('.screen');
+    if (sc) sc.style.setProperty('--sig', sigOf(p).toFixed(3));
+  }));
+  $('btn-flag').addEventListener('click', () => $('report-pop').classList.toggle('show'));
+  $('rep-no').addEventListener('click', () => $('report-pop').classList.remove('show'));
+  $('rep-yes').addEventListener('click', () => {
+    setOvr(p, { status: 'hidden' });
+    p.status = 'hidden';
+    $('report-pop').classList.remove('show');
+    toast('通報しました。スロットから下げて、管理人に知らせます');
+    lostAndNext();
+    renderConsole();
+  });
+}
+
+function updatePool() {
+  $('poolcount').textContent = 'ON AIR ' + liveAds().length + '本';
+}
+
+/* --- 各サーフェスの描画 --- */
+function show(p, opts = {}) {
+  current = p;
+  const box = $('pscale');
+  box.innerHTML = '';
+  box.style.cssText = '';
+  $('caption').innerHTML = '';
+  document.querySelectorAll('.sf-fill').forEach(x => x.remove());
+
+  if (surface === 'newtab') { showNewtab(p, opts); }
+  else if (!p) { showNewtab(null, opts); }
+  else if (surface === 'wallpaper') showWallpaper(p);
+  else if (surface === 'ticker') showTicker(p);
+  else if (surface === 'terminal') showTerminal(p);
+  else if (surface === 'stream') showStream(p);
+  updatePool();
+}
+
+function showNewtab(p, opts = {}) {
+  const box = $('pscale');
+  if (!p) {
+    const e = document.createElement('div');
+    e.id = 'empty';
+    e.innerHTML = '<div class="big">NO SIGNAL — 掲載中の広告がありません</div><p>ぜんぶ消灯しました。最初の一本を、あなたが。</p>';
+    const b = document.createElement('button');
+    b.className = 'cap-btn'; b.textContent = '＋ 出稿する';
+    b.addEventListener('click', openComposer);
+    e.appendChild(b);
+    box.appendChild(e);
+    return;
+  }
+  const el = renderAd(p, { clickable: true });
+  if (!calm && !opts.still) el.classList.add('enter');
+  box.appendChild(el);
+  fitStage();
+  renderCaption();
+}
+function fitStage() {
+  const box = $('pscale');
+  const el = box.querySelector('.screen');
+  if (!el || !current || surface !== 'newtab') return;
+  const slot = $('slotwrap');
+  fitBox(box, el, slot.clientWidth - 20, slot.clientHeight - 20, current.size, current.size === 'xl' ? 99 : 1.12);
+}
+addEventListener('resize', () => { fitStage(); if ($('composer').classList.contains('show')) fitComposer(); });
+
+function sfRoot() {
+  const r = document.createElement('div');
+  r.className = 'sf-fill';
+  $('stage').appendChild(r);
+  return r;
+}
+function mockBar(r) {
+  const bar = document.createElement('div');
+  bar.className = 'sf-bar';
+  const d = new Date();
+  bar.innerHTML = '<span class="st"></span><span class="app"></span><span class="app"></span><span class="app"></span><span class="sp"></span>';
+  const clk = document.createElement('span');
+  clk.className = 'clk';
+  clk.textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + '  ' + (d.getMonth() + 1) + '/' + d.getDate();
+  bar.appendChild(clk);
+  r.appendChild(bar);
+  return bar;
+}
+
+function showWallpaper(p) {
+  const r = sfRoot();
+  r.style.background = bgCss(p.bg);
+  const holder = document.createElement('div');
+  holder.className = 'sf-wall-screen';
+  const inner = document.createElement('div');
+  inner.style.position = 'relative';
+  const el = renderAd(p, { clickable: false });
+  el.style.position = 'absolute'; el.style.left = '0'; el.style.top = '0'; el.style.transformOrigin = '0 0';
+  el.style.borderRadius = '0'; el.style.border = 'none'; el.style.boxShadow = 'none';
+  inner.appendChild(el);
+  holder.appendChild(inner);
+  r.appendChild(holder);
+  const sz = SIZES[p.size];
+  requestAnimationFrame(() => {
+    const s = Math.max(r.clientWidth / sz.W, (r.clientHeight) / sz.H); // cover
+    inner.style.width = (sz.W * s) + 'px'; inner.style.height = (sz.H * s) + 'px';
+    inner.style.flex = 'none';
+    el.style.transform = 'scale(' + s + ')';
+  });
+  const icons = document.createElement('div');
+  icons.className = 'sf-desk-icons';
+  icons.innerHTML = '<div class="sf-icon"><div class="bx"></div>ゴミ箱</div><div class="sf-icon"><div class="bx"></div>作業</div><div class="sf-icon"><div class="bx"></div>あとで</div>';
+  r.appendChild(icons);
+  mockBar(r);
+  const cap = document.createElement('div');
+  cap.className = 'sf-wall-cap';
+  cap.innerHTML = '<span>壁紙: <b>' + esc(p.author || 'anonymous') + '</b> の広告 · BOOST ' + p.keeps + '</span>';
+  const b = document.createElement('button');
+  b.textContent = p.kept ? 'BOOSTED' : '⚡ ブースト';
+  b.addEventListener('click', () => boost(p, () => show(p, { still: true })));
+  cap.appendChild(b);
+  r.appendChild(cap);
+}
+
+function showTicker(p) {
+  const r = sfRoot();
+  const desk = document.createElement('div');
+  desk.className = 'sf-plain-desk';
+  r.appendChild(desk);
+  const bar = mockBar(r);
+  const tick = document.createElement('div');
+  tick.className = 'sf-ticker';
+  tick.style.setProperty('--glow', p.bg.c1);
+  const words = (p.texts || []).map(t => t.t).filter(Boolean).join(' — ').replace(/\n/g, ' ');
+  tick.innerHTML =
+    '<span class="sq" style="background:' + bgCss(p.bg).replace(/"/g, '') + '"></span>' +
+    '<span class="tag">AD</span>' +
+    '<span class="win"><span class="tape">' + esc(words || '(ことばのない広告)') + '　— ' + esc(p.author || 'anonymous') + '</span></span>';
+  const b = document.createElement('button');
+  b.className = 'bst';
+  b.innerHTML = '⚡' + p.keeps;
+  b.title = 'ブースト';
+  b.addEventListener('click', () => boost(p, () => show(p, { still: true })));
+  tick.appendChild(b);
+  bar.insertBefore(tick, bar.querySelector('.clk'));
+}
+
+function wrapJa(s, n) {
+  const out = [];
+  const noHead = '。、」）!?！？…・';
+  for (const raw of String(s).split('\n')) {
+    let line = '';
+    let w = 0;
+    for (const ch of raw) {
+      const cw = /[ -~]/.test(ch) ? 1 : 2;
+      if (w + cw > n && !noHead.includes(ch)) { out.push(line); line = ch; w = cw; }
+      else { line += ch; w += cw; }
+    }
+    out.push(line);
+  }
+  return out;
+}
+function showTerminal(p) {
+  const r = sfRoot();
+  const wrap = document.createElement('div');
+  wrap.className = 'sf-term-wrap';
+  const term = document.createElement('div');
+  term.className = 'sf-term';
+  const sig = Math.round(sigOf(p) * 100);
+  const bars = '▮'.repeat(Math.round(sigOf(p) * 10)).padEnd(10, '▯');
+  const title = (p.texts && p.texts[0] && p.texts[0].t || '(ことばのない広告)').replace(/\n/g, ' ');
+  const rest = (p.texts || []).slice(1).map(t => t.t).filter(Boolean).join(' ');
+  const lines = [];
+  lines.push('<span class="c">$</span> <span class="g">devad</span> --slot');
+  lines.push('');
+  lines.push('  <span class="hl" style="color:' + esc(p.bg.grad && isDark(p.bg.c1) === false ? p.bg.c1 : '#e8e8e6') + '">── ' + esc(title) + ' ──────</span>');
+  for (const l of wrapJa(rest, 40)) if (l) lines.push('  ' + esc(l));
+  if (p.link) lines.push('  <span class="c">link:</span> ' + esc(p.link.url));
+  lines.push('  <span class="c">by</span> ' + esc(p.author || 'anonymous'));
+  lines.push('');
+  lines.push('  SIGNAL ' + sig + '% <span class="g">[' + bars + ']</span>  BOOST ' + p.keeps + '  ' + SIZES[p.size].tag);
+  lines.push('');
+  lines.push('<span class="c">$</span> <span class="g">devad</span> boost ' + esc(p.id) + '   <span class="c"># ⚡ +8h</span>');
+  lines.push('<span class="c">$</span> <span class="g">devad</span> post          <span class="c"># あなたの広告を出稿</span>');
+  term.innerHTML = '<div class="bar"><i></i><i></i><i></i><span>devnull@studio: ~ — devad</span></div><pre>' + lines.join('\n') + '</pre>';
+  wrap.appendChild(term);
+  r.appendChild(wrap);
+}
+function isDark(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return true;
+  const v = parseInt(m[1], 16);
+  const rr = v >> 16, gg = (v >> 8) & 255, bb = v & 255;
+  return (rr * 299 + gg * 587 + bb * 114) / 1000 < 128;
+}
+
+function showStream(p) {
+  const r = sfRoot();
+  const st = document.createElement('div');
+  st.className = 'sf-stream';
+  st.innerHTML =
+    '<div class="blob" style="left:18%; top:14%; width:320px; height:320px; background:#4a5fd0"></div>' +
+    '<div class="blob" style="right:12%; bottom:20%; width:280px; height:280px; background:#7ce38b; animation-delay:-6s"></div>' +
+    '<div class="sf-live"><span class="rec">LIVE</span><span>1,204 viewers · OBSブラウザソース(モック)</span></div>' +
+    '<div class="sf-cam">☺</div>';
+  const ovl = document.createElement('div');
+  ovl.className = 'sf-ovl';
+  const cap = document.createElement('div');
+  cap.className = 'ovl-cap';
+  cap.textContent = 'AD SLOT · by ' + (p.author || 'anonymous') + ' · BOOST ' + p.keeps;
+  const holder = document.createElement('div');
+  holder.className = 'holder';
+  const el = renderAd(p, { clickable: false });
+  el.style.position = 'absolute'; el.style.left = '0'; el.style.top = '0'; el.style.transformOrigin = '0 0';
+  holder.appendChild(el);
+  ovl.appendChild(cap);
+  ovl.appendChild(holder);
+  st.appendChild(ovl);
+  r.appendChild(st);
+  const sz = SIZES[p.size];
+  const targetW = Math.min(300, r.clientWidth * 0.32);
+  const s = targetW / sz.W;
+  holder.style.width = (sz.W * s) + 'px';
+  holder.style.height = (sz.H * s) + 'px';
+  el.style.transform = 'scale(' + s + ')';
+}
+
+/* --- スロット送り --- */
+function drawNext(opts = {}) {
+  const pool = liveAds().filter(p => !current || p.id !== current.id);
+  const pick = pool.length ? pool[Math.floor(Math.random() * pool.length)]
+    : (current && isLive(current) ? current : null);
+  tabsOpened++;
+  $('tabcount').textContent = 'SESSION VIEWS ' + tabsOpened;
+  show(pick, opts);
+}
+function lostAndNext() {
+  if (surface !== 'newtab') { drawNext(); return; }
+  const box = $('pscale');
+  const el = box.querySelector('.screen');
+  if (el && current && !calm) {
+    const sz = SIZES[current.size];
+    const s = parseFloat(el.style.getPropertyValue('--s')) || 1;
+    box.innerHTML = '';
+    const ns = document.createElement('div');
+    ns.id = 'nosignal';
+    ns.style.width = (sz.W * s) + 'px';
+    ns.style.height = (sz.H * s) + 'px';
+    ns.innerHTML = '<div class="t">NO SIGNAL</div><div class="d">掲載終了 — 次のスロットへ</div>';
+    box.appendChild(ns);
+    $('caption').innerHTML = '';
+    setTimeout(() => drawNext(), 950);
+  } else {
+    drawNext();
+  }
+}
+
+/* --- サーフェス切替 --- */
+document.querySelectorAll('.surf-chip').forEach(ch => {
+  ch.addEventListener('click', () => {
+    surface = ch.dataset.surf;
+    document.querySelectorAll('.surf-chip').forEach(x => x.classList.toggle('sel', x === ch));
+    document.body.dataset.surface = surface;
+    if (current && !isLive(current)) current = null;
+    if (!current) drawNext({ still: true });
+    else show(current, { still: true });
+  });
+});
+$('btn-next').addEventListener('click', drawNext);
+
+/* ================= 減衰の監視 ================= */
+function tickDecay() {
+  if (!current) return;
+  if (!isLive(current)) { toast('SIGNAL LOST — 一本、掲載が終わりました'); lostAndNext(); return; }
+  if (surface === 'newtab') {
+    const el = $('pscale').querySelector('.screen');
+    if (el) el.style.setProperty('--sig', sigOf(current).toFixed(3));
+    renderCaption();
+  }
+}
+setInterval(() => { tickDecay(); updatePool(); }, 60e3);
+
+/* ================= 時計 ================= */
+function tickClock() {
+  const d = new Date();
+  $('clock').textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  $('today').textContent = (d.getMonth() + 1) + '/' + d.getDate() + ' ' + '日月火水木金土'[d.getDay()] + '曜日';
+}
+tickClock(); setInterval(tickClock, 5e3);
+
+/* ================= トースト ================= */
+let toastT = null;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ================= composer ================= */
+const cp = { size: 'm', bg: { c1: '#1c2440', c2: '#0d1120', grad: true, ang: 160 }, texts: [], stamps: [], strokes: [], link: null };
+let penMode = false, penW = 2, penErase = false;
+let sel = null; // {kind:'stamp'|'text', idx}
+let penCanvas = null;
+
+function openComposer() {
+  $('composer').classList.add('show');
+  cp.size = 'm';
+  cp.bg = { c1: '#1c2440', c2: '#0d1120', grad: true, ang: 160 };
+  cp.texts = [{ t: '', x: 50, y: 38, s: 3, c: '#ffffff', f: 'g' }];
+  cp.stamps = []; cp.strokes = []; cp.link = null;
+  $('bg-c1').value = cp.bg.c1; $('bg-c2').value = cp.bg.c2; $('bg-ang').value = cp.bg.ang;
+  setBgMode(true);
+  $('c-url').value = ''; $('c-url-label').value = '';
+  $('c-author').value = '';
+  $('c-author').placeholder = 'anonymous#' + String(1000 + Math.floor(Math.random() * 9000));
+  parseLink();
+  setPenMode(false);
+  penErase = false;
+  buildSizeChips();
+  buildTbRows();
+  rebuildPreview();
+  const firstTa = document.querySelector('.tb-row textarea');
+  if (firstTa) firstTa.focus();
+}
+function closeComposer() { $('composer').classList.remove('show'); hideTools(); }
+$('btn-compose').addEventListener('click', openComposer);
+$('c-close').addEventListener('click', closeComposer);
+
+function buildSizeChips() {
+  const wrap = $('c-sizes');
+  wrap.innerHTML = '';
+  for (const k of Object.keys(SIZES)) {
+    const b = document.createElement('button');
+    b.className = 'size-chip' + (cp.size === k ? ' sel' : '');
+    b.dataset.size = k;
+    b.innerHTML = '<span class="shape"></span><span class="nm">' + SIZES[k].nm + '</span><span class="hr">' + SIZES[k].tag + ' · ' + SIZES[k].life + 'h</span>';
+    b.addEventListener('click', () => { cp.size = k; buildSizeChips(); rebuildPreview(); });
+    wrap.appendChild(b);
+  }
+}
+
+/* --- 背景 --- */
+function setBgMode(grad) {
+  cp.bg.grad = grad;
+  document.querySelectorAll('#bg-mode button').forEach(b => b.classList.toggle('sel', (b.dataset.m === 'grad') === grad));
+  $('bg-c2-wrap').style.opacity = grad ? 1 : 0.3;
+  $('bg-ang').style.opacity = grad ? 1 : 0.3;
+  rebuildPreviewSoft();
+}
+document.querySelectorAll('#bg-mode button').forEach(b => b.addEventListener('click', () => setBgMode(b.dataset.m === 'grad')));
+$('bg-c1').addEventListener('input', () => { cp.bg.c1 = $('bg-c1').value; rebuildPreviewSoft(); });
+$('bg-c2').addEventListener('input', () => { cp.bg.c2 = $('bg-c2').value; rebuildPreviewSoft(); });
+$('bg-ang').addEventListener('input', () => { cp.bg.ang = +$('bg-ang').value; rebuildPreviewSoft(); });
+(() => {
+  const wrap = $('bg-presets');
+  for (const [c1, c2] of BG_PRESETS) {
+    const b = document.createElement('button');
+    b.className = 'preset';
+    b.style.background = 'linear-gradient(135deg,' + c1 + ',' + c2 + ')';
+    b.setAttribute('aria-label', '背景プリセット');
+    b.addEventListener('click', () => {
+      cp.bg.c1 = c1; cp.bg.c2 = c2;
+      $('bg-c1').value = c1; $('bg-c2').value = c2;
+      setBgMode(true);
+    });
+    wrap.appendChild(b);
+  }
+})();
+
+/* --- テキストブロック --- */
+function buildTbRows() {
+  const list = $('tb-list');
+  list.innerHTML = '';
+  cp.texts.forEach((tb, i) => {
+    const row = document.createElement('div');
+    row.className = 'tb-row' + (sel && sel.kind === 'text' && sel.idx === i ? ' sel' : '');
+    row.dataset.idx = i;
+    const ta = document.createElement('textarea');
+    ta.maxLength = 90;
+    ta.placeholder = i === 0 ? 'ここにことば(例: ネコさがしてます)' : 'テキスト';
+    ta.value = tb.t;
+    ta.addEventListener('input', () => { tb.t = ta.value; rebuildPreviewSoft(); });
+    ta.addEventListener('focus', () => selectEl('text', i, false));
+    row.appendChild(ta);
+    const ctrl = document.createElement('div');
+    ctrl.className = 'tb-ctrl';
+    // サイズ
+    const segS = document.createElement('span');
+    segS.className = 'seg';
+    ['S', 'M', 'L', 'XL'].forEach((nm, si) => {
+      const b = document.createElement('button');
+      b.textContent = nm;
+      b.classList.toggle('sel', tb.s === si + 1);
+      b.addEventListener('click', () => { tb.s = si + 1; buildTbRows(); rebuildPreview(); });
+      segS.appendChild(b);
+    });
+    ctrl.appendChild(segS);
+    // フォント
+    const segF = document.createElement('span');
+    segF.className = 'seg';
+    [['g', '太'], ['m', 'M0N0'], ['r', 'ゆる']].forEach(([f, nm]) => {
+      const b = document.createElement('button');
+      b.textContent = nm;
+      b.classList.toggle('sel', tb.f === f);
+      b.addEventListener('click', () => { tb.f = f; buildTbRows(); rebuildPreview(); });
+      segF.appendChild(b);
+    });
+    ctrl.appendChild(segF);
+    // 色
+    const col = document.createElement('input');
+    col.type = 'color'; col.value = tb.c || '#ffffff';
+    col.setAttribute('aria-label', 'テキストの色');
+    col.addEventListener('input', () => { tb.c = col.value; rebuildPreviewSoft(); });
+    ctrl.appendChild(col);
+    // 削除
+    if (cp.texts.length > 1) {
+      const del = document.createElement('button');
+      del.className = 'tb-del'; del.textContent = '✕ 削除';
+      del.addEventListener('click', () => { cp.texts.splice(i, 1); sel = null; buildTbRows(); rebuildPreview(); });
+      ctrl.appendChild(del);
+    }
+    row.appendChild(ctrl);
+    list.appendChild(row);
+  });
+}
+$('tb-add').addEventListener('click', () => {
+  if (cp.texts.length >= 3) { toast('テキストは3つまで'); return; }
+  cp.texts.push({ t: '', x: 50, y: cp.texts.length === 1 ? 68 : 84, s: 1, c: '#ffffff', f: 'g' });
+  buildTbRows(); rebuildPreview();
+  const tas = document.querySelectorAll('.tb-row textarea');
+  tas[tas.length - 1].focus();
+});
+
+/* --- スタンプ --- */
+(() => {
+  const wrap = $('c-stamps');
+  for (const ch of STAMPS) {
+    const b = document.createElement('button');
+    b.className = 'stamp-btn';
+    b.textContent = ch;
+    b.addEventListener('click', () => {
+      if (cp.stamps.length >= 12) { toast('スタンプは12個まで'); return; }
+      cp.stamps.push({ ch, x: 30 + Math.random() * 40, y: 25 + Math.random() * 50, r: Math.round(Math.random() * 36 - 18), s: 1 + Math.random() * 0.5 });
+      setPenMode(false);
+      rebuildPreview();
+      selectEl('stamp', cp.stamps.length - 1, true);
+    });
+    wrap.appendChild(b);
+  }
+})();
+
+/* --- ペン --- */
+document.querySelectorAll('.pen-mini[data-w]').forEach(b => {
+  b.addEventListener('click', () => {
+    penW = +b.dataset.w; penErase = false;
+    document.querySelectorAll('.pen-mini[data-w]').forEach(x => x.classList.remove('sel'));
+    $('pen-erase').classList.remove('sel');
+    b.classList.add('sel');
+  });
+});
+$('pen-erase').addEventListener('click', () => {
+  penErase = !penErase;
+  $('pen-erase').classList.toggle('sel', penErase);
+});
+$('pen-undo').addEventListener('click', () => { cp.strokes.pop(); redrawPen(); });
+$('pen-clear').addEventListener('click', () => { cp.strokes = []; redrawPen(); });
+$('mode-stamp').addEventListener('click', () => setPenMode(false));
+$('mode-pen').addEventListener('click', () => setPenMode(true));
+function setPenMode(on) {
+  penMode = on;
+  $('mode-pen').classList.toggle('sel', on);
+  $('mode-stamp').classList.toggle('sel', !on);
+  $('pen-opts').classList.toggle('show', on);
+  $('c-scale').classList.toggle('pen-on', on);
+  if (on) hideTools();
+}
+
+/* --- リンク --- */
+const HOSTS_NOTE = '許可リスト: YouTube / Spotify / X / GitHub / pixiv / note / Twitch / SoundCloud / Bandcamp / ニコニコ';
+function parseLink() {
+  const raw = $('c-url').value.trim();
+  const label = $('c-url-label').value.trim();
+  const st = $('c-link-status');
+  if (!raw) { cp.link = null; st.textContent = HOSTS_NOTE; st.className = 'c-note'; return; }
+  let u;
+  try { u = new URL(raw.match(/^https?:\/\//) ? raw : 'https://' + raw); } catch (e) {
+    cp.link = null; st.textContent = 'URLとして読めませんでした'; st.className = 'c-note warn'; return;
+  }
+  const host = u.hostname.replace(/^www\./, '');
+  const hit = HOSTS.find(([d]) => host === d || host.endsWith('.' + d));
+  if (!hit) { cp.link = null; st.textContent = '「' + host + '」は許可リスト外です(試作では貼れません)'; st.className = 'c-note warn'; return; }
+  const yt = (u.href.match(/(?:youtube\.com\/(?:watch\?[^#]*v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/) || [])[1];
+  if (yt) {
+    cp.link = { kind: 'yt', id: yt, url: u.href, label };
+    st.textContent = '✓ YouTubeのカードとして載ります';
+  } else {
+    cp.link = { kind: 'chip', url: u.href, host: hit[1], label: label || hit[1] };
+    st.textContent = '✓ ' + hit[1] + ' へのリンクチップとして載ります';
+  }
+  st.className = 'c-note ok';
+}
+$('c-url').addEventListener('input', () => { parseLink(); rebuildPreviewSoft(); });
+$('c-url-label').addEventListener('input', () => { parseLink(); rebuildPreviewSoft(); });
+$('c-author').addEventListener('input', rebuildPreviewSoft);
+
+/* --- プレビュー --- */
+let softT = null;
+function rebuildPreviewSoft() { clearTimeout(softT); softT = setTimeout(rebuildPreview, 60); }
+function cpAd() {
+  return {
+    id: 'preview', size: cp.size, bg: cp.bg,
+    texts: cp.texts, stamps: cp.stamps, doodle: null, link: cp.link,
+    author: $('c-author').value || $('c-author').placeholder,
+    postedAt: T(), keeps: 0, kept: false, status: 'live',
+  };
+}
+function rebuildPreview() {
+  const box = $('c-scale');
+  box.querySelectorAll('.screen').forEach(x => x.remove());
+  const el = renderAd(cpAd(), { fresh: true, editable: true });
+  box.prepend(el);
+  if (!penCanvas) {
+    penCanvas = document.createElement('canvas');
+    penCanvas.id = 'c-pen';
+    box.appendChild(penCanvas);
+    bindPen(penCanvas);
+    bindDrag(box);
+  }
+  const sz = SIZES[cp.size];
+  penCanvas.width = sz.W * 2; penCanvas.height = sz.H * 2;
+  penCanvas.style.width = sz.W + 'px'; penCanvas.style.height = sz.H + 'px';
+  fitComposer();
+  redrawPen();
+  restoreSel();
+}
+function fitComposer() {
+  const box = $('c-scale');
+  const el = box.querySelector('.screen');
+  if (!el) return;
+  const stage = $('c-stage');
+  const s = fitBox(box, el, stage.clientWidth - 44, stage.clientHeight - 66, cp.size, 1.05);
+  if (penCanvas) penCanvas.style.transform = 'scale(' + s + ')';
+  box.dataset.s = s;
+}
+
+/* --- ペン描画(正規化座標) --- */
+function redrawPen() {
+  if (!penCanvas) return;
+  const ctx = penCanvas.getContext('2d');
+  ctx.clearRect(0, 0, penCanvas.width, penCanvas.height);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const W = penCanvas.width, Hh = penCanvas.height;
+  for (const st of cp.strokes) {
+    ctx.globalCompositeOperation = st.e ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = st.c;
+    ctx.lineWidth = st.w * W;
+    const pts = st.pts;
+    if (pts.length === 1) {
+      ctx.fillStyle = st.c;
+      ctx.beginPath();
+      ctx.arc(pts[0][0] * W, pts[0][1] * Hh, st.w * W / 2, 0, 7);
+      ctx.fill();
+      continue;
+    }
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0] * W, pts[0][1] * Hh);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const mx = (pts[i][0] + pts[i + 1][0]) / 2 * W, my = (pts[i][1] + pts[i + 1][1]) / 2 * Hh;
+      ctx.quadraticCurveTo(pts[i][0] * W, pts[i][1] * Hh, mx, my);
+    }
+    const last = pts[pts.length - 1];
+    ctx.lineTo(last[0] * W, last[1] * Hh);
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+function bindPen(cv) {
+  let stroke = null;
+  const norm = e => {
+    const r = cv.getBoundingClientRect();
+    return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height];
+  };
+  cv.addEventListener('pointerdown', e => {
+    if (!penMode) return;
+    cv.setPointerCapture(e.pointerId);
+    stroke = {
+      c: $('pen-color').value,
+      w: (penErase ? penW * 3 : penW) / SIZES[cp.size].W,
+      e: penErase,
+      pts: [norm(e)],
+    };
+    cp.strokes.push(stroke);
+    redrawPen();
+    e.preventDefault();
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!stroke) return;
+    stroke.pts.push(norm(e));
+    redrawPen();
+  });
+  const up = () => { stroke = null; };
+  cv.addEventListener('pointerup', up);
+  cv.addEventListener('pointercancel', up);
+}
+
+/* --- ドラッグ・選択・ツール(テキスト/スタンプ共通) --- */
+function elOf(kind, idx) {
+  return $('c-scale').querySelector('.screen [data-kind="' + kind + '"][data-idx="' + idx + '"]');
+}
+function hideTools() { sel = null; $('el-tools').classList.remove('show'); document.querySelectorAll('#c-scale .sel-el').forEach(x => x.classList.remove('sel-el')); buildTbHighlight(); }
+function buildTbHighlight() {
+  document.querySelectorAll('.tb-row').forEach(r => {
+    r.classList.toggle('sel', !!(sel && sel.kind === 'text' && String(sel.idx) === r.dataset.idx));
+  });
+}
+function selectEl(kind, idx, showTools) {
+  document.querySelectorAll('#c-scale .sel-el').forEach(x => x.classList.remove('sel-el'));
+  sel = { kind, idx };
+  const el = elOf(kind, idx);
+  if (el) el.classList.add('sel-el');
+  buildTbHighlight();
+  if (showTools && el) positionTools(el);
+  else $('el-tools').classList.remove('show');
+}
+function positionTools(el) {
+  const r = el.getBoundingClientRect();
+  const t = $('el-tools');
+  t.classList.add('show');
+  t.style.left = Math.max(8, Math.min(innerWidth - 180, r.left + r.width / 2 - 82)) + 'px';
+  t.style.top = Math.max(8, r.top - 44) + 'px';
+}
+function restoreSel() {
+  if (!sel) return;
+  const el = elOf(sel.kind, sel.idx);
+  if (el) { el.classList.add('sel-el'); if ($('el-tools').classList.contains('show')) positionTools(el); }
+}
+function selData() {
+  if (!sel) return null;
+  return sel.kind === 'stamp' ? cp.stamps[sel.idx] : cp.texts[sel.idx];
+}
+$('et-plus').addEventListener('click', () => {
+  const d = selData(); if (!d) return;
+  if (sel.kind === 'stamp') d.s = Math.min(4, (d.s || 1) * 1.18);
+  else d.s = Math.min(4, (d.s || 2) + 1);
+  rebuildPreview();
+});
+$('et-minus').addEventListener('click', () => {
+  const d = selData(); if (!d) return;
+  if (sel.kind === 'stamp') d.s = Math.max(0.4, (d.s || 1) / 1.18);
+  else d.s = Math.max(1, (d.s || 2) - 1);
+  rebuildPreview();
+});
+$('et-rotl').addEventListener('click', () => { const d = selData(); if (!d || sel.kind !== 'stamp') return; d.r = (d.r || 0) - 15; rebuildPreview(); });
+$('et-rotr').addEventListener('click', () => { const d = selData(); if (!d || sel.kind !== 'stamp') return; d.r = (d.r || 0) + 15; rebuildPreview(); });
+$('et-del').addEventListener('click', () => {
+  if (!sel) return;
+  if (sel.kind === 'stamp') cp.stamps.splice(sel.idx, 1);
+  else if (cp.texts.length > 1) cp.texts.splice(sel.idx, 1);
+  else cp.texts[0].t = '';
+  hideTools();
+  buildTbRows();
+  rebuildPreview();
+});
+
+function bindDrag(box) {
+  let drag = null;
+  box.addEventListener('pointerdown', e => {
+    if (penMode) return;
+    const t = e.target.closest('[data-kind]');
+    if (!t) { hideTools(); return; }
+    drag = { kind: t.dataset.kind, idx: +t.dataset.idx, el: t, moved: false, sx: e.clientX, sy: e.clientY };
+    t.classList.add('drag');
+    t.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  box.addEventListener('pointermove', e => {
+    if (!drag) return;
+    if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 4) drag.moved = true;
+    if (!drag.moved) return;
+    const sc = box.querySelector('.screen');
+    const r = sc.getBoundingClientRect();
+    const x = Math.max(2, Math.min(98, (e.clientX - r.left) / r.width * 100));
+    const y = Math.max(2, Math.min(98, (e.clientY - r.top) / r.height * 100));
+    const d = drag.kind === 'stamp' ? cp.stamps[drag.idx] : cp.texts[drag.idx];
+    if (!d) return;
+    d.x = x; d.y = y;
+    drag.el.style.left = x + '%';
+    drag.el.style.top = y + '%';
+    if (sel && sel.kind === drag.kind && sel.idx === drag.idx && $('el-tools').classList.contains('show')) positionTools(drag.el);
+  });
+  const end = () => {
+    if (!drag) return;
+    drag.el.classList.remove('drag');
+    if (!drag.moved) selectEl(drag.kind, drag.idx, true);
+    drag = null;
+  };
+  box.addEventListener('pointerup', end);
+  box.addEventListener('pointercancel', end);
+}
+
+/* --- 出稿 --- */
+$('c-submit').addEventListener('click', () => {
+  const hasContent = cp.texts.some(t => t.t.trim()) || cp.stamps.length || cp.strokes.length || cp.link;
+  if (!hasContent) {
+    $('c-panel').classList.add('shakeit');
+    setTimeout(() => $('c-panel').classList.remove('shakeit'), 450);
+    toast('まっくらのままです。なにか、ひとこと');
+    return;
+  }
+  let doodle = null;
+  if (cp.strokes.length) doodle = penCanvas.toDataURL('image/png');
+  const p = {
+    id: 'u' + Date.now().toString(36),
+    size: cp.size,
+    bg: { ...cp.bg },
+    texts: cp.texts.filter(t => t.t.trim()).map(t => ({ ...t })),
+    stamps: cp.stamps.map(s => ({ ...s })),
+    doodle, link: cp.link,
+    author: ($('c-author').value.trim() || $('c-author').placeholder),
+    postedAt: T(), keeps: 0, kept: false, status: 'pending',
+  };
+  store.user.push(p);
+  save();
+  closeComposer();
+  toast('審査キューに入りました。OKが出たら掲載されます');
+  renderConsole();
+  updateQueueDot();
+});
+
+/* ================= 管理コンソール ================= */
+function openConsole() { $('console').classList.add('show'); $('console-scrim').classList.add('show'); renderConsole(); }
+function closeConsole() { $('console').classList.remove('show'); $('console-scrim').classList.remove('show'); }
+$('link-console').addEventListener('click', openConsole);
+$('console-close').addEventListener('click', closeConsole);
+$('console-scrim').addEventListener('click', closeConsole);
+
+function updateQueueDot() {
+  const n = allAds().filter(p => p.status === 'pending').length;
+  const d = $('queue-dot');
+  d.textContent = n;
+  d.classList.toggle('on', n > 0);
+}
+function miniOf(p) {
+  const sz = SIZES[p.size];
+  const k = Math.min(100 / sz.W, 74 / sz.H);
+  const wrap = document.createElement('div');
+  wrap.className = 'q-mini';
+  wrap.style.width = (sz.W * k) + 'px';
+  wrap.style.height = (sz.H * k) + 'px';
+  const el = renderAd(p, { fresh: p.status === 'pending' });
+  el.style.transform = 'scale(' + k + ')';
+  wrap.appendChild(el);
+  return wrap;
+}
+function queueItem(p, acts) {
+  const it = document.createElement('div');
+  it.className = 'q-item';
+  it.appendChild(miniOf(p));
+  const info = document.createElement('div');
+  info.className = 'q-info';
+  const title = (p.texts && p.texts[0] && p.texts[0].t || '(ことばなし)').replace(/\n/g, ' ');
+  info.innerHTML = '<div class="t">' + esc(title) + '</div>' +
+    '<div class="m">' + esc(p.author || 'anonymous') + ' · ' + SIZES[p.size].tag +
+    (p.link ? ' · link: ' + esc(p.link.kind === 'yt' ? 'YouTube' : (p.link.host || '')) : '') + '</div>';
+  it.appendChild(info);
+  const col = document.createElement('div');
+  col.className = 'q-acts';
+  for (const [label, cls, fn] of acts) {
+    const b = document.createElement('button');
+    b.className = 'q-btn ' + cls;
+    b.textContent = label;
+    b.addEventListener('click', fn);
+    col.appendChild(b);
+  }
+  it.appendChild(col);
+  return it;
+}
+function renderConsole() {
+  const all = allAds();
+  const pend = all.filter(p => p.status === 'pending');
+  const rep = all.filter(p => p.status === 'hidden');
+
+  const pWrap = $('q-pending');
+  pWrap.innerHTML = '';
+  $('q-pending-n').textContent = pend.length ? '· ' + pend.length : '';
+  if (!pend.length) pWrap.innerHTML = '<div class="q-empty">いまは、なにも待っていません</div>';
+  for (const p of pend) {
+    pWrap.appendChild(queueItem(p, [
+      ['✓ 掲載', 'ok', () => {
+        const u = store.user.find(x => x.id === p.id);
+        if (u) { u.status = 'live'; u.postedAt = T(); save(); }
+        else setOvr(p, { status: 'live', postedAt: T() });
+        toast('掲載しました。スロットに流れはじめます');
+        renderConsole(); updateQueueDot(); updatePool();
+      }],
+      ['✕ 返す', 'no', () => {
+        if (String(p.id).startsWith('u')) { store.user = store.user.filter(x => x.id !== p.id); save(); }
+        else setOvr(p, { status: 'rejected' });
+        toast('そっと、お返ししました');
+        renderConsole(); updateQueueDot();
+      }],
+    ]));
+  }
+
+  const rWrap = $('q-reported');
+  rWrap.innerHTML = '';
+  $('q-reported-n').textContent = rep.length ? '· ' + rep.length : '';
+  if (!rep.length) rWrap.innerHTML = '<div class="q-empty">通報はありません。平和です</div>';
+  for (const p of rep) {
+    rWrap.appendChild(queueItem(p, [
+      ['もどす', 'ok', () => {
+        const u = store.user.find(x => x.id === p.id);
+        if (u) { u.status = 'live'; save(); }
+        else setOvr(p, { status: 'live' });
+        toast('スロットにもどしました');
+        renderConsole(); updatePool();
+      }],
+      ['消す', 'no', () => {
+        if (String(p.id).startsWith('u')) { store.user = store.user.filter(x => x.id !== p.id); save(); }
+        else setOvr(p, { status: 'removed' });
+        toast('消しました');
+        renderConsole(); updatePool();
+      }],
+    ]));
+  }
+
+  $('q-clock').textContent = ffH ? 'DEMO TIME: now +' + ffH + 'h' : 'DEMO TIME: 現在時刻どおり';
+}
+document.querySelectorAll('.q-tool[data-ff]').forEach(b => {
+  b.addEventListener('click', () => {
+    ffH += Number(b.dataset.ff);
+    renderConsole();
+    updatePool();
+    if (current && !isLive(current)) { toast('目の前で一本、消灯しました'); closeConsole(); lostAndNext(); }
+    else if (current) {
+      if (surface === 'newtab') tickDecay();
+      else show(current, { still: true });
+      toast('+' + b.dataset.ff + 'h — 信号が少し弱りました');
+    }
+  });
+});
+$('q-reset').addEventListener('click', () => { localStorage.removeItem(LS); location.reload(); });
+
+/* ================= これはなに? ================= */
+function openAbout() { $('about').classList.add('show'); }
+function closeAbout() {
+  $('about').classList.remove('show');
+  if (!store.introSeen) { store.introSeen = 1; save(); }
+}
+$('link-about').addEventListener('click', openAbout);
+$('about-go').addEventListener('click', closeAbout);
+$('about').addEventListener('click', e => { if (e.target === $('about')) closeAbout(); });
+
+/* ================= キーボード ================= */
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea')) return;
+  if (e.key === 'Escape') {
+    if ($('composer').classList.contains('show')) closeComposer();
+    else if ($('console').classList.contains('show')) closeConsole();
+    else if ($('about').classList.contains('show')) closeAbout();
+    else { const rp = $('report-pop'); if (rp) rp.classList.remove('show'); }
+    return;
+  }
+  if ($('composer').classList.contains('show') || $('about').classList.contains('show') || $('console').classList.contains('show')) return;
+  if (e.key === ' ' || e.key === 'n' || e.key === 'N') { e.preventDefault(); drawNext(); }
+  if (e.key === 'p' || e.key === 'P') openComposer();
+});
+
+/* ================= 起動 ================= */
+// URLで面を固定できる: ?surface=wallpaper 等(Lively / OBS にこのURLを渡す用)
+const qs = new URLSearchParams(location.search).get('surface');
+if (qs && ['newtab', 'wallpaper', 'ticker', 'terminal', 'stream'].includes(qs)) {
+  surface = qs;
+  document.body.dataset.surface = qs;
+  document.querySelectorAll('.surf-chip').forEach(x => x.classList.toggle('sel', x.dataset.surf === qs));
+}
+updateQueueDot();
+drawNext({ still: true });
+if (!store.introSeen) openAbout();
+
+// 本番構想: この pool を API に差し替えれば、そのまま
+// 新しいタブ拡張 / Lively壁紙 / 常駐ティッカー / ターミナルCLI / OBSオーバーレイ の共有スロットになる。
+})();
+</script>
+</body>
+</html>
