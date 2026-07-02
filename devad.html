@@ -342,7 +342,10 @@ input, textarea, select { font-family: inherit; }
   border-radius: 3px; padding: 8px 18px;
 }
 #px-done:hover { background: #fff; }
-.px-editing #pscale canvas.px { cursor: crosshair; }
+#pscale .screen.pxboard { cursor: grab; }
+#pscale .screen.pxboard.dragging { cursor: grabbing; }
+.px-editing #pscale .screen.pxboard { cursor: crosshair; }
+.px-editing #pscale .screen.pxboard.dragging { cursor: grabbing; }
 
 /* ===== toast ===== */
 #toast {
@@ -943,31 +946,62 @@ const SEED = [
     author: 'circle lamp#1201', postedAgoH: 2, keeps: 7 },
 ];
 
-/* --- pixel board seeds (permanent, shared, wplace-style) --- */
-function blankGrid(cols, rows) { return '0'.repeat(cols * rows).split(''); }
-function drawOn(g, cols, pts, ci) { for (const [x, y] of pts) g[y * cols + x] = ci.toString(16); }
-function seedPx1() { // 30x30 — a small heart someone left + scattered dots
-  const g = blankGrid(30, 30);
-  const heart = [[12,9],[13,8],[14,9],[16,9],[17,8],[18,9],[11,10],[12,11],[13,12],[14,13],[15,14],[16,13],[17,12],[18,11],[19,10],[15,10],[13,10],[17,10],[14,11],[15,11],[16,11],[14,12],[15,12],[16,12],[15,13],[12,10],[18,10],[11,9],[19,9]];
-  drawOn(g, 30, heart, 6);
-  drawOn(g, 30, [[4,24],[5,24],[4,25],[5,25]], 9);
-  drawOn(g, 30, [[24,4],[25,4],[24,5],[25,5]], 11);
-  drawOn(g, 30, [[7,5],[22,25],[26,17],[3,15],[9,27]], 2);
-  return g.join('');
+/* --- pixel boards (permanent, shared, wplace-style; '.' = empty/transparent) --- */
+function blankGrid(n) { return '.'.repeat(n); }
+function setPx(g, cols, pts, ch) { const a = g.split(''); for (const [x, y] of pts) if (a[y * cols + x] !== undefined) a[y * cols + x] = ch; return a.join(''); }
+
+// rough continents (ellipses on a 96x48 grid) -> a blocky world map backdrop
+function genWorld(cols, rows) {
+  const ell = [
+    [17,13,9,8],[24,12,5,5],[33,5,3,3],[28,32,5,9],[48,11,5,4],
+    [52,25,7,10],[66,13,16,9],[63,21,4,5],[78,25,6,4],[83,34,6,4],[85,14,2,3],
+  ];
+  const land = new Array(cols * rows).fill(false);
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    for (const [cx, cy, rx, ry] of ell) {
+      const dx = (x - cx) / rx, dy = (y - cy) / ry;
+      if (dx * dx + dy * dy <= 1) { land[y * cols + x] = true; break; }
+    }
+  }
+  return land;
 }
-function seedPx2() { // 57x32 — "HI" + a tiny invader, lots of empty space to claim
-  const g = blankGrid(57, 32);
-  const H_ = [[10,10],[10,11],[10,12],[10,13],[10,14],[10,15],[10,16],[11,13],[12,13],[13,10],[13,11],[13,12],[13,13],[13,14],[13,15],[13,16]];
-  const I_ = [[17,10],[18,10],[19,10],[18,11],[18,12],[18,13],[18,14],[18,15],[17,16],[18,16],[19,16]];
-  drawOn(g, 57, H_, 1); drawOn(g, 57, I_, 1);
-  const inv = [[40,20],[44,20],[41,21],[43,21],[40,22],[41,22],[42,22],[43,22],[44,22],[39,23],[40,23],[42,23],[44,23],[45,23],[39,24],[41,24],[42,24],[43,24],[45,24],[41,25],[43,25]];
-  drawOn(g, 57, inv, 10);
-  drawOn(g, 57, [[30,6],[50,12],[6,26],[25,28],[48,5]], 3);
-  return g.join('');
+const WORLD_LAND = '#2b4a35', WORLD_SEA = '#0f2236';
+function boardBase(p) { // per-cell backdrop color under the pixels
+  const n = p.cols * p.rows, arr = new Array(n);
+  if (p.bg === 'world') {
+    const land = genWorld(p.cols, p.rows);
+    for (let i = 0; i < n; i++) arr[i] = land[i] ? WORLD_LAND : WORLD_SEA;
+  } else if (p.bg === 'grid') {
+    for (let y = 0; y < p.rows; y++) for (let x = 0; x < p.cols; x++) arr[y * p.cols + x] = ((x + y) & 1) ? '#141416' : '#1a1b1d';
+  } else {
+    arr.fill('#17181a');
+  }
+  return arr;
 }
+function heartGrid(cols, rows, ch) { // filled heart via implicit curve
+  const a = blankGrid(cols * rows).split('');
+  const cx = cols / 2, cy = rows / 2 - rows * 0.04, s = Math.min(cols, rows) * 0.30;
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const nx = (x + 0.5 - cx) / s, ny = -(y + 0.5 - cy) / s;
+    const v = Math.pow(nx * nx + ny * ny - 1, 3) - nx * nx * ny * ny * ny;
+    if (v < 0) a[y * cols + x] = ch;
+  }
+  return a.join('');
+}
+
+function seedWorld() {
+  let g = blankGrid(96 * 48);
+  g = setPx(g, 96, [[85, 15], [86, 15], [85, 16], [86, 14]], '6');                          // a red mark near Japan
+  g = setPx(g, 96, [[47, 9], [49, 9], [46, 10], [47, 10], [48, 10], [49, 10], [50, 10], [47, 11], [48, 11], [49, 11], [48, 12]], 'a'); // green heart over Europe
+  g = setPx(g, 96, [[17, 13], [18, 13], [17, 14]], 'c');                                     // blue dot on N. America
+  g = setPx(g, 96, [[28, 32], [29, 32]], 'e');                                               // dot on S. America
+  g = setPx(g, 96, [[83, 34], [84, 34]], '8');                                               // dot on Australia
+  return g;
+}
+
 const PXBOARDS = [
-  { id: 'px1', size: 's', pixel: true, cols: 30, rows: 30, grid: seedPx1(), placed: 118, people: 23 },
-  { id: 'px2', size: 'xl', pixel: true, cols: 57, rows: 32, grid: seedPx2(), placed: 1462, people: 208 },
+  { id: 'pxw', size: 'xl', pixel: true, bg: 'world', label: 'WORLD MAP', cols: 96, rows: 48, W: 960, H: 480, grid: seedWorld(), placed: 1462, people: 208 },
+  { id: 'pxh', size: 'm', pixel: true, bg: 'grid', label: 'BLANK BOARD', cols: 44, rows: 44, W: 528, H: 528, grid: heartGrid(44, 44, '6'), placed: 196, people: 41 },
 ];
 
 const loadT = Date.now();
@@ -1025,28 +1059,27 @@ function isDark(hex) {
   return ((v >> 16) * 299 + ((v >> 8) & 255) * 587 + (v & 255) * 114) / 1000 < 128;
 }
 
+function dimOf(p) { return p.pixel ? { W: p.W, H: p.H, tf: 1 } : SIZES[p.size]; }
 function paintBoard(cv, p) {
-  const sz = SIZES[p.size];
   cv.width = p.cols; cv.height = p.rows;
   const ctx = cv.getContext('2d');
-  for (let y = 0; y < p.rows; y++) {
-    for (let x = 0; x < p.cols; x++) {
-      const ci = parseInt(p.grid[y * p.cols + x], 16) || 0;
-      ctx.fillStyle = PX_PAL[ci];
-      ctx.fillRect(x, y, 1, 1);
-    }
+  const base = boardBase(p);
+  const n = p.cols * p.rows;
+  for (let i = 0; i < n; i++) {
+    const ch = p.grid[i];
+    ctx.fillStyle = (ch === '.' || ch === undefined) ? base[i] : (PX_PAL[parseInt(ch, 16)] || base[i]);
+    ctx.fillRect(i % p.cols, (i / p.cols) | 0, 1, 1);
   }
 }
 
 function renderAd(p, opts = {}) {
-  const sz = SIZES[p.size];
+  const sz = dimOf(p);
   const el = document.createElement('div');
   el.className = 'screen size-' + p.size + (p.pixel ? ' pxboard' : '');
   el.style.width = sz.W + 'px';
   el.style.height = sz.H + 'px';
 
   if (p.pixel) {
-    el.style.background = PX_PAL[0];
     const cv = document.createElement('canvas');
     cv.className = 'px';
     paintBoard(cv, p);
@@ -1169,14 +1202,18 @@ function renderCaption() {
   if (!current) { cap.innerHTML = ''; return; }
   const p = current;
 
-  if (pxEdit) { // pixel painting mode: palette instead of caption
+  if (pxEdit) { // painting mode: palette instead of caption
     cap.innerHTML = '<div id="px-bar"><span id="px-pal"></span><span id="px-charges" class="mono"></span><button id="px-done">Done</button></div>';
     const pal = $('px-pal');
+    const er = document.createElement('button');
+    er.className = 'erase' + (pxColor < 0 ? ' sel' : '');
+    er.setAttribute('aria-label', 'Erase');
+    er.addEventListener('click', () => { pxColor = -1; renderCaption(); });
+    pal.appendChild(er);
     PX_PAL.forEach((c, i) => {
       const b = document.createElement('button');
-      if (i === 0) b.className = 'erase';
       b.style.background = c;
-      b.setAttribute('aria-label', i === 0 ? 'Erase' : 'Color ' + c);
+      b.setAttribute('aria-label', 'Color ' + c);
       if (i === pxColor) b.classList.add('sel');
       b.addEventListener('click', () => { pxColor = i; renderCaption(); });
       pal.appendChild(b);
@@ -1188,10 +1225,9 @@ function renderCaption() {
 
   if (p.pixel) {
     cap.innerHTML =
-      '<span class="sizetag">PIXEL BOARD</span>' +
-      '<span class="sizetag">' + SIZES[p.size].tag + '</span>' +
+      '<span class="sizetag">' + esc(p.label || 'PIXEL BOARD') + '</span>' +
       '<span class="who"><b>' + (p.placed || 0).toLocaleString('en') + '</b> pixels by <b>' + (p.people || 0) + '</b> people</span>' +
-      '<span class="mono">permanent · shared</span>' +
+      '<span class="mono">drag to move · scroll to zoom</span>' +
       '<button class="cap-btn" id="btn-px">Place pixels</button>' +
       '<button class="cap-btn flag" id="btn-flag" aria-label="Report">⚑</button>' +
       REPORT_POP;
@@ -1222,8 +1258,9 @@ function updatePool() {
   $('poolcount').textContent = liveAds().length + ' live';
 }
 
-/* --- pixel painting --- */
-let pxColor = 1, pxCharges = PX_MAX_CHARGES, pxYou = false;
+/* --- pixel boards: pan / zoom / place (wplace-style) --- */
+let pxColor = 6, pxCharges = PX_MAX_CHARGES, pxYou = false;
+let pxView = null; // { el, cv, board, vpW, vpH, fitS, zoom, ox, oy }
 setInterval(() => {
   if (pxCharges < PX_MAX_CHARGES) {
     pxCharges++;
@@ -1239,39 +1276,86 @@ function enterPxEdit(p) {
   pxEdit = p;
   document.body.classList.add('px-editing');
   renderCaption();
-  toast('Pick a color, then click the board. One pixel at a time.');
+  toast('Pick a color and click to place. Drag to move, scroll to zoom.');
 }
 function exitPxEdit() {
   pxEdit = null;
   document.body.classList.remove('px-editing');
   renderCaption();
 }
-function bindBoardPaint(cv, p) {
-  let painting = false;
-  const paint = e => {
-    if (!pxEdit || pxEdit.id !== p.id) return;
-    if (pxCharges <= 0) { toast('Out of pixels — they come back over time'); return; }
-    const r = cv.getBoundingClientRect();
-    const x = Math.floor((e.clientX - r.left) / r.width * p.cols);
-    const y = Math.floor((e.clientY - r.top) / r.height * p.rows);
-    if (x < 0 || y < 0 || x >= p.cols || y >= p.rows) return;
-    const idx = y * p.cols + x;
-    const cur = p.grid[idx];
-    const next = pxColor.toString(16);
-    if (cur === next) return;
-    p.grid = p.grid.slice(0, idx) + next + p.grid.slice(idx + 1);
-    p.placed = (p.placed || 0) + 1;
-    if (!pxYou) { p.people = (p.people || 0) + 1; pxYou = true; }
-    pxCharges--;
-    updateCharges();
-    paintBoard(cv, p);
-    setOvr(p, { grid: p.grid, placed: p.placed, people: p.people });
+function applyPxTransform() {
+  if (!pxView) return;
+  pxView.el.style.transform = 'translate(' + pxView.ox + 'px,' + pxView.oy + 'px) scale(' + (pxView.fitS * pxView.zoom) + ')';
+}
+function buildPixelStage(p, opts) {
+  const box = $('pscale');
+  const slot = $('slotwrap');
+  const vpW = Math.max(120, slot.clientWidth - 20);
+  const vpH = Math.max(120, slot.clientHeight - 16);
+  box.style.width = vpW + 'px';
+  box.style.height = vpH + 'px';
+  box.style.overflow = 'hidden';
+  const el = renderAd(p, {});
+  el.style.left = '0'; el.style.top = '0';
+  box.appendChild(el);
+  const fitS = Math.min(vpW / p.W, vpH / p.H) * 0.94;
+  pxView = { el, cv: el.querySelector('canvas.px'), board: p, vpW, vpH, fitS, zoom: 1,
+    ox: (vpW - p.W * fitS) / 2, oy: (vpH - p.H * fitS) / 2 };
+  applyPxTransform();
+  bindPixelInteract(el, p);
+}
+function placePixelAt(e, p) {
+  if (!pxEdit || pxEdit.id !== p.id) return;
+  if (pxCharges <= 0) { toast('Out of pixels — they come back over time'); return; }
+  const r = pxView.cv.getBoundingClientRect();
+  const x = Math.floor((e.clientX - r.left) / r.width * p.cols);
+  const y = Math.floor((e.clientY - r.top) / r.height * p.rows);
+  if (x < 0 || y < 0 || x >= p.cols || y >= p.rows) return;
+  const idx = y * p.cols + x;
+  const next = pxColor < 0 ? '.' : pxColor.toString(16);
+  if (p.grid[idx] === next) return;
+  p.grid = p.grid.slice(0, idx) + next + p.grid.slice(idx + 1);
+  if (next !== '.') { p.placed = (p.placed || 0) + 1; if (!pxYou) { p.people = (p.people || 0) + 1; pxYou = true; } }
+  pxCharges--;
+  updateCharges();
+  paintBoard(pxView.cv, p);
+  setOvr(p, { grid: p.grid, placed: p.placed, people: p.people });
+}
+function bindPixelInteract(el, p) {
+  let start = null, moved = false;
+  el.addEventListener('pointerdown', e => {
+    el.setPointerCapture(e.pointerId);
+    start = { x: e.clientX, y: e.clientY, ox: pxView.ox, oy: pxView.oy };
+    moved = false;
+    el.classList.add('dragging');
+    e.preventDefault();
+  });
+  el.addEventListener('pointermove', e => {
+    if (!start) return;
+    const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (!moved && Math.hypot(dx, dy) > 4) moved = true;
+    if (moved) { pxView.ox = start.ox + dx; pxView.oy = start.oy + dy; applyPxTransform(); }
+  });
+  const up = e => {
+    if (!start) return;
+    el.classList.remove('dragging');
+    if (!moved) placePixelAt(e, p);
+    start = null;
   };
-  cv.addEventListener('pointerdown', e => { painting = true; cv.setPointerCapture(e.pointerId); paint(e); e.preventDefault(); });
-  cv.addEventListener('pointermove', e => { if (painting) paint(e); });
-  const up = () => { painting = false; };
-  cv.addEventListener('pointerup', up);
-  cv.addEventListener('pointercancel', up);
+  el.addEventListener('pointerup', up);
+  el.addEventListener('pointercancel', () => { start = null; el.classList.remove('dragging'); });
+  el.addEventListener('wheel', e => {
+    e.preventDefault();
+    const box = $('pscale').getBoundingClientRect();
+    const bx = e.clientX - box.left, by = e.clientY - box.top;
+    const old = pxView.fitS * pxView.zoom;
+    const nz = Math.max(0.6, Math.min(12, pxView.zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+    const neu = pxView.fitS * nz;
+    const wx = (bx - pxView.ox) / old, wy = (by - pxView.oy) / old;
+    pxView.zoom = nz;
+    pxView.ox = bx - wx * neu; pxView.oy = by - wy * neu;
+    applyPxTransform();
+  }, { passive: false });
 }
 
 /* --- surface rendering --- */
@@ -1313,26 +1397,23 @@ function showNewtab(p, opts = {}) {
     box.appendChild(e);
     return;
   }
+  if (p.pixel) { buildPixelStage(p, opts); renderCaption(); return; }
   const el = renderAd(p, { clickable: true });
   if (!calm && !opts.still) el.classList.add('enter');
   box.appendChild(el);
   fitStage();
-  if (p.pixel) {
-    const cv = el.querySelector('canvas.px');
-    if (cv) bindBoardPaint(cv, p);
-  }
   renderCaption();
 }
 function fitStage() {
   const box = $('pscale');
   if (!box) return;
   const el = box.querySelector('.screen');
-  if (!el || !current) return;
+  if (!el || !current || current.pixel) return;
   const slot = $('slotwrap');
   fitBox(box, el, slot.clientWidth - 20, slot.clientHeight - 16, current.size, current.size === 'xl' ? 99 : 1.12);
 }
 addEventListener('resize', () => {
-  if (surface === 'newtab') fitStage();
+  if (surface === 'newtab') { if (current && current.pixel) show(current, { still: true }); else fitStage(); }
   else if (current) show(current, { still: true });
   if ($('composer').classList.contains('show')) fitEditor();
 });
@@ -1369,7 +1450,7 @@ function showWallpaper(p) {
   inner.appendChild(el);
   holder.appendChild(inner);
   r.appendChild(holder);
-  const sz = SIZES[p.size];
+  const sz = dimOf(p);
   requestAnimationFrame(() => {
     const s = Math.max(r.clientWidth / sz.W, r.clientHeight / sz.H); // cover
     inner.style.width = (sz.W * s) + 'px'; inner.style.height = (sz.H * s) + 'px';
@@ -1446,7 +1527,7 @@ function showTerminal(p) {
   if (p.pixel) {
     lines.push('  <span style="font-weight:700">PIXEL BOARD</span>');
     lines.push('  ' + (p.placed || 0).toLocaleString('en') + ' pixels placed by ' + (p.people || 0) + ' people');
-    lines.push('  <span class="c">permanent · shared · ' + SIZES[p.size].tag + '</span>');
+    lines.push('  <span class="c">permanent · shared · ' + (p.label || 'BOARD') + '</span>');
   } else {
     const title = (p.texts && p.texts[0] && p.texts[0].t || '(a wordless ad)').replace(/\n/g, ' ');
     const rest = (p.texts || []).slice(1).map(t => t.t).filter(Boolean).join(' ');
@@ -1487,7 +1568,7 @@ function showStream(p) {
   ovl.appendChild(holder);
   st.appendChild(ovl);
   r.appendChild(st);
-  const sz = SIZES[p.size];
+  const sz = dimOf(p);
   const targetW = Math.min(280, r.clientWidth * 0.32);
   const s = targetW / sz.W;
   holder.style.width = (sz.W * s) + 'px';
@@ -1508,7 +1589,7 @@ function lostAndNext() {
   const box = $('pscale');
   const el = box && box.querySelector('.screen');
   if (el && current && !calm) {
-    const sz = SIZES[current.size];
+    const sz = dimOf(current);
     const s = parseFloat(el.style.getPropertyValue('--s')) || 1;
     box.innerHTML = '';
     const ns = document.createElement('div');
@@ -2060,7 +2141,7 @@ function updateQueueDot() {
   d.classList.toggle('on', n > 0);
 }
 function miniOf(p) {
-  const sz = SIZES[p.size];
+  const sz = dimOf(p);
   const k = Math.min(100 / sz.W, 74 / sz.H);
   const wrap = document.createElement('div');
   wrap.className = 'q-mini';
@@ -2079,7 +2160,7 @@ function queueItem(p, acts) {
   info.className = 'q-info';
   const title = p.pixel ? 'Pixel board' : ((p.texts && p.texts[0] && p.texts[0].t) || '(wordless)').replace(/\n/g, ' ');
   info.innerHTML = '<div class="t">' + esc(title) + '</div>' +
-    '<div class="m">' + esc(p.pixel ? 'shared' : (p.author || 'anonymous')) + ' · ' + SIZES[p.size].tag +
+    '<div class="m">' + esc(p.pixel ? 'shared' : (p.author || 'anonymous')) + ' · ' + (p.pixel ? (p.label || 'BOARD') : SIZES[p.size].tag) +
     (p.link ? ' · link: ' + esc(p.link.kind === 'yt' ? 'YouTube' : (p.link.host || '')) : '') + '</div>';
   it.appendChild(info);
   const col = document.createElement('div');
