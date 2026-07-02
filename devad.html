@@ -202,8 +202,27 @@ input, textarea, select { font-family: inherit; }
 #nt-page.has-halfR #sl-card { right: calc(34% + 18px); }
 #sl-halfL { position: absolute; left: 0; top: 12%; bottom: 12%; width: 34%; z-index: 2; display: flex; align-items: center; justify-content: flex-start; }
 #sl-halfR { position: absolute; right: 0; top: 12%; bottom: 12%; width: 34%; z-index: 2; display: flex; align-items: center; justify-content: flex-end; }
-#sl-full { position: absolute; inset: 0; z-index: 5; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.18); }
+#sl-full { position: absolute; inset: 0; z-index: 5; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.18); transition: opacity .55s ease; }
 #sl-full.show { display: flex; }
+#sl-full.fading { opacity: 0; pointer-events: none; }
+/* FTC/IAB: 広告ユニットには近接した明確なラベルを(常時表示) */
+.unit-tag {
+  position: absolute; left: 8px; top: 8px; z-index: 7;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 8.5px; font-weight: 700; letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.42);
+  padding: 2.5px 7px; border-radius: 2px;
+  pointer-events: none;
+}
+.sl-line-tag {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 8.5px; font-weight: 700; letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 2px; padding: 1.5px 6px; margin-right: 4px;
+  vertical-align: 1px;
+}
 .sl-full-close {
   position: absolute; top: 14px; right: 14px; z-index: 6;
   width: 30px; height: 30px; border-radius: 50%;
@@ -1027,6 +1046,8 @@ ja: {
   region_japan: '日本のあたり', region_na: '北米', region_sa: '南米', region_eu: 'ヨーロッパ',
   region_af: 'アフリカ', region_asia: 'アジア', region_oceania: 'オセアニア', region_sea: '海のうえ',
   about_sim_note: 'この試作では、他の人の活動をシミュレーションで再現しています。',
+  ad_tag: '広告',
+  about_rules: '表示ルール: 同時に載る広告は控えめに、全面広告は8秒で自動的に閉じ、タブが見えていない間はローテーションを止めます。実在の広告品質基準(Better Ads Standards)に合わせた設計です。',
   link_label: 'リンク(任意)', caption_ph: 'キャプション', name_label: '名前',
   link_allow: 'リンク許可: YouTube · Spotify · X · GitHub · pixiv · note · Twitch · SoundCloud · Bandcamp · niconico',
   link_bad_url: 'URLの形式が正しくないようです', link_not_allowed: h => h + ' は許可リストにありません',
@@ -1120,6 +1141,8 @@ en: {
   region_japan: 'Japan', region_na: 'North America', region_sa: 'South America', region_eu: 'Europe',
   region_af: 'Africa', region_asia: 'Asia', region_oceania: 'Oceania', region_sea: 'out at sea',
   about_sim_note: "In this prototype, other people's activity is simulated.",
+  ad_tag: 'AD',
+  about_rules: 'Display rules: ad density stays low, full-page ads close themselves after 8 seconds, and rotation pauses while the tab is hidden — in line with the real-world Better Ads Standards.',
   link_label: 'Link (optional)', caption_ph: 'Caption', name_label: 'Name',
   link_allow: 'Allowlist: YouTube · Spotify · X · GitHub · pixiv · note · Twitch · SoundCloud · Bandcamp · niconico',
   link_bad_url: "That doesn't look like a URL", link_not_allowed: h => h + ' is not on the allowlist',
@@ -1471,6 +1494,10 @@ function renderAd(p, opts = {}) {
   by.className = 'byline';
   by.textContent = (t('anon_prefix') === 'anonymous' ? 'by ' : '— ') + (p.author || t('anon_prefix'));
   el.appendChild(by);
+  const tag = document.createElement('span'); // FTC/IAB: ユニット内に常時「広告」ラベル
+  tag.className = 'unit-tag';
+  tag.textContent = t('ad_tag');
+  el.appendChild(tag);
   if (opts.chips) attachChips(el, p);
   return el;
 }
@@ -1480,6 +1507,10 @@ function renderLineAd(p, opts = {}) {
   el.className = 'sl-line-ad';
   const sig = opts.fresh ? 1 : sigOf(p);
   el.style.setProperty('--sig', sig.toFixed(3));
+  const tg = document.createElement('span');
+  tg.className = 'sl-line-tag';
+  tg.textContent = t('ad_tag');
+  el.appendChild(tg);
   const txt = document.createElement('span');
   txt.className = 'sl-line-txt';
   txt.textContent = p.text || '';
@@ -1538,6 +1569,7 @@ function confirmReport(chips, p) {
 let surface = 'newtab';
 const slotCurrent = { line: null, card: null, halfL: null, halfR: null, full: null };
 let fullClosed = false;
+let fullAutoT = null;
 const sessionSkip = new Set();
 let paintMode = false;
 
@@ -1546,17 +1578,26 @@ function pickForSlot(slotId) {
   const pool = poolFor(slotId);
   return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
 }
+let fullShownThisSession = false;
 function drawAllSlots() {
   fullClosed = false;
   for (const s of SLOT_ORDER) slotCurrent[s] = pickForSlot(s);
-  // フルは他の枠と同格の抽選: 生きていても毎回はジャックしない(約1/3)
-  if (slotCurrent.full && Math.random() > 0.35) slotCurrent.full = null;
+  // Better Ads Standards: 全面=プレスティシャルは最嫌悪形式。低確率+セッション1回まで
+  if (slotCurrent.full && (fullShownThisSession || Math.random() > 0.18)) slotCurrent.full = null;
+  if (slotCurrent.full) fullShownThisSession = true;
+  // Better Ads Standards: 広告密度を抑える — キャンバス枠は同時2つまで
+  const occupied = ['halfL', 'halfR', 'card'].filter(s => slotCurrent[s]);
+  while (occupied.length > 2) {
+    const drop = occupied.splice(Math.floor(Math.random() * occupied.length), 1)[0];
+    slotCurrent[drop] = null;
+  }
 }
 
 /* ---- C1: per-slot ad rotation (line/card/halfL/halfR only — full is excluded) ---- */
 const ROT_SLOTS = ['line', 'card', 'halfL', 'halfR'];
 const rotTimers = {};
 function isRotationPaused(slotId) {
+  if (document.hidden) return true; // viewability: 見えていない間は回さない
   if ($('composer').classList.contains('show') || $('console').classList.contains('show')) return true;
   if (paintMode) return true;
   const wrap = $('sl-' + slotId);
@@ -1574,13 +1615,13 @@ function rotateSlot(slotId) {
 }
 function scheduleRotation(slotId) {
   clearTimeout(rotTimers[slotId]);
-  rotTimers[slotId] = setTimeout(() => rotateSlot(slotId), 30000 + Math.random() * 25000);
+  rotTimers[slotId] = setTimeout(() => rotateSlot(slotId), 16000 + Math.random() * 12000); // DOOH相場: 滞在数分の面で1本10-15秒
 }
 function startRotationTimers() {
   ROT_SLOTS.forEach(s => {
     clearTimeout(rotTimers[s]);
     // stagger the very first fire so slots don't all swap in sync
-    rotTimers[s] = setTimeout(() => rotateSlot(s), (30000 + Math.random() * 25000) * Math.random());
+    rotTimers[s] = setTimeout(() => rotateSlot(s), (16000 + Math.random() * 12000) * Math.random());
   });
 }
 function boostAd(p) {
@@ -1944,8 +1985,18 @@ function mountSlot(slotId, opts = {}) {
     closeBtn.className = 'sl-full-close';
     closeBtn.setAttribute('aria-label', t('close_ad'));
     closeBtn.textContent = '✕';
-    closeBtn.addEventListener('click', e => { e.stopPropagation(); fullClosed = true; mountSlot('full'); });
+    const dismissFull = () => {
+      clearTimeout(fullAutoT);
+      fullClosed = true;
+      if (calm) { mountSlot('full'); return; }
+      container.classList.add('fading');
+      setTimeout(() => { container.classList.remove('fading'); mountSlot('full'); }, 550);
+    };
+    closeBtn.addEventListener('click', e => { e.stopPropagation(); dismissFull(); });
     container.appendChild(closeBtn);
+    // Better Ads: プレスティシャルは居座らない — 8秒で自動的に閉じてページを返す
+    clearTimeout(fullAutoT);
+    fullAutoT = setTimeout(dismissFull, 8000);
     return;
   }
   if (!ad) {
@@ -3264,6 +3315,7 @@ function buildAbout() {
     '<ul>' + hiw.map((s, i) => '<li>' + esc(s) + (i === 2 ? '<div class="a-life mono">' + esc(t('life_list')) + '</div>' : '') + '</li>').join('') + '</ul>' +
     '<h3>' + esc(t('surf_title')) + '</h3>' +
     '<ul><li>' + esc(t('surf_note')) + '</li></ul>' +
+    '<p class="a-note">' + esc(t('about_rules')) + '</p>' +
     '<p class="a-note">' + esc(t('about_note')) + ' ' + esc(t('about_sim_note')) + '</p>' +
     '<div class="a-cta"><button class="a-go" id="about-go">' + esc(t('about_go')) + '</button><span class="a-sub">' + esc(t('about_sub2')) + '</span></div>';
   $('about-go').addEventListener('click', closeAbout);
