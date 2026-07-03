@@ -570,6 +570,55 @@ button.sl-chip:hover { background: rgba(0, 0, 0, 0.86); }
 #about .a-go:hover { background: #fff; }
 #about .a-sub { font-size: 11px; color: var(--fg-faint); }
 
+/* ===== gallery + hall of fame ===== */
+.gal-frame { width: min(1180px, calc(100vw - 32px)); margin: clamp(20px, 4vh, 50px) auto 60px; }
+.gal-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 0 4px 18px; border-bottom: 1px solid #29292b; margin-bottom: 24px; }
+.gal-head-txt { display: flex; flex-direction: column; gap: 4px; margin-right: auto; }
+.gal-ttl { font-size: clamp(16px, 2.4vw, 20px); font-weight: 800; letter-spacing: -0.01em; }
+.gal-count { font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: var(--fg-faint); letter-spacing: 0.04em; }
+.gal-sort { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.gal-sort button { font-size: 11px; font-weight: 600; color: var(--fg-dim); padding: 7px 12px; }
+.gal-sort button:hover { color: var(--fg); }
+.gal-sort button.sel { background: rgba(255, 255, 255, 0.1); color: var(--fg); }
+.gal-close { font-size: 18px; color: var(--fg-faint); padding: 4px 10px; }
+.gal-close:hover { color: var(--fg); }
+
+.gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; padding: 0 4px; }
+.gal-card { position: relative; display: flex; flex-direction: column; gap: 8px; }
+.gal-thumb-media { position: relative; overflow: hidden; border-radius: 6px; border: 1px solid var(--line); background: #0d0d0e; }
+.gal-thumb-media .screen { border-radius: 6px; }
+.gal-thumb-line {
+  min-height: 100px; display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 14px; border-radius: 6px; border: 1px solid var(--line); background: #1a1a1c;
+}
+.gal-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 10.5px; color: var(--fg-faint); padding: 0 2px; }
+.gal-tag { font-family: ui-monospace, Menlo, monospace; font-size: 9px; letter-spacing: 0.12em; color: var(--fg-dim); border: 1px solid var(--line); border-radius: 2px; padding: 2px 6px; }
+.gal-author { color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
+.gal-boostn { margin-left: auto; font-family: ui-monospace, Menlo, monospace; color: var(--fg-dim); }
+.gal-empty { grid-column: 1 / -1; text-align: center; padding: 44px 20px; color: var(--fg-faint); border: 1px dashed var(--line); border-radius: 8px; }
+
+.gal-chips { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); z-index: 5; display: flex; gap: 5px; opacity: 0; pointer-events: none; transition: opacity .15s; }
+.gal-card:hover .gal-chips, .gal-card:focus-within .gal-chips { opacity: 1; pointer-events: auto; }
+
+.gal-hall { margin-top: 46px; }
+.gal-hall-ttl { font-family: ui-monospace, Menlo, monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.22em; color: var(--fg-faint); padding: 0 2px 14px; margin-bottom: 18px; border-bottom: 1px dashed #2a2a2c; }
+.hall-card { position: relative; }
+.hall-badge {
+  position: absolute; right: 7px; top: 7px; z-index: 6;
+  font-family: ui-monospace, Menlo, monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.14em;
+  padding: 3px 7px; border-radius: 2px;
+}
+.hall-badge-live { background: var(--bone); color: var(--bone-ink); }
+.hall-badge-dead { background: rgba(0, 0, 0, 0.62); color: #c9c6bd; }
+.hall-dead .gal-thumb-media, .hall-dead .gal-thumb-line { filter: grayscale(0.7) brightness(0.68); }
+
+#gal-link-nt {
+  font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.72); text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  align-self: flex-start; padding: 1px 0;
+}
+#gal-link-nt:hover { color: #fff; }
+
 /* ===== editor (composer) ===== */
 #composer .frame {
   min-height: 100dvh;
@@ -838,6 +887,9 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
   #sl-halfL, #sl-halfR { width: 44%; }
   #nt-col { width: 94%; padding-top: 16px; gap: 10px; }
   #nt-tiles { display: none; }
+  .gal-frame { width: calc(100vw - 20px); margin: 14px auto 40px; }
+  .gal-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .gal-head { gap: 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -864,6 +916,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
     <div class="links">
       <span class="wordmark">/dev/ad <span style="font-weight:500">β0</span></span>
       <button class="linky" id="link-about"></button>
+      <button class="linky" id="link-gallery"></button>
       <button class="linky" id="link-console"><span id="admin-lbl"></span><span id="queue-dot"></span></button>
       <button id="btn-lang"></button>
     </div>
@@ -879,6 +932,28 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 <!-- ===== about ===== -->
 <div class="overlay" id="about" role="dialog" aria-modal="true" aria-label="About /dev/ad">
   <div class="card" id="about-card"></div>
+</div>
+
+<!-- ===== gallery + hall of fame ===== -->
+<div class="overlay" id="gallery" role="dialog" aria-modal="true" aria-label="Gallery">
+  <div class="gal-frame">
+    <div class="gal-head">
+      <div class="gal-head-txt">
+        <span class="gal-ttl" id="gal-ttl"></span>
+        <span class="gal-count" id="gal-count"></span>
+      </div>
+      <span class="gal-sort" id="gal-sort">
+        <button data-sort="new" class="sel"></button>
+        <button data-sort="boost"></button>
+      </span>
+      <button class="gal-close" id="gal-close" aria-label="Close">✕</button>
+    </div>
+    <div id="gal-grid" class="gal-grid"></div>
+    <div class="gal-hall">
+      <div class="gal-hall-ttl" id="gal-hall-ttl"></div>
+      <div id="gal-hall-grid" class="gal-grid"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ===== editor ===== -->
@@ -1047,7 +1122,7 @@ ja: {
   region_af: 'アフリカ', region_asia: 'アジア', region_oceania: 'オセアニア', region_sea: '海のうえ',
   about_sim_note: 'この試作では、他の人の活動をシミュレーションで再現しています。',
   ad_tag: '広告',
-  about_rules: '表示ルール: 同時に載る広告は控えめに、全面広告は8秒で自動的に閉じ、タブが見えていない間はローテーションを止めます。実在の広告品質基準(Better Ads Standards)に合わせた設計です。',
+  about_rules: 'ここでは広告が主役です。枠は出し惜しみせず、全面広告もローテーションで巡ってきては通り過ぎていきます(✕でいつでも閉じられます)。全部まとめて見たい人は「ギャラリー」へ。',
   link_label: 'リンク(任意)', caption_ph: 'キャプション', name_label: '名前',
   link_allow: 'リンク許可: YouTube · Spotify · X · GitHub · pixiv · note · Twitch · SoundCloud · Bandcamp · niconico',
   link_bad_url: 'URLの形式が正しくないようです', link_not_allowed: h => h + ' は許可リストにありません',
@@ -1079,12 +1154,18 @@ ja: {
     '枠が大きいほど寿命は短くなります。',
     '掲載前に必ず人が審査します。画像アップロードは不可(お絵描きはOK)。リンクは許可リストのみ。',
     '背景の世界地図はみんなのピクセルボードです。1ドットずつ、みんなで塗っています。',
+    'ギャラリーで全部見られます。消えた広告は殿堂に残ります。',
   ],
   life_list: '行 120時間 · カード 96時間 · 左右半面 48時間 · 全面 24時間',
   surf_title: 'SURFACE',
   surf_note: '同じ広告プールは、壁紙・タスクバー・ターミナル・配信オーバーレイにも差し込めます。下のSURFACE切り替えで試せます。',
   about_note: 'この試作はブラウザの中だけで完結しています。まだ何も共有されていません。管理画面で審査したり、時間を送って広告が消えていく様子を見てみてください。',
   about_go: '枠を見る', about_sub2: 'devnull studio による実験',
+  gal_link: 'ギャラリー', gal_title: 'ギャラリー — いま掲載中の広告',
+  gal_count: n => n + '件', gal_empty: 'いまは何も掲載されていません',
+  gal_sort_new: '新着', gal_sort_boost: 'ブースト順',
+  gal_left: n => 'あと' + n + '時間', gal_see_all: 'ぜんぶ見る →',
+  hall_title: '殿堂 — 生き延びた広告たち', hall_badge_live: '掲載中', hall_badge_dead: 'SIGNAL LOST',
 },
 en: {
   surf_newtab: 'New Tab', surf_wallpaper: 'Wallpaper', surf_ticker: 'Taskbar', surf_terminal: 'Terminal', surf_stream: 'Stream',
@@ -1142,7 +1223,7 @@ en: {
   region_af: 'Africa', region_asia: 'Asia', region_oceania: 'Oceania', region_sea: 'out at sea',
   about_sim_note: "In this prototype, other people's activity is simulated.",
   ad_tag: 'AD',
-  about_rules: 'Display rules: ad density stays low, full-page ads close themselves after 8 seconds, and rotation pauses while the tab is hidden — in line with the real-world Better Ads Standards.',
+  about_rules: "Here, the ads are the main attraction. Slots don't hold back, and full-page ads roll through in rotation and pass by (close them anytime with ✕). Want to binge them all? Open the Gallery.",
   link_label: 'Link (optional)', caption_ph: 'Caption', name_label: 'Name',
   link_allow: 'Allowlist: YouTube · Spotify · X · GitHub · pixiv · note · Twitch · SoundCloud · Bandcamp · niconico',
   link_bad_url: "That doesn't look like a URL", link_not_allowed: h => h + ' is not on the allowlist',
@@ -1174,12 +1255,18 @@ en: {
     'Bigger formats burn faster.',
     'A human reviews every ad before it goes live. No image uploads (drawing is fine). Links from a short allowlist only.',
     'The world map background is a shared pixel board — everyone paints it, one dot at a time.',
+    'See everything in the Gallery. Ads that fade out still live on in the Hall of Fame.',
   ],
   life_list: 'Line 120h · Card 96h · Half L/R 48h · Full 24h',
   surf_title: 'SURFACES',
   surf_note: 'The same pool can run anywhere: wallpaper, taskbar ticker, terminal, stream overlay. Try the SURFACE switcher below.',
   about_note: 'This prototype runs entirely in your browser — nothing you post is shared yet. Open Admin to review posts and fast-forward time to watch ads fade out.',
   about_go: 'Open the slot', about_sub2: 'an experiment by devnull studio',
+  gal_link: 'Gallery', gal_title: 'Gallery — live now',
+  gal_count: n => n + (n === 1 ? ' ad' : ' ads'), gal_empty: 'Nothing is live right now',
+  gal_sort_new: 'Newest', gal_sort_boost: 'Most boosted',
+  gal_left: n => n + 'h left', gal_see_all: 'See all →',
+  hall_title: 'Hall of Fame — the ones that lasted', hall_badge_live: 'LIVE', hall_badge_dead: 'SIGNAL LOST',
 },
 };
 function t(key, ...args) {
@@ -1291,6 +1378,7 @@ let store;
 try { store = JSON.parse(localStorage.getItem(LS) || '{}'); } catch (e) { store = {}; }
 store.user = store.user || [];
 store.ovr = store.ovr || {};
+store.hall = store.hall || []; // v6: snapshots of ads that lost signal, for the Hall of Fame
 if (!store.lang) store.lang = (navigator.language || 'en').toLowerCase().startsWith('ja') ? 'ja' : 'en';
 function save() { try { localStorage.setItem(LS, JSON.stringify(store)); } catch (e) {} }
 function getWorld() {
@@ -1381,7 +1469,28 @@ const SEED = [
     author: 'ねぼすけ#0666', postedAgoH: 1, keeps: 0 },
 ];
 
+/* v6: Hall of Fame seed — a few ads that already lost signal before this session started */
+const HALL_SEED_RAW = [
+  { id: 'h01', slot: 'full', bg: { c1: '#141416', c2: '#000000', grad: true, ang: 180 },
+    texts: [
+      { t: '初日、貼りました。', x: 50, y: 40, s: 4, c: '#d8d5cc', f: 'g' },
+      { t: 'これがここに貼られた最初の広告でした。', x: 50, y: 58, s: 1, c: '#8d8b84', f: 'g' },
+    ],
+    stamps: [{ ch: '★', x: 50, y: 78, r: 0, s: 1.6 }],
+    author: 'root#0001', keeps: 41, diedAgoH: 720 },
+  { id: 'h02', slot: 'halfL', bg: { c1: '#3d2a10', c2: '#181008', grad: true, ang: 160 },
+    texts: [
+      { t: 'ラーメン屋、\n閉店します', x: 50, y: 30, s: 3, c: '#f3ead9', f: 'g' },
+      { t: '10年間ありがとうございました。\n最終営業日は今月末です。', x: 50, y: 60, s: 1, c: '#c9b490', f: 'g' },
+    ],
+    stamps: [{ ch: '🍜', x: 50, y: 82, r: -6, s: 1.6 }],
+    author: '大将#0002', keeps: 33, diedAgoH: 480 },
+  { id: 'h03', slot: 'line', text: 'めっちゃブーストされたやつ、ありがとう。もう行きます。', link: null,
+    author: 'buzzed#7777', keeps: 27, diedAgoH: 300 },
+];
+
 const loadT = Date.now();
+const HALL_SEED = HALL_SEED_RAW.map(h => ({ ...h, diedAt: loadT - h.diedAgoH * H }));
 
 /* ================= model ================= */
 function allAds() {
@@ -1403,6 +1512,45 @@ function sigOf(p) {
 }
 function isLive(p) { return p.status === 'live' && expiresAt(p) > T(); }
 function liveAds() { return allAds().filter(isLive); }
+
+/* ================= v6: Hall of Fame model ================= */
+/* store.hall holds up to 24 unique snapshots of ads that lost signal (isLive -> false).
+   Checked from decay ticks and the demo fast-forward tools — anywhere time can move an ad past its life. */
+function addToHall(p) {
+  store.hall = store.hall || [];
+  if (store.hall.some(h => h.id === p.id)) return; // no duplicate ids
+  const snap = {
+    id: p.id, slot: p.slot, bg: p.bg, texts: p.texts, stamps: p.stamps, doodle: p.doodle,
+    link: p.link, text: p.text, author: p.author, keeps: p.keeps || 0, diedAt: T(),
+  };
+  store.hall.push(snap);
+  if (store.hall.length > 24) {
+    let worst = 0;
+    for (let i = 1; i < store.hall.length; i++) if ((store.hall[i].keeps || 0) < (store.hall[worst].keeps || 0)) worst = i;
+    store.hall.splice(worst, 1);
+  }
+  save();
+}
+function checkHallInductions() {
+  for (const p of allAds()) {
+    if (p.status === 'live' && expiresAt(p) <= T()) addToHall(p);
+  }
+}
+/* merge seed + recorded dead snapshots with anything still live today (keeps top wins on id collision) */
+function hallEntries() {
+  const map = new Map();
+  for (const h of HALL_SEED) map.set(h.id, { ...h, dead: true });
+  for (const h of (store.hall || [])) map.set(h.id, { ...h, dead: true });
+  for (const p of liveAds()) {
+    map.set(p.id, {
+      id: p.id, slot: p.slot, bg: p.bg, texts: p.texts, stamps: p.stamps, doodle: p.doodle,
+      link: p.link, text: p.text, author: p.author, keeps: p.keeps || 0, dead: false,
+    });
+  }
+  return [...map.values()];
+}
+function hallTop(n) { return hallEntries().sort((a, b) => (b.keeps || 0) - (a.keeps || 0)).slice(0, n); }
+
 function setOvr(p, patch) {
   if (String(p.id).startsWith('u')) {
     const u = store.user.find(x => x.id === p.id);
@@ -1578,23 +1726,17 @@ function pickForSlot(slotId) {
   const pool = poolFor(slotId);
   return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
 }
-let fullShownThisSession = false;
 function drawAllSlots() {
   fullClosed = false;
   for (const s of SLOT_ORDER) slotCurrent[s] = pickForSlot(s);
-  // Better Ads Standards: 全面=プレスティシャルは最嫌悪形式。低確率+セッション1回まで
-  if (slotCurrent.full && (fullShownThisSession || Math.random() > 0.18)) slotCurrent.full = null;
-  if (slotCurrent.full) fullShownThisSession = true;
-  // Better Ads Standards: 広告密度を抑える — キャンバス枠は同時2つまで
-  const occupied = ['halfL', 'halfR', 'card'].filter(s => slotCurrent[s]);
-  while (occupied.length > 2) {
-    const drop = occupied.splice(Math.floor(Math.random() * occupied.length), 1)[0];
-    slotCurrent[drop] = null;
-  }
+  // ここでは広告が主役(見に来る人がいる)ので密度は絞らない。
+  // ただし全面ジャックが毎回だとページ自体を見られないので、開幕は1/3で登場。
+  // 登場後はローテーションに乗って通り過ぎていく(下のrotateSlot参照)。
+  if (slotCurrent.full && Math.random() > 0.33) slotCurrent.full = null;
 }
 
 /* ---- C1: per-slot ad rotation (line/card/halfL/halfR only — full is excluded) ---- */
-const ROT_SLOTS = ['line', 'card', 'halfL', 'halfR'];
+const ROT_SLOTS = ['line', 'card', 'halfL', 'halfR', 'full'];
 const rotTimers = {};
 function isRotationPaused(slotId) {
   if (document.hidden) return true; // viewability: 見えていない間は回さない
@@ -1608,6 +1750,19 @@ function rotateSlot(slotId) {
   scheduleRotation(slotId);
   if (surface !== 'newtab' || isRotationPaused(slotId)) return;
   const cur = slotCurrent[slotId];
+  if (slotId === 'full') {
+    // 全面はスペクタクル: 出て、1周期見せて、通り過ぎる(閉じるor次の全面へ)
+    if (cur && !fullClosed) {
+      const pool = poolFor('full').filter(p => p.id !== cur.id);
+      slotCurrent.full = (pool.length && Math.random() < 0.5) ? pool[Math.floor(Math.random() * pool.length)] : null;
+    } else {
+      const pool = poolFor('full');
+      slotCurrent.full = (pool.length && Math.random() < 0.3) ? pool[Math.floor(Math.random() * pool.length)] : null;
+      if (slotCurrent.full) fullClosed = false;
+    }
+    mountSlot('full');
+    return;
+  }
   const pool = poolFor(slotId).filter(p => !cur || p.id !== cur.id);
   if (!pool.length) return; // nothing else to rotate to
   slotCurrent[slotId] = pool[Math.floor(Math.random() * pool.length)];
@@ -1994,9 +2149,6 @@ function mountSlot(slotId, opts = {}) {
     };
     closeBtn.addEventListener('click', e => { e.stopPropagation(); dismissFull(); });
     container.appendChild(closeBtn);
-    // Better Ads: プレスティシャルは居座らない — 8秒で自動的に閉じてページを返す
-    clearTimeout(fullAutoT);
-    fullAutoT = setTimeout(dismissFull, 8000);
     return;
   }
   if (!ad) {
@@ -2069,7 +2221,7 @@ function showNewtab() {
       '<div id="sl-halfL"></div>' +
       '<div id="sl-halfR"></div>' +
       '<div id="sl-full"></div>' +
-      '<div id="nt-corner-wrap"><div id="nt-feed" class="mono"></div><div id="nt-corner"><button id="btn-paint"></button><span id="wp-stats" class="mono"></span></div></div>' +
+      '<div id="nt-corner-wrap"><div id="nt-feed" class="mono"></div><button id="gal-link-nt"></button><div id="nt-corner"><button id="btn-paint"></button><span id="wp-stats" class="mono"></span></div></div>' +
     '</div>';
   vp.innerHTML = '';
   vp.appendChild(nt);
@@ -2086,6 +2238,8 @@ function showNewtab() {
   });
   $('btn-paint').textContent = t('paint_bg');
   $('btn-paint').addEventListener('click', enterPaint);
+  $('gal-link-nt').textContent = t('gal_see_all');
+  $('gal-link-nt').addEventListener('click', openGallery);
   renderWallStats();
   paintWorldCanvas($('wall'), world.grid);
   layoutWallCover();
@@ -2281,6 +2435,7 @@ $('btn-next').addEventListener('click', () => {
 
 /* ================= decay watch ================= */
 function tickDecay() {
+  checkHallInductions(); // v6: catch any ad that just lost signal, wherever it's mounted
   if (surface === 'newtab') {
     let changed = false;
     for (const s of SLOT_ORDER) {
@@ -2294,6 +2449,7 @@ function tickDecay() {
     showSurface();
   }
   updatePool();
+  if ($('gallery').classList.contains('show')) renderGallery();
 }
 setInterval(tickDecay, 60e3);
 
@@ -3294,10 +3450,12 @@ function renderConsole() {
 document.querySelectorAll('.q-tool[data-ff]').forEach(b => {
   b.addEventListener('click', () => {
     ffH += Number(b.dataset.ff);
+    checkHallInductions(); // v6: fast-forwarding time can push any live ad past its life, not just the mounted one
     renderConsole();
     updatePool();
     if (surface === 'newtab') { tickDecay(); }
     else if (sfCurrent && !isLive(sfCurrent)) { sfCurrent = pickOther(); showSurface(); }
+    if ($('gallery').classList.contains('show')) renderGallery();
     toast('+' + b.dataset.ff + 'h');
   });
 });
@@ -3327,6 +3485,135 @@ function closeAbout() {
 }
 $('link-about').addEventListener('click', openAbout);
 $('about').addEventListener('click', e => { if (e.target === $('about')) closeAbout(); });
+
+/* ================= v6: gallery + hall of fame ================= */
+let gallerySort = 'new';
+
+/* shared thumbnail builder: same "scale a full-size render down" trick as miniOf() / mp-box */
+function galleryThumbFor(p, opts = {}) {
+  if (p.slot === 'line') {
+    const box = document.createElement('div');
+    box.className = 'gal-thumb-line';
+    box.appendChild(renderLineAd(p, { fresh: opts.fresh }));
+    return box;
+  }
+  const dims = SLOTS[p.slot];
+  const box = document.createElement('div');
+  box.className = 'gal-thumb-media';
+  box.style.aspectRatio = dims.W + ' / ' + dims.H;
+  box.dataset.slot = p.slot;
+  const el = renderAd(p, { fresh: opts.fresh });
+  el.style.position = 'absolute'; el.style.left = '0'; el.style.top = '0'; el.style.transformOrigin = '0 0';
+  box.appendChild(el);
+  return box;
+}
+function fitGalleryThumbs(root) {
+  root.querySelectorAll('.gal-thumb-media').forEach(box => {
+    const dims = SLOTS[box.dataset.slot];
+    if (!dims) return;
+    const cw = box.clientWidth || 1;
+    const el = box.querySelector('.screen');
+    if (el) el.style.transform = 'scale(' + (cw / dims.W) + ')';
+  });
+}
+function galCardMeta(p, opts = {}) {
+  const meta = document.createElement('div');
+  meta.className = 'gal-meta';
+  const tag = document.createElement('span'); tag.className = 'gal-tag'; tag.textContent = SLOT_TAG[p.slot];
+  const author = document.createElement('span'); author.className = 'gal-author'; author.textContent = p.author || t('anon_prefix');
+  meta.appendChild(tag); meta.appendChild(author);
+  if (opts.timeLeft) {
+    const time = document.createElement('span'); time.className = 'gal-time';
+    time.textContent = t('gal_left', Math.max(1, Math.ceil((expiresAt(p) - T()) / H)));
+    meta.appendChild(time);
+  }
+  const boost = document.createElement('span'); boost.className = 'gal-boostn'; boost.textContent = '+' + (p.keeps || 0);
+  meta.appendChild(boost);
+  return meta;
+}
+/* hover chips: reuse boostAd()/reportAd() (the same functions the main slots use) with a small gallery-local confirm UI */
+function galConfirmReport(chips, p) {
+  chips.innerHTML = '';
+  const q = document.createElement('span'); q.className = 'sl-chip'; q.textContent = t('report_confirm'); chips.appendChild(q);
+  const yes = document.createElement('button'); yes.className = 'sl-chip sl-chip-yes'; yes.textContent = t('yes');
+  yes.addEventListener('click', e => { e.stopPropagation(); reportAd(p); renderGallery(); });
+  const no = document.createElement('button'); no.className = 'sl-chip'; no.textContent = t('cancel');
+  no.addEventListener('click', e => { e.stopPropagation(); renderGallery(); });
+  chips.appendChild(yes); chips.appendChild(no);
+}
+function galAttachChips(card, p) {
+  const chips = document.createElement('div');
+  chips.className = 'gal-chips';
+  const mk = (txt, cls, fn) => {
+    const b = document.createElement('button');
+    b.className = 'sl-chip' + (cls ? ' ' + cls : '');
+    b.textContent = txt;
+    b.addEventListener('click', e => { e.stopPropagation(); fn(); });
+    return b;
+  };
+  chips.appendChild(mk(p.kept ? t('boosted') : t('boost'), p.kept ? 'boosted' : '', () => { boostAd(p); renderGallery(); }));
+  chips.appendChild(mk('⚑', 'flag', () => galConfirmReport(chips, p)));
+  card.appendChild(chips);
+}
+function galSortedAds() {
+  const ads = liveAds().slice();
+  if (gallerySort === 'boost') ads.sort((a, b) => (b.keeps || 0) - (a.keeps || 0) || b.postedAt - a.postedAt);
+  else ads.sort((a, b) => b.postedAt - a.postedAt);
+  return ads;
+}
+function buildGalCard(p) {
+  const card = document.createElement('div');
+  card.className = 'gal-card';
+  card.tabIndex = 0;
+  card.appendChild(galleryThumbFor(p));
+  card.appendChild(galCardMeta(p, { timeLeft: true }));
+  galAttachChips(card, p);
+  return card;
+}
+function buildHallCard(h) {
+  const card = document.createElement('div');
+  card.className = 'hall-card' + (h.dead ? ' hall-dead' : '');
+  card.appendChild(galleryThumbFor(h, { fresh: true }));
+  const badge = document.createElement('span');
+  badge.className = 'hall-badge ' + (h.dead ? 'hall-badge-dead' : 'hall-badge-live');
+  badge.textContent = h.dead ? t('hall_badge_dead') : t('hall_badge_live');
+  card.appendChild(badge);
+  card.appendChild(galCardMeta(h));
+  return card;
+}
+function renderGallery() {
+  $('gal-ttl').textContent = t('gal_title');
+  document.querySelectorAll('#gal-sort button').forEach(b => {
+    b.textContent = b.dataset.sort === 'new' ? t('gal_sort_new') : t('gal_sort_boost');
+    b.classList.toggle('sel', b.dataset.sort === gallerySort);
+  });
+
+  const ads = galSortedAds();
+  $('gal-count').textContent = t('gal_count', ads.length);
+  const grid = $('gal-grid');
+  grid.innerHTML = '';
+  if (!ads.length) {
+    const empty = document.createElement('div'); empty.className = 'gal-empty'; empty.textContent = t('gal_empty');
+    grid.appendChild(empty);
+  } else {
+    for (const p of ads) grid.appendChild(buildGalCard(p));
+  }
+  fitGalleryThumbs(grid);
+
+  $('gal-hall-ttl').textContent = t('hall_title');
+  const hallGrid = $('gal-hall-grid');
+  hallGrid.innerHTML = '';
+  for (const h of hallTop(8)) hallGrid.appendChild(buildHallCard(h));
+  fitGalleryThumbs(hallGrid);
+}
+function openGallery() { $('gallery').classList.add('show'); renderGallery(); }
+function closeGallery() { $('gallery').classList.remove('show'); }
+$('link-gallery').addEventListener('click', openGallery);
+$('gal-close').addEventListener('click', closeGallery);
+$('gallery').addEventListener('click', e => { if (e.target === $('gallery')) closeGallery(); });
+document.querySelectorAll('#gal-sort button').forEach(b => {
+  b.addEventListener('click', () => { gallerySort = b.dataset.sort; renderGallery(); });
+});
 
 /* ================= static chrome (i18n) ================= */
 function buildEditorChrome() {
@@ -3372,6 +3659,7 @@ function buildChrome() {
   document.querySelector('[data-surf="stream"]').textContent = t('surf_stream');
   $('btn-next').textContent = t('new_tab_btn');
   $('link-about').textContent = t('about_link');
+  $('link-gallery').textContent = t('gal_link');
   $('admin-lbl').textContent = t('admin_link');
   $('btn-lang').textContent = t('lang_btn');
   $('btn-compose').textContent = t('post_ad');
@@ -3379,6 +3667,7 @@ function buildChrome() {
   buildAdminChrome();
   if ($('console').classList.contains('show')) renderConsole();
   if ($('about').classList.contains('show')) buildAbout();
+  if ($('gallery').classList.contains('show')) renderGallery();
   if ($('composer').classList.contains('show')) { buildEditorChrome(); buildPlacementPicker(); rebuildPreview(); }
 }
 $('btn-lang').addEventListener('click', () => {
@@ -3409,10 +3698,11 @@ document.addEventListener('keydown', e => {
     if (composerOpen) closeComposer();
     else if ($('console').classList.contains('show')) closeConsole();
     else if ($('about').classList.contains('show')) closeAbout();
+    else if ($('gallery').classList.contains('show')) closeGallery();
     else if (paintMode) exitPaint();
     return;
   }
-  if (composerOpen || $('about').classList.contains('show') || $('console').classList.contains('show')) return;
+  if (composerOpen || $('about').classList.contains('show') || $('console').classList.contains('show') || $('gallery').classList.contains('show')) return;
   if (e.key === ' ' || e.key === 'n' || e.key === 'N') { e.preventDefault(); if (surface === 'newtab') { drawAllSlots(); mountAllSlots(); } }
   if (e.key === 'p' || e.key === 'P') openComposer();
 });
@@ -3427,6 +3717,7 @@ if (qs && ['newtab', 'wallpaper', 'ticker', 'terminal', 'stream'].includes(qs)) 
 }
 buildChrome();
 drawAllSlots();
+checkHallInductions();
 if (surface === 'newtab') showNewtab(); else { sfCurrent = pickOther(); showSurface(); }
 updateQueueDot();
 startRotationTimers();
