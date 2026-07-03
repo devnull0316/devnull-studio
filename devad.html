@@ -188,7 +188,6 @@ input, textarea, select { font-family: inherit; }
   position: relative; display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; justify-content: center;
   color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.55);
   font-size: 12.5px; padding: 4px 12px 28px;
-  opacity: calc(0.4 + 0.6 * var(--sig, 1));
 }
 .sl-line-lnk { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
 .sl-line-by { opacity: 0.72; font-size: 10.5px; }
@@ -254,29 +253,13 @@ input, textarea, select { font-family: inherit; }
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
-  /* --sig 1=fresh 0=gone */
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.5),
     0 24px 60px rgba(0, 0, 0, 0.45);
-  filter:
-    brightness(calc(0.52 + 0.48 * var(--sig, 1)))
-    saturate(calc(0.55 + 0.45 * var(--sig, 1)));
 }
 .screen::before {
   content: ''; position: absolute; inset: 0; z-index: 5; pointer-events: none;
   background: linear-gradient(165deg, rgba(255, 255, 255, 0.06), transparent 38%);
-}
-.screen::after { /* static noise creeps in as signal drops */
-  content: ''; position: absolute; inset: 0; z-index: 6; pointer-events: none;
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="220" height="220" filter="url(%23n)"/></svg>');
-  opacity: calc((1 - var(--sig, 1)) * 0.42);
-  mix-blend-mode: overlay;
-}
-.screen.weak { animation: flick 5s steps(1, end) infinite; }
-@keyframes flick {
-  0%, 91%, 94%, 100% { opacity: 1; }
-  92% { opacity: 0.72; }
-  93% { opacity: 0.9; }
 }
 
 .t-block {
@@ -292,6 +275,7 @@ input, textarea, select { font-family: inherit; }
 
 .stamp { position: absolute; z-index: 3; user-select: none; line-height: 1; }
 .doodle { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; pointer-events: none; }
+.photo { position: absolute; z-index: 1; max-width: none; }
 
 .byline {
   position: absolute; right: 4.5%; bottom: 4%; z-index: 4;
@@ -378,7 +362,7 @@ input, textarea, select { font-family: inherit; }
   padding: 4px 8px; border-radius: 3px; white-space: nowrap;
 }
 button.sl-chip:hover { background: rgba(0, 0, 0, 0.86); }
-.sl-chip.boosted { background: var(--bone); color: var(--bone-ink); }
+.sl-chip.saved { background: var(--bone); color: var(--bone-ink); }
 .chip-glow .sl-chips { opacity: 1; pointer-events: auto; }
 .chip-glow .sl-chip:first-child { animation: chipGlow 1.2s ease; }
 @keyframes chipGlow { 0%, 100% { box-shadow: none; } 30% { box-shadow: 0 0 0 4px rgba(216, 213, 204, 0.4); } }
@@ -558,7 +542,6 @@ button.sl-chip:hover { background: rgba(0, 0, 0, 0.86); }
 #about li { font-size: 13px; line-height: 1.8; color: var(--fg-dim); padding-left: 18px; position: relative; }
 #about li::before { content: '—'; position: absolute; left: 0; color: var(--fg-faint); }
 #about li b { color: var(--fg); }
-#about .a-life { margin-top: 8px; font-size: 11.5px; color: var(--fg-faint); }
 #about .a-note { margin-top: 24px; font-size: 11.5px; line-height: 1.85; color: var(--fg-faint); border-top: 1px dashed #2a2a2c; padding-top: 16px; }
 #about .a-cta { margin-top: 26px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 #about .a-go {
@@ -576,10 +559,10 @@ button.sl-chip:hover { background: rgba(0, 0, 0, 0.86); }
 .gal-head-txt { display: flex; flex-direction: column; gap: 4px; margin-right: auto; }
 .gal-ttl { font-size: clamp(16px, 2.4vw, 20px); font-weight: 800; letter-spacing: -0.01em; }
 .gal-count { font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: var(--fg-faint); letter-spacing: 0.04em; }
-.gal-sort { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
-.gal-sort button { font-size: 11px; font-weight: 600; color: var(--fg-dim); padding: 7px 12px; }
-.gal-sort button:hover { color: var(--fg); }
-.gal-sort button.sel { background: rgba(255, 255, 255, 0.1); color: var(--fg); }
+.gal-sort, .gal-tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.gal-sort button, .gal-tabs button { font-size: 11px; font-weight: 600; color: var(--fg-dim); padding: 7px 12px; }
+.gal-sort button:hover, .gal-tabs button:hover { color: var(--fg); }
+.gal-sort button.sel, .gal-tabs button.sel { background: rgba(255, 255, 255, 0.1); color: var(--fg); }
 .gal-close { font-size: 18px; color: var(--fg-faint); padding: 4px 10px; }
 .gal-close:hover { color: var(--fg); }
 
@@ -594,23 +577,19 @@ button.sl-chip:hover { background: rgba(0, 0, 0, 0.86); }
 .gal-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 10.5px; color: var(--fg-faint); padding: 0 2px; }
 .gal-tag { font-family: ui-monospace, Menlo, monospace; font-size: 9px; letter-spacing: 0.12em; color: var(--fg-dim); border: 1px solid var(--line); border-radius: 2px; padding: 2px 6px; }
 .gal-author { color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
-.gal-boostn { margin-left: auto; font-family: ui-monospace, Menlo, monospace; color: var(--fg-dim); }
+.gal-savesn { margin-left: auto; font-family: ui-monospace, Menlo, monospace; color: var(--fg-dim); }
 .gal-empty { grid-column: 1 / -1; text-align: center; padding: 44px 20px; color: var(--fg-faint); border: 1px dashed var(--line); border-radius: 8px; }
 
 .gal-chips { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); z-index: 5; display: flex; gap: 5px; opacity: 0; pointer-events: none; transition: opacity .15s; }
 .gal-card:hover .gal-chips, .gal-card:focus-within .gal-chips { opacity: 1; pointer-events: auto; }
 
-.gal-hall { margin-top: 46px; }
-.gal-hall-ttl { font-family: ui-monospace, Menlo, monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.22em; color: var(--fg-faint); padding: 0 2px 14px; margin-bottom: 18px; border-bottom: 1px dashed #2a2a2c; }
-.hall-card { position: relative; }
-.hall-badge {
+.gal-mine-badge {
   position: absolute; right: 7px; top: 7px; z-index: 6;
-  font-family: ui-monospace, Menlo, monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.14em;
+  font-family: ui-monospace, Menlo, monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em;
   padding: 3px 7px; border-radius: 2px;
+  background: var(--bone); color: var(--bone-ink);
 }
-.hall-badge-live { background: var(--bone); color: var(--bone-ink); }
-.hall-badge-dead { background: rgba(0, 0, 0, 0.62); color: #c9c6bd; }
-.hall-dead .gal-thumb-media, .hall-dead .gal-thumb-line { filter: grayscale(0.7) brightness(0.68); }
+.hall-card { position: relative; }
 
 #gal-link-nt {
   font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: 0.04em;
@@ -703,8 +682,8 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 #c-scale > .screen { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 #c-scale canvas#c-pen { position: absolute; left: 0; top: 0; z-index: 8; transform-origin: 0 0; touch-action: none; pointer-events: none; }
 #c-scale.pen-on canvas#c-pen { pointer-events: auto; cursor: crosshair; }
-#c-scale .t-block, #c-scale .stamp { pointer-events: auto; }
-#c-scale.tool-select .t-block, #c-scale.tool-select .stamp { cursor: grab; }
+#c-scale .t-block, #c-scale .stamp, #c-scale .photo { pointer-events: auto; }
+#c-scale.tool-select .t-block, #c-scale.tool-select .stamp, #c-scale.tool-select .photo { cursor: grab; }
 #c-scale.tool-text .screen { cursor: text; }
 #c-scale.tool-sticker .screen { cursor: copy; }
 #c-scale .drag { cursor: grabbing !important; }
@@ -819,6 +798,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 }
 .ed-input.sm { width: 140px; }
 .ed-input:focus { outline: none; border-color: var(--bone); }
+#ed-review-note { flex-basis: 100%; text-align: center; margin-top: 4px; font-size: 10.5px; color: var(--fg-faint); line-height: 1.6; }
 #link-status { font-size: 10.5px; }
 #link-status.warn { color: var(--danger); }
 #link-status.ok { color: var(--fg-dim); }
@@ -863,6 +843,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 .q-info { flex: 1; min-width: 0; }
 .q-info .t { font-size: 12.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .q-info .m { margin-top: 3px; font-size: 10.5px; color: var(--fg-faint); }
+.q-info .m.mine { color: var(--bone); font-weight: 700; }
 .q-acts { display: flex; flex-direction: column; gap: 7px; }
 .q-btn { font-size: 11.5px; font-weight: 700; border-radius: 3px; padding: 8px 13px; white-space: nowrap; }
 .q-btn.ok { background: var(--bone); color: var(--bone-ink); }
@@ -942,17 +923,18 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
         <span class="gal-ttl" id="gal-ttl"></span>
         <span class="gal-count" id="gal-count"></span>
       </div>
+      <span class="gal-tabs" id="gal-tabs">
+        <button data-tab="all" class="sel"></button>
+        <button data-tab="saved"></button>
+        <button data-tab="hall"></button>
+      </span>
       <span class="gal-sort" id="gal-sort">
         <button data-sort="new" class="sel"></button>
-        <button data-sort="boost"></button>
+        <button data-sort="saves"></button>
       </span>
       <button class="gal-close" id="gal-close" aria-label="Close">✕</button>
     </div>
     <div id="gal-grid" class="gal-grid"></div>
-    <div class="gal-hall">
-      <div class="gal-hall-ttl" id="gal-hall-ttl"></div>
-      <div id="gal-hall-grid" class="gal-grid"></div>
-    </div>
   </div>
 </div>
 
@@ -986,6 +968,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
     <div id="ed-main">
       <div id="ed-tools" role="toolbar" aria-label="Tools"></div>
       <div id="ed-canvas">
+        <input type="file" id="c-image-input" accept="image/*" style="display:none">
         <div id="c-scale"></div>
         <div id="ed-line-form">
           <label for="c-line-text" id="lbl-line-text"></label>
@@ -1024,6 +1007,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
       <span id="link-status"></span>
       <span id="lbl-name" style="margin-left:10px"></span>
       <input class="ed-input sm" id="c-author" maxlength="14">
+      <div id="ed-review-note"></div>
     </div>
   </div>
 </div>
@@ -1080,13 +1064,13 @@ ja: {
   close_ad: '閉じる',
   slot_open: 'この枠、空いています — 出稿する',
   slot_open_short: '空き枠',
-  boost: 'ブースト +8h', boosted: 'ブースト済',
-  signal: pct => 'シグナル ' + pct + '%',
-  report: '通報', skip: 'スキップ',
+  save_chip: n => '保存 ' + n, saved_chip: '保存済み',
+  report: '通報', skip: 'この広告をもう見ない',
   report_confirm: '隠して管理者に知らせますか?', yes: '通報する', cancel: 'キャンセル',
   toast_reported: '通報しました。非表示にして管理者が確認します。',
-  toast_boosted: '+8時間 ブースト — シグナルが回復しました',
-  toast_already_boosted: 'すでにブースト済みです',
+  toast_saved: 'スクラップブックに保存しました',
+  toast_already_saved: 'すでに保存しています',
+  toast_muted: 'もう表示しません(ギャラリーには残ります)',
   erase: '消しゴム', color_x: c => '色 ' + c,
   charges: n => n + '/30',
   paint_done: '完了',
@@ -1095,7 +1079,7 @@ ja: {
   new_ad_title: '新しい広告',
   close: '閉じる', placement: '配置', background: '背景',
   solid: '単色', gradient: 'グラデ', post_review: '審査に出す',
-  tool_select: '選択', tool_text: 'テキスト', tool_draw: '描く', tool_erase: '消す', tool_sticker: 'ステッカー',
+  tool_select: '選択', tool_text: 'テキスト', tool_image: '画像', tool_draw: '描く', tool_erase: '消す', tool_sticker: 'ステッカー',
   hint_select_empty: 'キャンバス上の要素をクリックして選択。テキストはダブルクリックで編集。',
   hint_text: 'キャンバスをクリックしてテキストを追加',
   hint_sticker: 'クリックしてキャンバスに配置',
@@ -1116,13 +1100,14 @@ ja: {
   feed_now: 'たったいま', feed_mins_ago: n => n + '分前',
   feed_you: 'あなた', feed_someone: n => '誰か#' + n,
   feed_paint_body: (who, region) => who + ' が ' + region + ' に1px',
-  feed_boost_body_you: author => 'あなた が ' + author + ' をブーストした',
-  feed_boost_body_sim: author => author + ' がブーストされた',
+  feed_save_body_you: author => 'あなた が ' + author + ' を保存した',
+  feed_save_body_sim: author => author + ' が保存された',
   region_japan: '日本のあたり', region_na: '北米', region_sa: '南米', region_eu: 'ヨーロッパ',
   region_af: 'アフリカ', region_asia: 'アジア', region_oceania: 'オセアニア', region_sea: '海のうえ',
   about_sim_note: 'この試作では、他の人の活動をシミュレーションで再現しています。',
   ad_tag: '広告',
   about_rules: 'ここでは広告が主役です。枠は出し惜しみせず、全面広告もローテーションで巡ってきては通り過ぎていきます(✕でいつでも閉じられます)。全部まとめて見たい人は「ギャラリー」へ。',
+  economy_note: '広告は消えません。新しい広告ほどよく流れ、保存された広告はまた巡ってきます。同じ広告ばかりにならないよう、あなたが何度も見たものはしばらく休みます。いらない広告は✕で、あなたにはもう表示されません。保存はあなたのスクラップブックに残り、作者にも伝わります。',
   link_label: 'リンク(任意)', caption_ph: 'キャプション', name_label: '名前',
   link_allow: 'リンク許可: YouTube · Spotify · X · GitHub · pixiv · note · Twitch · SoundCloud · Bandcamp · niconico',
   link_bad_url: 'URLの形式が正しくないようです', link_not_allowed: h => h + ' は許可リストにありません',
@@ -1132,15 +1117,16 @@ ja: {
   toast_blank_line: 'テキストを入力してください',
   toast_posted: '審査に送りました。承認され次第、掲載されます。',
   toast_max_text: 'テキストは5つまで', toast_max_sticker: 'ステッカーは12個まで',
+  toast_max_image: '画像は3枚まで', toast_image_error: '画像を読み込めませんでした',
+  review_note: '画像を含むすべての広告は、掲載前に人の目で審査されます。',
   slot_line: '行', slot_card: 'カード', slot_halfL: '左半面', slot_halfR: '右半面', slot_full: '全面',
-  life_h: n => '寿命 ' + n + '時間',
   admin_title: '管理', admin_sub: '本番では管理者だけがここを見ます — これは試作なのでどうぞ',
   queue_review: '審査待ち', queue_reports: '通報', queue_demo: 'デモ — 時間送り',
   queue_empty_pending: '審査待ちはありません', queue_empty_reports: '通報はありません。平穏です',
   approve: '✓ 承認', return_it: '✕ 差し戻す', restore: '復元', remove: '削除',
   ff6: '+6時間', ff24: '+24時間', ff72: '+3日', reset_proto: '試作をリセット',
   demo_realtime: 'デモ時間: リアルタイム', demo_plus: n => 'デモ時間: 現在+' + n + '時間',
-  admin_note: '承認と差し戻しはワンタップです。ブーストされない広告は自然に消えるので、片付けはほとんど不要です。時間を送って、シグナルが落ち、ノイズが増え、枠が入れ替わる様子を見てみてください。',
+  admin_note: '承認と差し戻しはワンタップです。広告は消えません — 新しい広告ほどよく流れ、保存された広告はまた巡ってきます。同じ広告を見すぎた人にはしばらく休んでもらいます。時間を送って、デビュー枠(掲載48時間・2週間)が変わり、露出の重みが移り変わる様子を見てみてください。',
   toast_approved: '承認しました — ローテーションに入りました', toast_returned: '差し戻しました',
   toast_restored: 'ローテーションに戻しました', toast_removed: '削除しました',
   wordless: '(文字なし)', anon_prefix: 'ゲスト',
@@ -1149,23 +1135,24 @@ ja: {
   about_lead: '好きな枠を選んで、無料で出稿できます。目立たせたいなら、注目を集めてください。',
   hiw_title: '仕組み',
   hiw: [
-    '出稿は無料。通貨は「注目」です。見た人がブーストすると、その広告は+8時間延命します。',
-    '放置された広告はシグナルが落ち、ノイズが増え、やがて消えます。居座ることはできません。',
-    '枠が大きいほど寿命は短くなります。',
-    '掲載前に必ず人が審査します。画像アップロードは不可(お絵描きはOK)。リンクは許可リストのみ。',
+    '出稿は無料です。新しい広告ほどよく流れ、保存されるとまた巡ってきやすくなります。',
+    '広告は消えません。ただし同じ広告を何度も見た人には、しばらく休んでもらいます。',
+    '画像を含むすべての広告は、掲載前に人の目で審査されます。リンクは許可リストのみ。',
     '背景の世界地図はみんなのピクセルボードです。1ドットずつ、みんなで塗っています。',
-    'ギャラリーで全部見られます。消えた広告は殿堂に残ります。',
+    'ギャラリーで全部見られます。いちばん保存された広告は殿堂に並びます。',
   ],
-  life_list: '行 120時間 · カード 96時間 · 左右半面 48時間 · 全面 24時間',
   surf_title: 'SURFACE',
   surf_note: '同じ広告プールは、壁紙・タスクバー・ターミナル・配信オーバーレイにも差し込めます。下のSURFACE切り替えで試せます。',
-  about_note: 'この試作はブラウザの中だけで完結しています。まだ何も共有されていません。管理画面で審査したり、時間を送って広告が消えていく様子を見てみてください。',
+  about_note: 'この試作はブラウザの中だけで完結しています。まだ何も共有されていません。管理画面で審査したり、時間を送って露出の重みが移り変わる様子を見てみてください。',
   about_go: '枠を見る', about_sub2: 'devnull studio による実験',
-  gal_link: 'ギャラリー', gal_title: 'ギャラリー — いま掲載中の広告',
+  gal_link: 'ギャラリー', gal_title: 'ギャラリー',
   gal_count: n => n + '件', gal_empty: 'いまは何も掲載されていません',
-  gal_sort_new: '新着', gal_sort_boost: 'ブースト順',
-  gal_left: n => 'あと' + n + '時間', gal_see_all: 'ぜんぶ見る →',
-  hall_title: '殿堂 — 生き延びた広告たち', hall_badge_live: '掲載中', hall_badge_dead: 'SIGNAL LOST',
+  gal_saved_empty: 'まだ何も保存していません',
+  gal_tab_all: 'すべて', gal_tab_saved: '保存済み', gal_tab_hall: '殿堂',
+  gal_sort_new: '新着', gal_sort_saves: '保存順',
+  gal_see_all: 'ぜんぶ見る →',
+  your_ad_saves: n => 'あなたの広告 · ' + n + '人が保存',
+  hall_title: 'いちばん保存された広告たち',
 },
 en: {
   surf_newtab: 'New Tab', surf_wallpaper: 'Wallpaper', surf_ticker: 'Taskbar', surf_terminal: 'Terminal', surf_stream: 'Stream',
@@ -1181,13 +1168,13 @@ en: {
   close_ad: 'Close',
   slot_open: 'This slot is open — post here',
   slot_open_short: 'Open slot',
-  boost: 'Boost +8h', boosted: 'Boosted',
-  signal: pct => 'Signal ' + pct + '%',
-  report: 'Report', skip: 'Skip',
+  save_chip: n => 'Save ' + n, saved_chip: 'Saved',
+  report: 'Report', skip: "Don't show this again",
   report_confirm: 'Hide this and let the admin know?', yes: 'Report', cancel: 'Cancel',
   toast_reported: 'Reported. It is hidden and the admin will take a look.',
-  toast_boosted: 'Boosted +8h — signal restored',
-  toast_already_boosted: 'Already boosted',
+  toast_saved: 'Saved to your scrapbook',
+  toast_already_saved: 'Already saved',
+  toast_muted: "You won't see this again (it stays in the Gallery)",
   erase: 'Erase', color_x: c => 'Color ' + c,
   charges: n => n + '/30',
   paint_done: 'Done',
@@ -1196,7 +1183,7 @@ en: {
   new_ad_title: 'New ad',
   close: 'Close', placement: 'PLACEMENT', background: 'BACKGROUND',
   solid: 'Solid', gradient: 'Gradient', post_review: 'Post for review',
-  tool_select: 'Select', tool_text: 'Text', tool_draw: 'Draw', tool_erase: 'Erase', tool_sticker: 'Sticker',
+  tool_select: 'Select', tool_text: 'Text', tool_image: 'Image', tool_draw: 'Draw', tool_erase: 'Erase', tool_sticker: 'Sticker',
   hint_select_empty: 'Click something on the canvas to select it. Double-click text to edit.',
   hint_text: 'Click the canvas to add text',
   hint_sticker: 'then click the canvas to place it',
@@ -1217,13 +1204,14 @@ en: {
   feed_now: 'just now', feed_mins_ago: n => n + 'm ago',
   feed_you: 'you', feed_someone: n => 'someone#' + n,
   feed_paint_body: (who, region) => who + ' placed 1px near ' + region,
-  feed_boost_body_you: author => 'you boosted ' + author,
-  feed_boost_body_sim: author => author + ' got boosted',
+  feed_save_body_you: author => 'you saved ' + author,
+  feed_save_body_sim: author => author + ' got saved',
   region_japan: 'Japan', region_na: 'North America', region_sa: 'South America', region_eu: 'Europe',
   region_af: 'Africa', region_asia: 'Asia', region_oceania: 'Oceania', region_sea: 'out at sea',
   about_sim_note: "In this prototype, other people's activity is simulated.",
   ad_tag: 'AD',
   about_rules: "Here, the ads are the main attraction. Slots don't hold back, and full-page ads roll through in rotation and pass by (close them anytime with ✕). Want to binge them all? Open the Gallery.",
+  economy_note: "Ads don't disappear. Newer ads get more airtime, and saved ads keep coming back around. So you don't see the same one over and over, anything you've viewed a lot rests for a while. Don't want an ad? Tap ✕ and you won't see it again. Saves live in your scrapbook, and the poster can see them too.",
   link_label: 'Link (optional)', caption_ph: 'Caption', name_label: 'Name',
   link_allow: 'Allowlist: YouTube · Spotify · X · GitHub · pixiv · note · Twitch · SoundCloud · Bandcamp · niconico',
   link_bad_url: "That doesn't look like a URL", link_not_allowed: h => h + ' is not on the allowlist',
@@ -1233,15 +1221,16 @@ en: {
   toast_blank_line: 'Text is required',
   toast_posted: 'Sent for review. It goes live once approved.',
   toast_max_text: 'Up to 5 text blocks', toast_max_sticker: 'Up to 12 stickers',
+  toast_max_image: 'Up to 3 images', toast_image_error: 'Could not load the image',
+  review_note: 'Every ad — images included — is reviewed by a human before it goes live.',
   slot_line: 'Line', slot_card: 'Card', slot_halfL: 'Half L', slot_halfR: 'Half R', slot_full: 'Full',
-  life_h: n => n + 'h lifetime',
   admin_title: 'Admin', admin_sub: "In production only the admin sees this — it's a prototype, go ahead",
   queue_review: 'REVIEW QUEUE', queue_reports: 'REPORTS', queue_demo: 'DEMO — FAST-FORWARD TIME',
   queue_empty_pending: 'Nothing is waiting', queue_empty_reports: 'No reports. All is calm',
   approve: '✓ Approve', return_it: '✕ Return', restore: 'Restore', remove: 'Remove',
   ff6: '+6h', ff24: '+24h', ff72: '+3 days', reset_proto: 'Reset prototype',
   demo_realtime: 'DEMO TIME: real time', demo_plus: n => 'DEMO TIME: now +' + n + 'h',
-  admin_note: 'Approving and returning are one tap each. Ads nobody boosts fade out on their own, so there is very little to clean up. Fast-forward time to watch the signal drop, static creep in, and the slot move on.',
+  admin_note: "Approving and returning are one tap each. Ads never disappear — newer ones get more airtime, and saved ads keep coming back around. Anyone who's seen an ad too many times gets a break from it. Fast-forward time to watch an ad age out of its debut window (48h, then 2 weeks) and its exposure weight shift.",
   toast_approved: 'Approved — it is in the rotation now', toast_returned: 'Gently returned',
   toast_restored: 'Back in the rotation', toast_removed: 'Removed',
   wordless: '(wordless)', anon_prefix: 'anonymous',
@@ -1250,23 +1239,24 @@ en: {
   about_lead: 'Pick a slot and post for free. Want to stand out? Earn attention.',
   hiw_title: 'HOW IT WORKS',
   hiw: [
-    'Posting is free. Attention is the currency. Each boost from a viewer adds +8 hours.',
-    'Ignored ads lose signal, static creeps in, and they fade out. Nothing can squat here.',
-    'Bigger formats burn faster.',
-    'A human reviews every ad before it goes live. No image uploads (drawing is fine). Links from a short allowlist only.',
+    'Posting is free. Newer ads get more airtime, and saved ads keep coming back around.',
+    "Ads don't disappear. But if you've seen one a lot, it rests for a while so the mix stays fresh.",
+    'Every ad — images included — is reviewed by a human before it goes live. Links from a short allowlist only.',
     'The world map background is a shared pixel board — everyone paints it, one dot at a time.',
-    'See everything in the Gallery. Ads that fade out still live on in the Hall of Fame.',
+    'See everything in the Gallery. The most-saved ads make the Hall of Fame.',
   ],
-  life_list: 'Line 120h · Card 96h · Half L/R 48h · Full 24h',
   surf_title: 'SURFACES',
   surf_note: 'The same pool can run anywhere: wallpaper, taskbar ticker, terminal, stream overlay. Try the SURFACE switcher below.',
-  about_note: 'This prototype runs entirely in your browser — nothing you post is shared yet. Open Admin to review posts and fast-forward time to watch ads fade out.',
+  about_note: "This prototype runs entirely in your browser — nothing you post is shared yet. Open Admin to review posts and fast-forward time to watch exposure weights shift.",
   about_go: 'Open the slot', about_sub2: 'an experiment by devnull studio',
-  gal_link: 'Gallery', gal_title: 'Gallery — live now',
+  gal_link: 'Gallery', gal_title: 'Gallery',
   gal_count: n => n + (n === 1 ? ' ad' : ' ads'), gal_empty: 'Nothing is live right now',
-  gal_sort_new: 'Newest', gal_sort_boost: 'Most boosted',
-  gal_left: n => n + 'h left', gal_see_all: 'See all →',
-  hall_title: 'Hall of Fame — the ones that lasted', hall_badge_live: 'LIVE', hall_badge_dead: 'SIGNAL LOST',
+  gal_saved_empty: "You haven't saved anything yet",
+  gal_tab_all: 'All', gal_tab_saved: 'Saved', gal_tab_hall: 'Hall of Fame',
+  gal_sort_new: 'Newest', gal_sort_saves: 'Most saved',
+  gal_see_all: 'See all →',
+  your_ad_saves: n => 'Your ad · ' + n + (n === 1 ? ' save' : ' saves'),
+  hall_title: 'Most saved of all time',
 },
 };
 function t(key, ...args) {
@@ -1276,16 +1266,18 @@ function t(key, ...args) {
 
 /* ================= constants ================= */
 const SLOTS = {
-  line:  { life: 120 },
-  card:  { W: 320,  H: 220, life: 96,  tf: 1 },
-  halfL: { W: 460,  H: 640, life: 48,  tf: 1.3 },
-  halfR: { W: 460,  H: 640, life: 48,  tf: 1.3 },
-  full:  { W: 1160, H: 660, life: 24,  tf: 1.9 },
+  line:  {},
+  card:  { W: 320,  H: 220, tf: 1 },
+  halfL: { W: 460,  H: 640, tf: 1.3 },
+  halfR: { W: 460,  H: 640, tf: 1.3 },
+  full:  { W: 1160, H: 660, tf: 1.9 },
 };
 const SLOT_ORDER = ['line', 'card', 'halfL', 'halfR', 'full'];
 const SLOT_TAG = { line: 'LINE', card: 'CARD', halfL: 'HALF L', halfR: 'HALF R', full: 'FULL' };
-const BOOST_H = 8;
 const T_PX = [15, 22, 32, 46];
+/* v7: weighted exposure engine (replaces the old lifetime/decay economy) */
+const DEBUT_H1 = 48;   // < 48h old: strong debut boost
+const DEBUT_H2 = 336;  // < 2 weeks old: normal weight; older: reduced
 
 const BG_PRESETS = [
   ['#1c2440', '#0d1120'], ['#3b1120', '#12060c'], ['#0d2b1c', '#071510'],
@@ -1373,12 +1365,15 @@ const T = () => Date.now() + ffH * 3600e3;
 const H = 3600e3;
 
 /* ================= storage ================= */
-const LS = 'devad.v4';
+const LS = 'devad.v5';
 let store;
 try { store = JSON.parse(localStorage.getItem(LS) || '{}'); } catch (e) { store = {}; }
 store.user = store.user || [];
 store.ovr = store.ovr || {};
-store.hall = store.hall || []; // v6: snapshots of ads that lost signal, for the Hall of Fame
+store.muted = store.muted || {};       // v7: id -> true, permanent per-viewer mute (the old ✕)
+store.savedIds = store.savedIds || []; // v7: ids the viewer has saved, in save order
+store.savedSnaps = store.savedSnaps || {}; // v7: id -> snapshot at time of save (survives author deletion)
+store.seen = store.seen || {};         // v7: id -> {d, today, total} view counters for the fatigue weight
 if (!store.lang) store.lang = (navigator.language || 'en').toLowerCase().startsWith('ja') ? 'ja' : 'en';
 function save() { try { localStorage.setItem(LS, JSON.stringify(store)); } catch (e) {} }
 function getWorld() {
@@ -1391,13 +1386,13 @@ function saveWorld() { store.ovr.world = { grid: world.grid, placed: world.place
 /* ================= seed content ================= */
 const SEED = [
   { id: 'l01', slot: 'line', text: '今日のラーメン、うまかった。以上です。', link: null,
-    author: '通りすがり#0412', postedAgoH: 5, keeps: 2 },
+    author: '通りすがり#0412', postedAgoH: 5, saves: 2 },
   { id: 'l02', slot: 'line', text: 'my all-night work playlist',
     link: { kind: 'yt', id: 'jfKfPfyJRdk', url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk' },
-    author: 'nightowl#2201', postedAgoH: 30, keeps: 6 },
+    author: 'nightowl#2201', postedAgoH: 30, saves: 6 },
   { id: 'l03', slot: 'line', text: 'ベース募集。下手でも可。',
     link: { kind: 'chip', url: 'https://x.com/', host: 'X' },
-    author: 'ギターの人#0093', postedAgoH: 14, keeps: 1 },
+    author: 'ギターの人#0093', postedAgoH: 14, saves: 1 },
 
   { id: 'c01', slot: 'card', bg: { c1: '#d98cab', c2: '#a15c7c', grad: true, ang: 150 },
     texts: [
@@ -1405,21 +1400,21 @@ const SEED = [
       { t: '漬物、毎週更新中。\nぜひ見てください。', x: 50, y: 56, s: 1, c: '#5c3345', f: 'g' },
     ],
     link: { kind: 'chip', url: 'https://note.com/', host: 'note', label: '漬物日記' },
-    stamps: [], author: '孫#1030', postedAgoH: 20, keeps: 9 },
+    stamps: [], author: '孫#1030', postedAgoH: 20, saves: 9 },
   { id: 'c02', slot: 'card', bg: { c1: '#e6c14a', c2: '#c9932a', grad: true, ang: 110 },
     texts: [
       { t: 'My zine is done.', x: 38, y: 28, s: 2, c: '#33280a', f: 'g' },
       { t: 'Three years. 128 pages.\nI just want someone to read it.', x: 42, y: 60, s: 1, c: '#5c4a17', f: 'g' },
     ],
     stamps: [{ ch: '★', x: 84, y: 26, r: 8, s: 1 }, { ch: '★', x: 78, y: 76, r: -12, s: 0.7 }],
-    author: 'circle lamp#1201', postedAgoH: 2, keeps: 7 },
+    author: 'circle lamp#1201', postedAgoH: 2, saves: 7 },
   { id: 'c03', slot: 'card', bg: { c1: '#23422e', c2: '#10231a', grad: true, ang: 180 },
     texts: [
       { t: '植物あげます', x: 50, y: 26, s: 2, c: '#ecf5e8', f: 'g' },
       { t: 'ポトス増えすぎました。\n鉢付き、取りに来られる方。', x: 50, y: 54, s: 1, c: '#b8d3ba', f: 'g' },
     ],
     stamps: [{ ch: '🌱', x: 50, y: 82, r: -6, s: 1.3 }],
-    author: 'ベランダ#0505', postedAgoH: 90, keeps: 0 },
+    author: 'ベランダ#0505', postedAgoH: 90, saves: 0 },
 
   { id: 'hl01', slot: 'halfL', bg: { c1: '#f5efe2', c2: '', grad: false, ang: 0 },
     texts: [
@@ -1427,7 +1422,7 @@ const SEED = [
       { t: "Black, yellow eyes. Answers to 'Null' (sometimes).\nPlease tell me if you see him.", x: 50, y: 40, s: 1, c: '#55504a', f: 'g' },
     ],
     stamps: [{ ch: '🐈', x: 50, y: 66, r: -8, s: 3 }],
-    author: 'worried owner#0016', postedAgoH: 16, keeps: 14 },
+    author: 'worried owner#0016', postedAgoH: 16, saves: 14 },
   { id: 'hl02', slot: 'halfL', bg: { c1: '#2e2018', c2: '#140e0a', grad: true, ang: 180 },
     texts: [
       { t: 'COFFEE', x: 50, y: 13, s: 2, c: '#d3b98a', f: 'm' },
@@ -1435,7 +1430,7 @@ const SEED = [
       { t: 'Saturday mornings, north gate.', x: 50, y: 55, s: 1, c: '#b5a48c', f: 'g' },
     ],
     stamps: [{ ch: '☕', x: 50, y: 76, r: 6, s: 2.1 }],
-    author: 'coffee rookie#0930', postedAgoH: 44, keeps: 5 },
+    author: 'coffee rookie#0930', postedAgoH: 44, saves: 5 },
 
   { id: 'hr01', slot: 'halfR', bg: { c1: '#2e4e8f', c2: '#1b2f5c', grad: true, ang: 100 },
     texts: [
@@ -1443,14 +1438,14 @@ const SEED = [
       { t: '日曜10時 · 公園の角 · 雨天中止\n値段はすべて気分で。', x: 50, y: 42, s: 1, c: '#c3d2f2', f: 'g' },
     ],
     stamps: [{ ch: '🧦', x: 50, y: 68, r: -8, s: 1.8 }],
-    author: '近所の人#0777', postedAgoH: 52, keeps: 2 },
+    author: '近所の人#0777', postedAgoH: 52, saves: 2 },
   { id: 'hr02', slot: 'halfR', bg: { c1: '#141416', c2: '#000000', grad: true, ang: 180 },
     texts: [
       { t: '深夜ラジオ\nはじめました', x: 50, y: 24, s: 3, c: '#d8d5cc', f: 'm' },
       { t: '毎週金曜25時、\n誰も聞いてなくても喋ります。', x: 50, y: 54, s: 1, c: '#8d8b84', f: 'm' },
     ],
     stamps: [{ ch: '📻', x: 50, y: 78, r: 0, s: 1.5 }],
-    author: '夜更かし#0219', postedAgoH: 9, keeps: 4 },
+    author: '夜更かし#0219', postedAgoH: 9, saves: 4 },
 
   { id: 'f01', slot: 'full', bg: { c1: '#2b1e4d', c2: '#0c1024', grad: true, ang: 160 },
     texts: [
@@ -1462,35 +1457,36 @@ const SEED = [
       { ch: '☆', x: 12, y: 18, r: -14, s: 1.4 }, { ch: '★', x: 22, y: 74, r: 8, s: 0.9 },
       { ch: '☆', x: 86, y: 22, r: 18, s: 1.1 }, { ch: '🌙', x: 79, y: 66, r: -10, s: 2.6 },
     ],
-    author: 'painter#0033', postedAgoH: 6, keeps: 18 },
+    author: 'painter#0033', postedAgoH: 6, saves: 18 },
   { id: 'f02', slot: 'full', bg: { c1: '#f4d63a', c2: '', grad: false, ang: 0 },
     texts: [{ t: 'おはよう。', x: 50, y: 50, s: 4, c: '#2b2308', f: 'g' }],
     stamps: [{ ch: '☀', x: 14, y: 16, r: 0, s: 2 }],
-    author: 'ねぼすけ#0666', postedAgoH: 1, keeps: 0 },
+    author: 'ねぼすけ#0666', postedAgoH: 1, saves: 0 },
 ];
 
-/* v6: Hall of Fame seed — a few ads that already lost signal before this session started */
-const HALL_SEED_RAW = [
+/* v7: Hall of Fame legacy entries — ads from before this session that are no longer in the
+   live rotation, kept around only so the Hall of Fame has some history to show. They never
+   appear in a slot; they only compete for the all-time top-saved ranking. */
+const HALL_SEED = [
   { id: 'h01', slot: 'full', bg: { c1: '#141416', c2: '#000000', grad: true, ang: 180 },
     texts: [
       { t: '初日、貼りました。', x: 50, y: 40, s: 4, c: '#d8d5cc', f: 'g' },
       { t: 'これがここに貼られた最初の広告でした。', x: 50, y: 58, s: 1, c: '#8d8b84', f: 'g' },
     ],
     stamps: [{ ch: '★', x: 50, y: 78, r: 0, s: 1.6 }],
-    author: 'root#0001', keeps: 41, diedAgoH: 720 },
+    author: 'root#0001', saves: 41 },
   { id: 'h02', slot: 'halfL', bg: { c1: '#3d2a10', c2: '#181008', grad: true, ang: 160 },
     texts: [
       { t: 'ラーメン屋、\n閉店します', x: 50, y: 30, s: 3, c: '#f3ead9', f: 'g' },
       { t: '10年間ありがとうございました。\n最終営業日は今月末です。', x: 50, y: 60, s: 1, c: '#c9b490', f: 'g' },
     ],
     stamps: [{ ch: '🍜', x: 50, y: 82, r: -6, s: 1.6 }],
-    author: '大将#0002', keeps: 33, diedAgoH: 480 },
-  { id: 'h03', slot: 'line', text: 'めっちゃブーストされたやつ、ありがとう。もう行きます。', link: null,
-    author: 'buzzed#7777', keeps: 27, diedAgoH: 300 },
+    author: '大将#0002', saves: 33 },
+  { id: 'h03', slot: 'line', text: 'めっちゃ保存されたやつ、ありがとう。もう行きます。', link: null,
+    author: 'buzzed#7777', saves: 27 },
 ];
 
 const loadT = Date.now();
-const HALL_SEED = HALL_SEED_RAW.map(h => ({ ...h, diedAt: loadT - h.diedAgoH * H }));
 
 /* ================= model ================= */
 function allAds() {
@@ -1499,57 +1495,24 @@ function allAds() {
     return {
       ...sd,
       postedAt: loadT - sd.postedAgoH * H,
-      keeps: (o.keeps != null) ? o.keeps : sd.keeps,
-      kept: !!o.kept,
+      saves: (o.saves != null) ? o.saves : sd.saves,
       status: o.status || 'live',
     };
   }).concat(store.user);
 }
-function expiresAt(p) { return p.postedAt + (SLOTS[p.slot].life + p.keeps * BOOST_H) * H; }
-function sigOf(p) {
-  const total = expiresAt(p) - p.postedAt;
-  return Math.max(0, Math.min(1, (expiresAt(p) - T()) / total));
-}
-function isLive(p) { return p.status === 'live' && expiresAt(p) > T(); }
+/* v7: ads never expire — "live" just means approved and not hidden/removed */
+function isLive(p) { return p.status === 'live'; }
 function liveAds() { return allAds().filter(isLive); }
+function isMine(p) { return String(p.id).startsWith('u'); }
 
-/* ================= v6: Hall of Fame model ================= */
-/* store.hall holds up to 24 unique snapshots of ads that lost signal (isLive -> false).
-   Checked from decay ticks and the demo fast-forward tools — anywhere time can move an ad past its life. */
-function addToHall(p) {
-  store.hall = store.hall || [];
-  if (store.hall.some(h => h.id === p.id)) return; // no duplicate ids
-  const snap = {
-    id: p.id, slot: p.slot, bg: p.bg, texts: p.texts, stamps: p.stamps, doodle: p.doodle,
-    link: p.link, text: p.text, author: p.author, keeps: p.keeps || 0, diedAt: T(),
-  };
-  store.hall.push(snap);
-  if (store.hall.length > 24) {
-    let worst = 0;
-    for (let i = 1; i < store.hall.length; i++) if ((store.hall[i].keeps || 0) < (store.hall[worst].keeps || 0)) worst = i;
-    store.hall.splice(worst, 1);
-  }
-  save();
-}
-function checkHallInductions() {
-  for (const p of allAds()) {
-    if (p.status === 'live' && expiresAt(p) <= T()) addToHall(p);
-  }
-}
-/* merge seed + recorded dead snapshots with anything still live today (keeps top wins on id collision) */
+/* ================= v7: Hall of Fame — all-time top-saved, no more "live/dead" distinction ================= */
 function hallEntries() {
   const map = new Map();
-  for (const h of HALL_SEED) map.set(h.id, { ...h, dead: true });
-  for (const h of (store.hall || [])) map.set(h.id, { ...h, dead: true });
-  for (const p of liveAds()) {
-    map.set(p.id, {
-      id: p.id, slot: p.slot, bg: p.bg, texts: p.texts, stamps: p.stamps, doodle: p.doodle,
-      link: p.link, text: p.text, author: p.author, keeps: p.keeps || 0, dead: false,
-    });
-  }
+  for (const h of HALL_SEED) map.set(h.id, h);
+  for (const p of liveAds()) map.set(p.id, p);
   return [...map.values()];
 }
-function hallTop(n) { return hallEntries().sort((a, b) => (b.keeps || 0) - (a.keeps || 0)).slice(0, n); }
+function hallTop(n) { return hallEntries().sort((a, b) => (b.saves || 0) - (a.saves || 0)).slice(0, n); }
 
 function setOvr(p, patch) {
   if (String(p.id).startsWith('u')) {
@@ -1588,10 +1551,21 @@ function renderAd(p, opts = {}) {
   el.style.height = dims.H + 'px';
   el.style.background = bgCss(p.bg);
   el.style.color = isDark(p.bg.c1) ? '#eceae4' : '#22211f';
-  const sig = opts.fresh ? 1 : sigOf(p);
-  el.style.setProperty('--sig', sig.toFixed(3));
-  if (!opts.fresh && !calm && sig < 0.22) el.classList.add('weak');
 
+  for (const [i, im] of (p.images || []).entries()) {
+    const img = document.createElement('img');
+    img.className = 'photo';
+    img.alt = ''; img.draggable = false;
+    img.src = im.src;
+    img.style.left = im.x + '%';
+    img.style.top = im.y + '%';
+    img.style.width = (im.w || 40) + '%';
+    img.style.height = 'auto';
+    img.style.transform = 'translate(-50%,-50%) rotate(' + (im.r || 0) + 'deg)';
+    img.style.zIndex = String(1 + i); // v7: images sit above the background, below text/stamps
+    img.dataset.kind = 'image'; img.dataset.idx = i;
+    el.appendChild(img);
+  }
   for (const [i, tb] of (p.texts || []).entries()) {
     if (!tb.t && !opts.editable) continue;
     const t2 = document.createElement('div');
@@ -1653,8 +1627,6 @@ function renderAd(p, opts = {}) {
 function renderLineAd(p, opts = {}) {
   const el = document.createElement('div');
   el.className = 'sl-line-ad';
-  const sig = opts.fresh ? 1 : sigOf(p);
-  el.style.setProperty('--sig', sig.toFixed(3));
   const tg = document.createElement('span');
   tg.className = 'sl-line-tag';
   tg.textContent = t('ad_tag');
@@ -1683,20 +1655,18 @@ function renderLineAd(p, opts = {}) {
 function attachChips(container, p) {
   const chips = document.createElement('div');
   chips.className = 'sl-chips';
-  const mk = (txt, cls, fn) => {
+  const mk = (txt, cls, fn, title) => {
     const b = document.createElement('button');
     b.className = 'sl-chip' + (cls ? ' ' + cls : '');
     b.textContent = txt;
+    if (title) { b.title = title; b.setAttribute('aria-label', title); }
     b.addEventListener('click', e => { e.stopPropagation(); fn(); });
     return b;
   };
-  chips.appendChild(mk(p.kept ? t('boosted') : t('boost'), p.kept ? 'boosted' : '', () => boostAd(p)));
-  const sigChip = document.createElement('span');
-  sigChip.className = 'sl-chip';
-  sigChip.textContent = t('signal', Math.round(sigOf(p) * 100));
-  chips.appendChild(sigChip);
+  const isSaved = (store.savedIds || []).includes(p.id);
+  chips.appendChild(mk(isSaved ? t('saved_chip') : t('save_chip', p.saves || 0), isSaved ? 'saved' : '', () => saveAd(p)));
   chips.appendChild(mk('⚑', 'flag', () => confirmReport(chips, p)));
-  chips.appendChild(mk('✕', 'skip', () => skipAd(p)));
+  chips.appendChild(mk('✕', 'skip', () => muteAd(p), t('skip')));
   container.appendChild(chips);
   container.addEventListener('click', e => {
     if (e.target.closest('.sl-chips') || e.target.closest('.p-link') || e.target.closest('.sl-line-lnk')) return;
@@ -1718,14 +1688,47 @@ let surface = 'newtab';
 const slotCurrent = { line: null, card: null, halfL: null, halfR: null, full: null };
 let fullClosed = false;
 let fullAutoT = null;
-const sessionSkip = new Set();
 let paintMode = false;
 
-function poolFor(slotId) { return liveAds().filter(p => p.slot === slotId && !sessionSkip.has(p.id)); }
-function pickForSlot(slotId) {
-  const pool = poolFor(slotId);
-  return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+/* ================= v7: weighted exposure engine =================
+   weight = debut × quality × fatigue × mute
+   Ads never expire; what changes over time is how often they're picked. */
+function todayStr() { return new Date(T()).toISOString().slice(0, 10); }
+function seenOf(id) {
+  const s = store.seen && store.seen[id];
+  if (!s) return { d: todayStr(), today: 0, total: 0 };
+  if (s.d !== todayStr()) return { d: todayStr(), today: 0, total: s.total || 0 };
+  return s;
 }
+function recordSeen(id) {
+  store.seen = store.seen || {};
+  const cur = seenOf(id);
+  store.seen[id] = { d: todayStr(), today: cur.today + 1, total: cur.total + 1 };
+  save();
+}
+function weightOf(p) {
+  if (store.muted && store.muted[p.id]) return 0;
+  const ageH = (T() - p.postedAt) / H;
+  const debut = ageH < DEBUT_H1 ? 3.0 : ageH < DEBUT_H2 ? 1.0 : 0.5;
+  const quality = 1 + Math.min(p.saves || 0, 20) * 0.15;
+  const seen = seenOf(p.id);
+  let fatigue = 1;
+  if (seen.today >= 3) fatigue = 0.05;
+  if (seen.total >= 10) fatigue *= 0.5;
+  return debut * quality * fatigue;
+}
+function weightedPick(pool) {
+  if (!pool.length) return null;
+  const weights = pool.map(weightOf);
+  const total = weights.reduce((a, b) => a + b, 0);
+  if (total <= 0) return null;
+  let r = Math.random() * total;
+  for (let i = 0; i < pool.length; i++) { r -= weights[i]; if (r <= 0) return pool[i]; }
+  return pool[pool.length - 1];
+}
+function poolFor(slotId) { return liveAds().filter(p => p.slot === slotId); }
+function pickForSlot(slotId) { return weightedPick(poolFor(slotId)); }
+
 function drawAllSlots() {
   fullClosed = false;
   for (const s of SLOT_ORDER) slotCurrent[s] = pickForSlot(s);
@@ -1754,10 +1757,10 @@ function rotateSlot(slotId) {
     // 全面はスペクタクル: 出て、1周期見せて、通り過ぎる(閉じるor次の全面へ)
     if (cur && !fullClosed) {
       const pool = poolFor('full').filter(p => p.id !== cur.id);
-      slotCurrent.full = (pool.length && Math.random() < 0.5) ? pool[Math.floor(Math.random() * pool.length)] : null;
+      slotCurrent.full = (pool.length && Math.random() < 0.5) ? weightedPick(pool) : null;
     } else {
       const pool = poolFor('full');
-      slotCurrent.full = (pool.length && Math.random() < 0.3) ? pool[Math.floor(Math.random() * pool.length)] : null;
+      slotCurrent.full = (pool.length && Math.random() < 0.3) ? weightedPick(pool) : null;
       if (slotCurrent.full) fullClosed = false;
     }
     mountSlot('full');
@@ -1765,7 +1768,7 @@ function rotateSlot(slotId) {
   }
   const pool = poolFor(slotId).filter(p => !cur || p.id !== cur.id);
   if (!pool.length) return; // nothing else to rotate to
-  slotCurrent[slotId] = pool[Math.floor(Math.random() * pool.length)];
+  slotCurrent[slotId] = weightedPick(pool);
   mountSlot(slotId, { rotate: true });
 }
 function scheduleRotation(slotId) {
@@ -1779,22 +1782,38 @@ function startRotationTimers() {
     rotTimers[s] = setTimeout(() => rotateSlot(s), (16000 + Math.random() * 12000) * Math.random());
   });
 }
-function boostAd(p) {
-  if (p.kept) { toast(t('toast_already_boosted')); return; }
-  p.kept = true; p.keeps = (p.keeps || 0) + 1;
-  setOvr(p, { kept: true, keeps: p.keeps });
-  toast(t('toast_boosted'));
-  pushFeedEvent(t('feed_boost_body_you', p.author || t('anon_prefix')));
+function snapshotOf(p) {
+  return {
+    id: p.id, slot: p.slot, bg: p.bg, texts: p.texts, stamps: p.stamps, doodle: p.doodle,
+    images: p.images, link: p.link, text: p.text, author: p.author, saves: p.saves || 0,
+  };
+}
+function saveAd(p) {
+  store.savedIds = store.savedIds || [];
+  if (store.savedIds.includes(p.id)) { toast(t('toast_already_saved')); return; }
+  p.saves = (p.saves || 0) + 1;
+  setOvr(p, { saves: p.saves });
+  store.savedIds.push(p.id);
+  store.savedSnaps = store.savedSnaps || {};
+  store.savedSnaps[p.id] = snapshotOf(p);
+  save();
+  toast(t('toast_saved'));
+  pushFeedEvent(t('feed_save_body_you', p.author || t('anon_prefix')));
   const cur = slotCurrent[p.slot];
   if (cur && cur.id === p.id) mountSlot(p.slot);
   updatePool();
 }
-function skipAd(p) {
-  sessionSkip.add(p.id);
+function muteAd(p) {
+  store.muted = store.muted || {};
+  store.muted[p.id] = true;
+  save();
+  toast(t('toast_muted'));
   if (slotCurrent[p.slot] && slotCurrent[p.slot].id === p.id) {
     slotCurrent[p.slot] = pickForSlot(p.slot);
     mountSlot(p.slot);
   }
+  if (surface !== 'newtab' && sfCurrent && sfCurrent.id === p.id) { sfCurrent = pickOther(); showSurface(); }
+  if ($('gallery').classList.contains('show')) renderGallery();
 }
 function reportAd(p) {
   setOvr(p, { status: 'hidden' });
@@ -2087,18 +2106,18 @@ function flashChipForAd(p) {
   el.classList.add('chip-glow');
   setTimeout(() => el.classList.remove('chip-glow'), 1400);
 }
-function simulateBoostEvent() {
+function simulateSaveEvent() {
   const pool = liveAds();
   if (pool.length) {
     const p = pool[Math.floor(Math.random() * pool.length)];
-    p.keeps = (p.keeps || 0) + 1;
-    setOvr(p, { keeps: p.keeps });
-    pushFeedEvent(t('feed_boost_body_sim', p.author || t('anon_prefix')));
+    p.saves = (p.saves || 0) + 1;
+    setOvr(p, { saves: p.saves });
+    pushFeedEvent(t('feed_save_body_sim', p.author || t('anon_prefix')));
     flashChipForAd(p);
   }
-  scheduleAmbientBoost();
+  scheduleAmbientSave();
 }
-function scheduleAmbientBoost() { setTimeout(simulateBoostEvent, (60 + Math.random() * 60) * 1000); }
+function scheduleAmbientSave() { setTimeout(simulateSaveEvent, (60 + Math.random() * 60) * 1000); }
 
 /* --- slot mount/fit --- */
 function renderEmptySlot(slotId) {
@@ -2116,6 +2135,7 @@ function renderEmptySlot(slotId) {
   }
   return el;
 }
+const slotSeenMark = { line: null, card: null, halfL: null, halfR: null, full: null };
 function mountSlot(slotId, opts = {}) {
   const container = $('sl-' + slotId);
   if (!container) return;
@@ -2123,7 +2143,9 @@ function mountSlot(slotId, opts = {}) {
   const ad = slotCurrent[slotId];
   if (slotId === 'halfR') { const pg = $('nt-page'); if (pg) pg.classList.toggle('has-halfR', !!ad); }
   if (slotId === 'full') {
-    if (!ad || fullClosed) { container.classList.remove('show'); return; }
+    if (!ad || fullClosed) { container.classList.remove('show'); slotSeenMark.full = null; return; }
+    // v7: record a view the first time this ad lands in the slot (not on every re-render of the same ad)
+    if (slotSeenMark.full !== ad.id) { slotSeenMark.full = ad.id; recordSeen(ad.id); }
     container.classList.add('show');
     const dims = SLOTS.full;
     const cw = container.clientWidth || 1, ch = container.clientHeight || 1;
@@ -2152,10 +2174,12 @@ function mountSlot(slotId, opts = {}) {
     return;
   }
   if (!ad) {
+    slotSeenMark[slotId] = null;
     const empty = renderEmptySlot(slotId);
     if (empty) container.appendChild(empty);
     return;
   }
+  if (slotSeenMark[slotId] !== ad.id) { slotSeenMark[slotId] = ad.id; recordSeen(ad.id); }
   if (slotId === 'line') {
     const el = renderAd(ad, { chips: true, clickable: true });
     if (opts.rotate) el.classList.add('rot-enter'); // C1: rotation crossfade+drift
@@ -2273,7 +2297,7 @@ const OTHER_SLOTS = ['card', 'halfL', 'halfR', 'full'];
 let sfCurrent = null;
 function pickOther() {
   const pool = OTHER_SLOTS.flatMap(s => liveAds().filter(p => p.slot === s));
-  return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+  return weightedPick(pool);
 }
 
 function showWallpaper(p) {
@@ -2303,10 +2327,11 @@ function showWallpaper(p) {
   mockBar(r);
   const cap = document.createElement('div');
   cap.className = 'sf-wall-cap';
-  cap.innerHTML = '<span>' + esc((p.author || t('anon_prefix'))) + ' · +' + p.keeps + '</span>';
+  cap.innerHTML = '<span>' + esc((p.author || t('anon_prefix'))) + ' · +' + p.saves + '</span>';
   const b = document.createElement('button');
-  b.textContent = p.kept ? t('boosted') : t('boost');
-  b.addEventListener('click', () => boostAd(p) || show());
+  const isSaved = (store.savedIds || []).includes(p.id);
+  b.textContent = isSaved ? t('saved_chip') : t('save_chip', p.saves || 0);
+  b.addEventListener('click', () => saveAd(p) || show());
   cap.appendChild(b);
   r.appendChild(cap);
 }
@@ -2326,9 +2351,9 @@ function showTicker(p) {
     '<span class="win"><span class="tape">' + esc(words || '(…)') + '　— ' + esc(p.author || t('anon_prefix')) + '</span></span>';
   const b = document.createElement('button');
   b.className = 'bst';
-  b.textContent = '+' + p.keeps;
-  b.title = t('boost');
-  b.addEventListener('click', () => { boostAd(p); showSurface(); });
+  b.textContent = '+' + p.saves;
+  b.title = t('save_chip', p.saves || 0);
+  b.addEventListener('click', () => { saveAd(p); showSurface(); });
   tick.appendChild(b);
   bar.insertBefore(tick, bar.querySelector('.clk'));
 }
@@ -2369,9 +2394,7 @@ function showTerminal(p) {
     if (p.link) lines.push('  <span class="c">link:</span> ' + esc(p.link.url));
     lines.push('  <span class="c">by ' + esc(p.author || t('anon_prefix')) + '</span>');
     lines.push('');
-    const sig = Math.round(sigOf(p) * 100);
-    const bars = '▮'.repeat(Math.round(sigOf(p) * 10)).padEnd(10, '▯');
-    lines.push('  signal ' + sig + '% <span class="g">[' + bars + ']</span> · +' + p.keeps + ' · ' + SLOT_TAG[p.slot]);
+    lines.push('  <span class="g">saved +' + (p.saves || 0) + '</span> · ' + SLOT_TAG[p.slot]);
   }
   term.innerHTML = '<div class="bar"><i style="background:#e0604f"></i><i style="background:#e0b34f"></i><i style="background:#6cc860"></i><span>devnull@studio: ~</span></div><pre>' + lines.join('\n') + '</pre>';
   wrap.appendChild(term);
@@ -2390,7 +2413,7 @@ function showStream(p) {
   ovl.className = 'sf-ovl';
   const cap = document.createElement('div');
   cap.className = 'ovl-cap';
-  cap.textContent = 'AD SLOT · ' + esc(p.author || t('anon_prefix')) + ' · +' + p.keeps;
+  cap.textContent = 'AD SLOT · ' + esc(p.author || t('anon_prefix')) + ' · +' + p.saves;
   const holder = document.createElement('div');
   holder.className = 'holder';
   const el = renderAd(p);
@@ -2433,26 +2456,6 @@ $('btn-next').addEventListener('click', () => {
   else { sfCurrent = pickOther(); showSurface(); }
 });
 
-/* ================= decay watch ================= */
-function tickDecay() {
-  checkHallInductions(); // v6: catch any ad that just lost signal, wherever it's mounted
-  if (surface === 'newtab') {
-    let changed = false;
-    for (const s of SLOT_ORDER) {
-      const cur = slotCurrent[s];
-      if (cur && !isLive(cur)) { slotCurrent[s] = pickForSlot(s); changed = true; }
-      else if (cur) mountSlot(s); // just refresh signal display
-    }
-    if (changed) mountAllSlots();
-  } else if (sfCurrent && !isLive(sfCurrent)) {
-    sfCurrent = pickOther();
-    showSurface();
-  }
-  updatePool();
-  if ($('gallery').classList.contains('show')) renderGallery();
-}
-setInterval(tickDecay, 60e3);
-
 /* ================= toast ================= */
 let toastT = null;
 function toast(msg) {
@@ -2472,7 +2475,7 @@ addEventListener('resize', () => {
 });
 
 /* ================= editor ================= */
-const cp = { slot: 'card', bg: { c1: '#1c2440', c2: '#0d1120', grad: true, ang: 160 }, texts: [], stamps: [], strokes: [], link: null, lineText: '' };
+const cp = { slot: 'card', bg: { c1: '#1c2440', c2: '#0d1120', grad: true, ang: 160 }, texts: [], stamps: [], strokes: [], images: [], link: null, lineText: '' };
 const defText = { s: 3, c: '#ffffff', f: 'g' };
 let tool = 'select';
 let sel = null;
@@ -2488,7 +2491,7 @@ let penCanvas = null;
 let undoStack = [], redoStack = [];
 const UNDO_MAX = 50;
 function snapCP() {
-  return JSON.stringify({ slot: cp.slot, bg: cp.bg, texts: cp.texts, stamps: cp.stamps, strokes: cp.strokes, link: cp.link, lineText: cp.lineText });
+  return JSON.stringify({ slot: cp.slot, bg: cp.bg, texts: cp.texts, stamps: cp.stamps, strokes: cp.strokes, images: cp.images, link: cp.link, lineText: cp.lineText });
 }
 function commitInstant(preSnap) {
   undoStack.push(preSnap);
@@ -2504,7 +2507,7 @@ function updateUndoBtns() {
 function applySnap(json) {
   const o = JSON.parse(json);
   cp.slot = o.slot; cp.bg = o.bg; cp.texts = o.texts; cp.stamps = o.stamps;
-  cp.strokes = o.strokes; cp.link = o.link; cp.lineText = o.lineText;
+  cp.strokes = o.strokes; cp.images = o.images || []; cp.link = o.link; cp.lineText = o.lineText;
   clearSel();
   $('bg-c1').value = cp.bg.c1 || '#000000';
   $('bg-c2').value = cp.bg.c2 || '#000000';
@@ -2536,20 +2539,22 @@ $('ed-undo').addEventListener('click', doUndo);
 $('ed-redo').addEventListener('click', doRedo);
 
 /* ---- element edit helpers shared by ctx bar + keyboard shortcuts (A2/A4) ---- */
+/* v7: text / stamp / image all live in their own cp array but share the same select-drag-resize-rotate machinery */
+function arrFor(kind) { return kind === 'stamp' ? cp.stamps : kind === 'image' ? cp.images : cp.texts; }
 function deleteSelected() {
   if (!sel) return;
   const pre = snapCP();
-  if (sel.kind === 'stamp') cp.stamps.splice(sel.idx, 1);
-  else cp.texts.splice(sel.idx, 1);
+  arrFor(sel.kind).splice(sel.idx, 1);
   clearSel();
   commitInstant(pre);
   rebuildPreview();
 }
 function duplicateSelected() {
   if (!sel) return;
-  const arr = sel.kind === 'stamp' ? cp.stamps : cp.texts;
+  const arr = arrFor(sel.kind);
   const src = arr[sel.idx];
   if (!src) return;
+  if (sel.kind === 'image' && cp.images.length >= 3) { toast(t('toast_max_image')); return; }
   const pre = snapCP();
   const copy = JSON.parse(JSON.stringify(src));
   copy.x = Math.min(96, (copy.x || 50) + 2);
@@ -2576,7 +2581,7 @@ function nudgeSelected(key, big) {
 }
 function reorderLayer(dir) {
   if (!sel) return;
-  const arr = sel.kind === 'stamp' ? cp.stamps : cp.texts;
+  const arr = arrFor(sel.kind);
   const pre = snapCP();
   const item = arr.splice(sel.idx, 1)[0];
   if (!item) return;
@@ -2594,6 +2599,12 @@ function applyElStyleFromData(kind, idx) {
     if (!d) return;
     el.style.left = d.x + '%'; el.style.top = d.y + '%';
     el.style.fontSize = Math.round(26 * (d.s || 1) * dims.tf) + 'px';
+    el.style.transform = 'translate(-50%,-50%) rotate(' + (d.r || 0) + 'deg)';
+  } else if (kind === 'image') {
+    const d = cp.images[idx];
+    if (!d) return;
+    el.style.left = d.x + '%'; el.style.top = d.y + '%';
+    el.style.width = (d.w || 40) + '%';
     el.style.transform = 'translate(-50%,-50%) rotate(' + (d.r || 0) + 'deg)';
   } else {
     const d = cp.texts[idx];
@@ -2644,7 +2655,7 @@ function startHandleDrag(e, type) {
   const cy = boxRect.top + (d.y / 100) * dims.H * s;
   const startDist = Math.max(4, Math.hypot(e.clientX - cx, e.clientY - cy));
   const startAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
-  const startScale = sel.kind === 'stamp' ? (d.s || 1) : (d.scale || 1);
+  const startScale = sel.kind === 'stamp' ? (d.s || 1) : sel.kind === 'image' ? (d.w || 40) : (d.scale || 1);
   const startR = d.r || 0;
   const pre = snapCP();
   const handle = e.currentTarget;
@@ -2654,8 +2665,9 @@ function startHandleDrag(e, type) {
       const dist = Math.max(4, Math.hypot(ev.clientX - cx, ev.clientY - cy));
       const factor = dist / startDist;
       let ns = startScale * factor;
-      ns = Math.max(sel.kind === 'stamp' ? 0.3 : 0.4, Math.min(sel.kind === 'stamp' ? 7 : 5, ns));
-      if (sel.kind === 'stamp') d.s = ns; else d.scale = ns;
+      if (sel.kind === 'stamp') { d.s = Math.max(0.3, Math.min(7, ns)); }
+      else if (sel.kind === 'image') { d.w = Math.max(4, Math.min(95, ns)); }
+      else { d.scale = Math.max(0.4, Math.min(5, ns)); }
     } else {
       const ang = Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180 / Math.PI;
       let r = startR + (ang - startAngle);
@@ -2729,6 +2741,7 @@ function buildTemplateOverlay() {
 function applyTemplate(tpl) {
   const pre = snapCP();
   cp.slot = tpl.slot;
+  cp.images = [];
   if (tpl.slot === 'line') {
     cp.lineText = tpl.lineText ? tpl.lineText() : '';
     $('c-line-text').value = cp.lineText;
@@ -2756,6 +2769,7 @@ $('ed-tmpl-blank').addEventListener('click', hideTemplateOverlay);
 const TOOLS = [
   ['select', 'tool_select', '<svg viewBox="0 0 20 20"><path d="M5 3 L15 10 L10.5 11.5 L13 16.5 L10.8 17.5 L8.3 12.5 L5 15 Z"/></svg>'],
   ['text', 'tool_text', '<svg viewBox="0 0 20 20"><path d="M4 5 H16 M10 5 V16"/></svg>'],
+  ['image', 'tool_image', '<svg viewBox="0 0 20 20"><rect x="3" y="4" width="14" height="12" rx="1.5"/><circle cx="7.5" cy="8.5" r="1.5"/><path d="M4 14 L8.5 10 L11.5 12.5 L14 10.5 L16.5 13"/></svg>'],
   ['draw', 'tool_draw', '<svg viewBox="0 0 20 20"><path d="M4 16 C7 9 12 5 16 4 C15 8 11 13 4 16 Z"/></svg>'],
   ['erase', 'tool_erase', '<svg viewBox="0 0 20 20"><path d="M8 15 L3.5 10.5 L11 3 L16.5 8.5 L10 15 Z M6 17 H17"/></svg>'],
   ['sticker', 'tool_sticker', '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7"/><path d="M7.5 8.5 H7.51 M12.5 8.5 H12.51 M7 12 C8 13.4 12 13.4 13 12"/></svg>'],
@@ -2769,9 +2783,56 @@ function buildTools() {
     b.dataset.tool = id;
     b.innerHTML = icon + '<span class="tl">' + esc(t(labelKey)) + '</span>';
     b.setAttribute('aria-label', t(labelKey));
-    b.addEventListener('click', () => setTool(id));
+    b.addEventListener('click', () => { if (id === 'image') pickImage(); else setTool(id); });
     rail.appendChild(b);
   }
+}
+/* v7: image upload — pick a file, downscale it client-side, drop it on the canvas as a new element */
+function pickImage() {
+  if ((cp.images || []).length >= 3) { toast(t('toast_max_image')); return; }
+  const input = $('c-image-input');
+  if (input) input.click();
+}
+function processImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const maxSide = 1000;
+      let w = img.naturalWidth || 1, h = img.naturalHeight || 1;
+      const scale = Math.min(1, maxSide / Math.max(w, h));
+      w = Math.max(1, Math.round(w * scale)); h = Math.max(1, Math.round(h * scale));
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const ctx = cv.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const wantsPng = /png|gif/.test(file.type); // only keep a lossless format when transparency is plausible
+      let dataUrl = wantsPng ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', 0.85);
+      if (dataUrl.length > 400 * 1024 * 1.37) dataUrl = cv.toDataURL('image/jpeg', 0.7); // v7: recompress if >400KB
+      resolve(dataUrl);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('load-failed')); };
+    img.src = url;
+  });
+}
+if ($('c-image-input')) {
+  $('c-image-input').addEventListener('change', async e => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if ((cp.images || []).length >= 3) { toast(t('toast_max_image')); return; }
+    try {
+      const src = await processImageFile(file);
+      const pre = snapCP();
+      cp.images = cp.images || [];
+      cp.images.push({ src, x: 50, y: 50, w: 40, r: 0 });
+      commitInstant(pre);
+      rebuildPreview();
+      setTool('select');
+      selectEl('image', cp.images.length - 1);
+    } catch (err) { toast(t('toast_image_error')); }
+  });
 }
 function setTool(t2) {
   tool = t2;
@@ -2789,7 +2850,7 @@ function openComposer(initSlot) {
   $('composer').classList.add('show');
   cp.slot = initSlot || 'card';
   cp.bg = { c1: '#1c2440', c2: '#0d1120', grad: true, ang: 160 };
-  cp.texts = []; cp.stamps = []; cp.strokes = []; cp.link = null; cp.lineText = '';
+  cp.texts = []; cp.stamps = []; cp.strokes = []; cp.images = []; cp.link = null; cp.lineText = '';
   defText.s = 3; defText.c = '#ffffff'; defText.f = 'g';
   sel = null; editingText = null;
   $('bg-c1').value = cp.bg.c1; $('bg-c2').value = cp.bg.c2; $('bg-ang').value = cp.bg.ang;
@@ -2820,7 +2881,7 @@ function buildPlacementPicker() {
     const b = document.createElement('button');
     b.className = 'pp-zone pp-' + k;
     b.textContent = t('slot_' + k);
-    b.title = t('life_h', SLOTS[k].life);
+    b.title = t('slot_' + k);
     b.classList.toggle('sel', cp.slot === k);
     b.addEventListener('click', () => { cp.slot = k; buildPlacementPicker(); applyEditorMode(); rebuildPreview(); });
     wrap.appendChild(b);
@@ -2902,13 +2963,13 @@ function rebuildPreviewSoft() { clearTimeout(softT); softT = setTimeout(rebuildP
 function cpAd() {
   if (cp.slot === 'line') {
     return { id: 'preview', slot: 'line', text: cp.lineText || '', link: cp.link,
-      author: $('c-author').value || $('c-author').placeholder, postedAt: T(), keeps: 0, kept: false, status: 'live' };
+      author: $('c-author').value || $('c-author').placeholder, postedAt: T(), saves: 0, status: 'live' };
   }
   return {
     id: 'preview', slot: cp.slot, bg: cp.bg,
-    texts: cp.texts, stamps: cp.stamps, doodle: null, link: cp.link,
+    texts: cp.texts, stamps: cp.stamps, doodle: null, images: cp.images, link: cp.link,
     author: $('c-author').value || $('c-author').placeholder,
-    postedAt: T(), keeps: 0, kept: false, status: 'live',
+    postedAt: T(), saves: 0, status: 'live',
   };
 }
 function rebuildPreview() {
@@ -3082,7 +3143,7 @@ function restoreSel() {
 }
 function selData() {
   if (!sel) return null;
-  return sel.kind === 'stamp' ? cp.stamps[sel.idx] : cp.texts[sel.idx];
+  return arrFor(sel.kind)[sel.idx];
 }
 
 function startTextEdit(el, idx) {
@@ -3173,7 +3234,7 @@ function bindCanvasPointer(box) {
     if (Math.abs(x - 50) <= 1.5) { x = 50; snapV = true; }
     if (Math.abs(y - 50) <= 1.5) { y = 50; snapH = true; }
     showSnapGuides(snapV, snapH);
-    const d = drag.kind === 'stamp' ? cp.stamps[drag.idx] : cp.texts[drag.idx];
+    const d = arrFor(drag.kind)[drag.idx];
     if (!d) return;
     d.x = x; d.y = y;
     drag.el.style.left = x + '%';
@@ -3302,7 +3363,7 @@ $('ed-post').addEventListener('click', () => {
       id: 'u' + Date.now().toString(36), slot: 'line',
       text: cp.lineText.trim(), link: cp.link,
       author: ($('c-author').value.trim() || $('c-author').placeholder),
-      postedAt: T(), keeps: 0, kept: false, status: 'pending',
+      postedAt: T(), saves: 0, status: 'pending',
     };
     store.user.push(p);
     save();
@@ -3312,7 +3373,7 @@ $('ed-post').addEventListener('click', () => {
     updateQueueDot();
     return;
   }
-  const hasContent = cp.texts.some(x => x.t.trim()) || cp.stamps.length || cp.strokes.length || cp.link;
+  const hasContent = cp.texts.some(x => x.t.trim()) || cp.stamps.length || cp.strokes.length || cp.link || (cp.images && cp.images.length);
   if (!hasContent) {
     $('ed-top').classList.add('shakeit');
     setTimeout(() => $('ed-top').classList.remove('shakeit'), 450);
@@ -3327,9 +3388,10 @@ $('ed-post').addEventListener('click', () => {
     bg: { ...cp.bg },
     texts: cp.texts.filter(x => x.t.trim()).map(x => ({ ...x })),
     stamps: cp.stamps.map(s => ({ ...s })),
+    images: (cp.images || []).map(im => ({ ...im })),
     doodle, link: cp.link,
     author: ($('c-author').value.trim() || $('c-author').placeholder),
-    postedAt: T(), keeps: 0, kept: false, status: 'pending',
+    postedAt: T(), saves: 0, status: 'pending',
   };
   store.user.push(p);
   save();
@@ -3381,7 +3443,8 @@ function queueItem(p, acts) {
   const title = p.slot === 'line' ? p.text : ((p.texts && p.texts[0] && p.texts[0].t) || t('wordless')).replace(/\n/g, ' ');
   info.innerHTML = '<div class="t">' + esc(title) + '</div>' +
     '<div class="m">' + esc(p.author || t('anon_prefix')) + ' · ' + SLOT_TAG[p.slot] +
-    (p.link ? ' · ' + esc(p.link.kind === 'yt' ? 'YouTube' : (p.link.host || '')) : '') + '</div>';
+    (p.link ? ' · ' + esc(p.link.kind === 'yt' ? 'YouTube' : (p.link.host || '')) : '') + '</div>' +
+    (isMine(p) ? '<div class="m mine">' + esc(t('your_ad_saves', p.saves || 0)) + '</div>' : '');
   it.appendChild(info);
   const col = document.createElement('div');
   col.className = 'q-acts';
@@ -3450,11 +3513,12 @@ function renderConsole() {
 document.querySelectorAll('.q-tool[data-ff]').forEach(b => {
   b.addEventListener('click', () => {
     ffH += Number(b.dataset.ff);
-    checkHallInductions(); // v6: fast-forwarding time can push any live ad past its life, not just the mounted one
+    // v7: time doesn't kill ads anymore, but it moves them through the debut windows —
+    // re-roll the current view so the shifted exposure weights are visible.
     renderConsole();
     updatePool();
-    if (surface === 'newtab') { tickDecay(); }
-    else if (sfCurrent && !isLive(sfCurrent)) { sfCurrent = pickOther(); showSurface(); }
+    if (surface === 'newtab') { drawAllSlots(); mountAllSlots(); }
+    else { sfCurrent = pickOther(); showSurface(); }
     if ($('gallery').classList.contains('show')) renderGallery();
     toast('+' + b.dataset.ff + 'h');
   });
@@ -3470,10 +3534,11 @@ function buildAbout() {
     '<h2>' + esc(t('about_h2_1')) + '<br>' + esc(t('about_h2_2')) + '</h2>' +
     '<p class="lead">' + esc(t('about_lead')) + '</p>' +
     '<h3>' + esc(t('hiw_title')) + '</h3>' +
-    '<ul>' + hiw.map((s, i) => '<li>' + esc(s) + (i === 2 ? '<div class="a-life mono">' + esc(t('life_list')) + '</div>' : '') + '</li>').join('') + '</ul>' +
+    '<ul>' + hiw.map(s => '<li>' + esc(s) + '</li>').join('') + '</ul>' +
     '<h3>' + esc(t('surf_title')) + '</h3>' +
     '<ul><li>' + esc(t('surf_note')) + '</li></ul>' +
     '<p class="a-note">' + esc(t('about_rules')) + '</p>' +
+    '<p class="a-note">' + esc(t('economy_note')) + '</p>' +
     '<p class="a-note">' + esc(t('about_note')) + ' ' + esc(t('about_sim_note')) + '</p>' +
     '<div class="a-cta"><button class="a-go" id="about-go">' + esc(t('about_go')) + '</button><span class="a-sub">' + esc(t('about_sub2')) + '</span></div>';
   $('about-go').addEventListener('click', closeAbout);
@@ -3486,8 +3551,9 @@ function closeAbout() {
 $('link-about').addEventListener('click', openAbout);
 $('about').addEventListener('click', e => { if (e.target === $('about')) closeAbout(); });
 
-/* ================= v6: gallery + hall of fame ================= */
+/* ================= v7: gallery + scrapbook + hall of fame ================= */
 let gallerySort = 'new';
+let galleryTab = 'all'; // 'all' | 'saved' | 'hall'
 
 /* shared thumbnail builder: same "scale a full-size render down" trick as miniOf() / mp-box */
 function galleryThumbFor(p, opts = {}) {
@@ -3516,22 +3582,25 @@ function fitGalleryThumbs(root) {
     if (el) el.style.transform = 'scale(' + (cw / dims.W) + ')';
   });
 }
-function galCardMeta(p, opts = {}) {
+/* v7: ads posted by the viewer (store.user, id starts with 'u') get their save count called out */
+function galCardMeta(p) {
   const meta = document.createElement('div');
   meta.className = 'gal-meta';
   const tag = document.createElement('span'); tag.className = 'gal-tag'; tag.textContent = SLOT_TAG[p.slot];
   const author = document.createElement('span'); author.className = 'gal-author'; author.textContent = p.author || t('anon_prefix');
   meta.appendChild(tag); meta.appendChild(author);
-  if (opts.timeLeft) {
-    const time = document.createElement('span'); time.className = 'gal-time';
-    time.textContent = t('gal_left', Math.max(1, Math.ceil((expiresAt(p) - T()) / H)));
-    meta.appendChild(time);
-  }
-  const boost = document.createElement('span'); boost.className = 'gal-boostn'; boost.textContent = '+' + (p.keeps || 0);
-  meta.appendChild(boost);
+  const saves = document.createElement('span'); saves.className = 'gal-savesn'; saves.textContent = '+' + (p.saves || 0);
+  meta.appendChild(saves);
   return meta;
 }
-/* hover chips: reuse boostAd()/reportAd() (the same functions the main slots use) with a small gallery-local confirm UI */
+function galMineBadge(p) {
+  if (!isMine(p)) return null;
+  const badge = document.createElement('span');
+  badge.className = 'gal-mine-badge';
+  badge.textContent = t('your_ad_saves', p.saves || 0);
+  return badge;
+}
+/* hover chips: reuse saveAd()/reportAd() (the same functions the main slots use) with a small gallery-local confirm UI */
 function galConfirmReport(chips, p) {
   chips.innerHTML = '';
   const q = document.createElement('span'); q.className = 'sl-chip'; q.textContent = t('report_confirm'); chips.appendChild(q);
@@ -3551,13 +3620,14 @@ function galAttachChips(card, p) {
     b.addEventListener('click', e => { e.stopPropagation(); fn(); });
     return b;
   };
-  chips.appendChild(mk(p.kept ? t('boosted') : t('boost'), p.kept ? 'boosted' : '', () => { boostAd(p); renderGallery(); }));
+  const isSaved = (store.savedIds || []).includes(p.id);
+  chips.appendChild(mk(isSaved ? t('saved_chip') : t('save_chip', p.saves || 0), isSaved ? 'saved' : '', () => { saveAd(p); renderGallery(); }));
   chips.appendChild(mk('⚑', 'flag', () => galConfirmReport(chips, p)));
   card.appendChild(chips);
 }
 function galSortedAds() {
   const ads = liveAds().slice();
-  if (gallerySort === 'boost') ads.sort((a, b) => (b.keeps || 0) - (a.keeps || 0) || b.postedAt - a.postedAt);
+  if (gallerySort === 'saves') ads.sort((a, b) => (b.saves || 0) - (a.saves || 0) || b.postedAt - a.postedAt);
   else ads.sort((a, b) => b.postedAt - a.postedAt);
   return ads;
 }
@@ -3566,45 +3636,53 @@ function buildGalCard(p) {
   card.className = 'gal-card';
   card.tabIndex = 0;
   card.appendChild(galleryThumbFor(p));
-  card.appendChild(galCardMeta(p, { timeLeft: true }));
+  const mine = galMineBadge(p);
+  if (mine) card.appendChild(mine);
+  card.appendChild(galCardMeta(p));
   galAttachChips(card, p);
   return card;
 }
 function buildHallCard(h) {
   const card = document.createElement('div');
-  card.className = 'hall-card' + (h.dead ? ' hall-dead' : '');
+  card.className = 'hall-card';
   card.appendChild(galleryThumbFor(h, { fresh: true }));
-  const badge = document.createElement('span');
-  badge.className = 'hall-badge ' + (h.dead ? 'hall-badge-dead' : 'hall-badge-live');
-  badge.textContent = h.dead ? t('hall_badge_dead') : t('hall_badge_live');
-  card.appendChild(badge);
   card.appendChild(galCardMeta(h));
   return card;
 }
 function renderGallery() {
   $('gal-ttl').textContent = t('gal_title');
+  document.querySelectorAll('#gal-tabs button').forEach(b => {
+    b.textContent = b.dataset.tab === 'all' ? t('gal_tab_all') : b.dataset.tab === 'saved' ? t('gal_tab_saved') : t('gal_tab_hall');
+    b.classList.toggle('sel', b.dataset.tab === galleryTab);
+  });
+  $('gal-sort').style.display = galleryTab === 'all' ? '' : 'none';
   document.querySelectorAll('#gal-sort button').forEach(b => {
-    b.textContent = b.dataset.sort === 'new' ? t('gal_sort_new') : t('gal_sort_boost');
+    b.textContent = b.dataset.sort === 'new' ? t('gal_sort_new') : t('gal_sort_saves');
     b.classList.toggle('sel', b.dataset.sort === gallerySort);
   });
 
-  const ads = galSortedAds();
-  $('gal-count').textContent = t('gal_count', ads.length);
+  let items, emptyKey, isHall = false;
+  if (galleryTab === 'saved') {
+    items = (store.savedIds || []).slice().reverse().map(id => store.savedSnaps[id]).filter(Boolean);
+    emptyKey = 'gal_saved_empty';
+  } else if (galleryTab === 'hall') {
+    items = hallTop(8);
+    emptyKey = 'gal_empty';
+    isHall = true;
+  } else {
+    items = galSortedAds();
+    emptyKey = 'gal_empty';
+  }
+  $('gal-count').textContent = t('gal_count', items.length);
   const grid = $('gal-grid');
   grid.innerHTML = '';
-  if (!ads.length) {
-    const empty = document.createElement('div'); empty.className = 'gal-empty'; empty.textContent = t('gal_empty');
+  if (!items.length) {
+    const empty = document.createElement('div'); empty.className = 'gal-empty'; empty.textContent = t(emptyKey);
     grid.appendChild(empty);
   } else {
-    for (const p of ads) grid.appendChild(buildGalCard(p));
+    for (const p of items) grid.appendChild(isHall ? buildHallCard(p) : buildGalCard(p));
   }
   fitGalleryThumbs(grid);
-
-  $('gal-hall-ttl').textContent = t('hall_title');
-  const hallGrid = $('gal-hall-grid');
-  hallGrid.innerHTML = '';
-  for (const h of hallTop(8)) hallGrid.appendChild(buildHallCard(h));
-  fitGalleryThumbs(hallGrid);
 }
 function openGallery() { $('gallery').classList.add('show'); renderGallery(); }
 function closeGallery() { $('gallery').classList.remove('show'); }
@@ -3613,6 +3691,9 @@ $('gal-close').addEventListener('click', closeGallery);
 $('gallery').addEventListener('click', e => { if (e.target === $('gallery')) closeGallery(); });
 document.querySelectorAll('#gal-sort button').forEach(b => {
   b.addEventListener('click', () => { gallerySort = b.dataset.sort; renderGallery(); });
+});
+document.querySelectorAll('#gal-tabs button').forEach(b => {
+  b.addEventListener('click', () => { galleryTab = b.dataset.tab; renderGallery(); });
 });
 
 /* ================= static chrome (i18n) ================= */
@@ -3634,6 +3715,7 @@ function buildEditorChrome() {
   $('ed-redo').setAttribute('aria-label', t('redo'));
   $('ed-redo').title = t('redo');
   $('ed-tmpl-close').setAttribute('aria-label', t('close'));
+  $('ed-review-note').textContent = t('review_note');
   buildTools();
   buildBgPresets();
   parseLink();
@@ -3717,13 +3799,12 @@ if (qs && ['newtab', 'wallpaper', 'ticker', 'terminal', 'stream'].includes(qs)) 
 }
 buildChrome();
 drawAllSlots();
-checkHallInductions();
 if (surface === 'newtab') showNewtab(); else { sfCurrent = pickOther(); showSurface(); }
 updateQueueDot();
 startRotationTimers();
 restartFeedCycle();
 scheduleAmbientPaint();
-scheduleAmbientBoost();
+scheduleAmbientSave();
 // keep the always-on mini preview's map thumbnail fresh once the editor first mounts
 const _mpObs = new MutationObserver(() => { if ($('composer').classList.contains('show')) paintMiniWall(); });
 _mpObs.observe($('composer'), { attributes: true, attributeFilter: ['class'] });
