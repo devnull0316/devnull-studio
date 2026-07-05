@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>/dev/ad — 誰でも書き込める広告枠</title>
-<meta name="description" content="広告枠はずっと読み取り専用だった。/dev/ad は新規タブページに複数の広告枠を持つ実験で、誰でも無料で出稿できる。注目が通貨で、放置された広告は消えていく。背景の世界地図はみんなのピクセルボード。">
+<meta name="description" content="広告枠はずっと読み取り専用だった。/dev/ad は新規タブページに複数の広告枠を持つ実験で、誰でも無料で出稿できる。広告は消えず、保存されるほどよく流れる。みんなで塗る世界地図も1本の広告として巡ってくる。">
 <meta name="theme-color" content="#131314">
 <link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="%23131314"/><rect x="7" y="20" width="10" height="3.4" rx="1" fill="%23d8d5cc"/><path d="M8 8 L14 13 L8 18" stroke="%23d8d5cc" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'>
 <style>
@@ -223,13 +223,6 @@ input, textarea, select { font-family: inherit; }
 
 #nt-corner-wrap { position: absolute; left: clamp(14px, 2.5vw, 26px); bottom: clamp(12px, 2.5vh, 20px); z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; max-width: min(360px, 68vw); }
 #nt-corner { display: flex; align-items: center; gap: 10px; }
-#btn-paint {
-  font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.4);
-  background: rgba(255,255,255,0.14); border-radius: 4px; padding: 7px 12px;
-  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-}
-#btn-paint:hover { background: rgba(255,255,255,0.26); }
-#wp-stats { color: rgba(255,255,255,0.9); text-shadow: 0 1px 4px rgba(0,0,0,0.4); font-size: 10px; }
 #nt-feed {
   font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: #5f6368;
   background: #fff; border: 1px solid #e4e6e9; border-radius: 4px; padding: 5px 9px;
@@ -316,14 +309,14 @@ input, textarea, select { font-family: inherit; }
 /* ===== empty slot placeholders ===== */
 .sl-empty {
   display: flex; align-items: center; justify-content: center; text-align: center;
-  color: rgba(255,255,255,0.86); text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  color: #80868b;
   font-size: 11px; line-height: 1.6;
-  border: 1.5px dashed rgba(255,255,255,0.55);
+  border: 1.5px dashed #dadce0;
   border-radius: 6px;
   padding: 10px;
-  transition: background .15s, border-color .15s;
+  transition: background .15s, border-color .15s, color .15s;
 }
-.sl-empty:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.85); }
+.sl-empty:hover { background: rgba(32,33,36,0.04); border-color: #b9bdc2; color: #5f6368; }
 #sl-line .sl-empty { width: 100%; max-width: 420px; padding: 7px 14px; font-size: 11px; border-radius: 999px; }
 #sl-card .sl-empty { width: 100%; height: 100%; }
 .sl-empty-half {
@@ -699,14 +692,12 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
   position: relative; width: 320px; height: 200px;
   border-radius: 6px; overflow: hidden;
   border: 1px solid var(--line);
-  background: #142f4b;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f7f9 100%); /* v8: NTPと同じライト */
 }
-#mp-page canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
-#mp-page .mp-scrim { position: absolute; inset: 0; background: radial-gradient(ellipse 70% 55% at 50% 30%, rgba(0,0,0,0.3), transparent 70%); }
-#mp-page .mp-search { position: absolute; left: 50%; top: 20px; transform: translateX(-50%); width: 150px; height: 15px; background: #fff; border-radius: 999px; box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
+#mp-page .mp-search { position: absolute; left: 50%; top: 20px; transform: translateX(-50%); width: 150px; height: 15px; background: #fff; border: 1px solid #e4e6e9; border-radius: 999px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 #mp-page .mp-tiles { position: absolute; left: 50%; top: 46px; transform: translateX(-50%); display: flex; gap: 7px; }
-#mp-page .mp-tiles i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,0.85); display: block; }
-#mp-page .mp-line { position: absolute; left: 8px; right: 8px; top: 38px; text-align: center; color: #fff; font-size: 8.5px; text-shadow: 0 1px 3px rgba(0,0,0,0.5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#mp-page .mp-tiles i { width: 9px; height: 9px; border-radius: 50%; background: #f1f3f4; border: 1px solid #e4e6e9; display: block; }
+#mp-page .mp-line { position: absolute; left: 8px; right: 8px; top: 38px; text-align: center; color: #3c4043; font-size: 8.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #mp-page .mp-box { position: absolute; overflow: hidden; border-radius: 3px; display: none; }
 #mp-page .mp-box.on { display: block; }
 #mp-page .mp-box .screen { position: absolute; left: 0; top: 0; transform-origin: 0 0; border-radius: 3px; }
@@ -978,8 +969,6 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
       <div id="ed-preview">
         <span class="ep-lbl" id="lbl-preview"></span>
         <div id="mp-page">
-          <canvas id="mp-wall"></canvas>
-          <div class="mp-scrim"></div>
           <div class="mp-search"></div>
           <div class="mp-tiles"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
           <div class="mp-line" id="mp-line"></div>
@@ -1050,12 +1039,12 @@ ja: {
   newtab: '新しいタブ', search: '検索またはURLを入力',
   tile_mail: 'メール', tile_video: '動画', tile_news: 'ニュース', tile_maps: '地図', tile_translate: '翻訳', tile_calendar: 'カレンダー', tile_photos: '写真', tile_drive: 'ドライブ',
   mock_tile: 'これは飾りです',
-  paint_bg: '背景にペイント',
+
   by_everyone: 'みんな',
   px_count: n => n.toLocaleString('ja') + 'px',
   px_board: 'ピクセルボード',
   place_pixels: 'ピクセルを置く',
-  wall_stats: (p, ppl) => p.toLocaleString('ja') + 'px · ' + ppl + '人',
+
   close_ad: '閉じる',
   slot_open: 'この枠、空いています — 出稿する',
   slot_open_short: '空き枠',
@@ -1158,12 +1147,12 @@ en: {
   newtab: 'New Tab', search: 'Search or type a URL',
   tile_mail: 'Mail', tile_video: 'Video', tile_news: 'News', tile_maps: 'Maps', tile_translate: 'Translate', tile_calendar: 'Calendar', tile_photos: 'Photos', tile_drive: 'Drive',
   mock_tile: 'Just for show',
-  paint_bg: 'Paint the background',
+
   by_everyone: 'everyone',
   px_count: n => n.toLocaleString('en') + 'px',
   px_board: 'PIXEL BOARD',
   place_pixels: 'Place pixels',
-  wall_stats: (p, ppl) => p.toLocaleString('en') + 'px · ' + ppl + ' people',
+
   close_ad: 'Close',
   slot_open: 'This slot is open — post here',
   slot_open_short: 'Open slot',
@@ -1377,10 +1366,13 @@ if (!store.lang) store.lang = (navigator.language || 'en').toLowerCase().startsW
 function save() { try { localStorage.setItem(LS, JSON.stringify(store)); } catch (e) {} }
 function getWorld() {
   const o = store.ovr.world || {};
-  return { grid: o.grid || seedWorldGrid(), placed: o.placed != null ? o.placed : 1462, people: o.people != null ? o.people : 208 };
+  return { grid: o.grid || seedWorldGrid(), placed: o.placed != null ? o.placed : 1462, people: o.people != null ? o.people : 208, meta: o.meta || {} };
 }
 let world = getWorld();
-function saveWorld() { store.ovr.world = { grid: world.grid, placed: world.placed, people: world.people }; save(); }
+function saveWorld() { // merge: setOvr経由のsaves/statusを消さない(監査で発見したバグの修正)
+  store.ovr.world = Object.assign(store.ovr.world || {}, { grid: world.grid, placed: world.placed, people: world.people, meta: world.meta });
+  save();
+}
 
 /* ================= seed content ================= */
 const SEED = [
@@ -1723,7 +1715,7 @@ function confirmReport(chips, p) {
 let surface = 'newtab';
 const slotCurrent = { line: null, card: null, halfL: null, halfR: null, full: null };
 let fullClosed = false;
-let fullAutoT = null;
+
 let paintMode = false;
 
 /* ================= v7: weighted exposure engine =================
@@ -1875,22 +1867,32 @@ function updatePool() {
 }
 
 /* --- world background paint mode --- */
-let wpColor = 9, wpCharges = WP_MAX_CHARGES, wpYou = false;
-setInterval(() => {
-  if (wpCharges < WP_MAX_CHARGES) { wpCharges++; if (paintMode) updateCharges(); }
-}, 2000);
-function updateCharges() { const el = $('wp-charges'); if (el) el.textContent = t('charges', wpCharges); }
-
-function layoutWallCover() {
-  const cv = $('wall'), wrap = $('wall-wrap');
-  if (!cv || !wrap) return;
-  const vw = Math.max(1, wrap.clientWidth), vh = Math.max(1, wrap.clientHeight);
-  const s = Math.max(vw / WORLD_COLS, vh / WORLD_ROWS);
-  const w = WORLD_COLS * s, h = WORLD_ROWS * s;
-  cv.style.width = w + 'px'; cv.style.height = h + 'px';
-  cv.style.left = ((vw - w) / 2) + 'px'; cv.style.top = ((vh - h) / 2) + 'px';
-  cv.style.transform = '';
+/* wplace準拠のチャージ: 上限30・30秒で1回復・リロードしても続きから(経過時間ぶん回復) */
+let wpColor = 9, wpYou = false;
+const WP_REGEN_MS = 30e3;
+store.wp = store.wp || { charges: WP_MAX_CHARGES, last: Date.now() };
+function regenCharges() {
+  const w = store.wp;
+  if (w.charges >= WP_MAX_CHARGES) { w.last = Date.now(); return; }
+  const gained = Math.floor((Date.now() - w.last) / WP_REGEN_MS);
+  if (gained > 0) {
+    w.charges = Math.min(WP_MAX_CHARGES, w.charges + gained);
+    w.last += gained * WP_REGEN_MS;
+    save();
+  }
 }
+regenCharges();
+setInterval(() => { regenCharges(); if (paintMode) updateCharges(); }, 1000);
+function updateCharges() {
+  const el = $('wp-charges');
+  if (!el) return;
+  const c = store.wp.charges;
+  if (c >= WP_MAX_CHARGES) { el.textContent = c + '/' + WP_MAX_CHARGES; return; }
+  const ms = Math.max(0, WP_REGEN_MS - (Date.now() - store.wp.last));
+  const mm = Math.floor(ms / 60000), ss = Math.floor(ms / 1000) % 60;
+  el.textContent = c + '/' + WP_MAX_CHARGES + ' · +1 ' + mm + ':' + String(ss).padStart(2, '0');
+}
+
 let paintView = null;
 function applyPaintTransform() {
   const cv = $('wall');
@@ -1898,10 +1900,6 @@ function applyPaintTransform() {
   cv.style.width = WORLD_COLS + 'px'; cv.style.height = WORLD_ROWS + 'px';
   cv.style.left = '0'; cv.style.top = '0'; cv.style.transformOrigin = '0 0';
   cv.style.transform = 'translate(' + paintView.ox + 'px,' + paintView.oy + 'px) scale(' + (paintView.fitS * paintView.zoom) + ')';
-}
-function renderWallStats() {
-  const el = $('wp-stats');
-  if (el) el.textContent = t('wall_stats', world.placed || 0, world.people || 0);
 }
 /* v8: the world map is a normal ad; painting happens in a full-screen overlay reachable from its "Place pixels" chip */
 function startPaint() {
@@ -2007,7 +2005,14 @@ function updatePaintHover(clientX, clientY, dragging) {
   const x = Math.floor((clientX - r.left) / r.width * WORLD_COLS);
   const y = Math.floor((clientY - r.top) / r.height * WORLD_ROWS);
   const inBounds = x >= 0 && y >= 0 && x < WORLD_COLS && y < WORLD_ROWS;
-  if (coordEl) coordEl.textContent = inBounds ? (x + ',' + y) : '';
+  if (coordEl) {
+    let s = inBounds ? (x + ',' + y) : '';
+    if (inBounds) { // wplace同様、塗られたマスは誰が置いたか見える
+      const who = world.meta[y * WORLD_COLS + x];
+      if (who && world.grid[y * WORLD_COLS + x] !== '.') s += ' · ' + (who === '@you' ? t('feed_you') : who);
+    }
+    coordEl.textContent = s;
+  }
   if (!ghost) return;
   if (!inBounds || dragging) { ghost.style.display = 'none'; return; }
   const wrapRect = wrap.getBoundingClientRect();
@@ -2021,7 +2026,8 @@ function updatePaintHover(clientX, clientY, dragging) {
   else { ghost.style.background = PX_PAL[wpColor]; ghost.style.border = 'none'; }
 }
 function placePaintAt(clientX, clientY) {
-  if (wpCharges <= 0) { toast(t('toast_out_of_charges')); return; }
+  regenCharges();
+  if (store.wp.charges <= 0) { toast(t('toast_out_of_charges')); return; }
   const cv = $('wall');
   const r = cv.getBoundingClientRect();
   const x = Math.floor((clientX - r.left) / r.width * WORLD_COLS);
@@ -2032,14 +2038,18 @@ function placePaintAt(clientX, clientY) {
   if (world.grid[idx] === next) return;
   world.grid = world.grid.slice(0, idx) + next + world.grid.slice(idx + 1);
   if (next !== '.') {
+    world.meta[idx] = '@you';
     world.placed = (world.placed || 0) + 1;
     if (!wpYou) { world.people = (world.people || 0) + 1; wpYou = true; }
     pushFeedEvent(t('feed_paint_body', t('feed_you'), t('region_' + regionOf(x, y))));
+  } else {
+    delete world.meta[idx];
   }
-  wpCharges--;
+  if (store.wp.charges >= WP_MAX_CHARGES) store.wp.last = Date.now(); // 満タンから使い始めた瞬間に回復タイマー起動
+  store.wp.charges--;
   updateCharges();
   paintWorldCanvas($('wall'), world.grid);
-  renderWallStats();
+
   saveWorld();
   spawnRipple(x, y);
 }
@@ -2141,10 +2151,11 @@ function simulatePaintEvent() {
   if (world.grid[idx] !== ch) {
     world.grid = world.grid.slice(0, idx) + ch + world.grid.slice(idx + 1);
     world.placed = (world.placed || 0) + 1;
+    const handle = t('feed_someone', 1000 + Math.floor(Math.random() * 9000));
+    world.meta[idx] = handle;
     saveWorld();
     if (paintMode && $('wall')) { paintWorldCanvas($('wall'), world.grid); spawnRipple(x, y); }
     else refreshWorldSlots();
-    const handle = t('feed_someone', 1000 + Math.floor(Math.random() * 9000));
     pushFeedEvent(t('feed_paint_body', handle, t('region_' + regionOf(x, y))));
   }
   scheduleAmbientPaint();
@@ -2222,7 +2233,7 @@ function mountSlot(slotId, opts = {}) {
     closeBtn.setAttribute('aria-label', t('close_ad'));
     closeBtn.textContent = '✕';
     const dismissFull = () => {
-      clearTimeout(fullAutoT);
+
       fullClosed = true;
       if (calm) { mountSlot('full'); return; }
       container.classList.add('fading');
@@ -2521,7 +2532,7 @@ function toast(msg) {
 
 addEventListener('resize', () => {
   if (surface === 'newtab') {
-    if (paintMode) { /* keep pan/zoom as-is */ } else { layoutWallCover(); }
+    /* paint overlay keeps its own pan/zoom on resize */
     mountAllSlots();
   } else { showSurface(); }
   if ($('composer').classList.contains('show')) { fitEditor(); renderMiniPreview(); }
@@ -3101,10 +3112,6 @@ function renderMiniPreview() {
   const el = renderAd(ad, { fresh: true, editable: true });
   el.style.transform = 'scale(' + s + ')';
   box.appendChild(el);
-}
-function paintMiniWall() {
-  const cv = $('mp-wall');
-  if (cv) paintWorldCanvas(cv, world.grid);
 }
 
 /* pen / eraser (normalized coords, survives size change) */
@@ -3860,7 +3867,7 @@ restartFeedCycle();
 scheduleAmbientPaint();
 scheduleAmbientSave();
 // keep the always-on mini preview's map thumbnail fresh once the editor first mounts
-const _mpObs = new MutationObserver(() => { if ($('composer').classList.contains('show')) paintMiniWall(); });
+const _mpObs = new MutationObserver(() => { /* mini-preview is static-light now; nothing to repaint */ });
 _mpObs.observe($('composer'), { attributes: true, attributeFilter: ['class'] });
 if (!store.introSeen) openAbout();
 })();
