@@ -151,28 +151,16 @@ input, textarea, select { font-family: inherit; }
   padding: 7px 16px;
 }
 #nt-bar .dots { color: #5f6368; font-size: 14px; letter-spacing: 2px; }
-#nt-page { flex: 1; min-height: 0; position: relative; overflow: hidden; }
-#wall-wrap { position: absolute; inset: 0; overflow: hidden; z-index: 0; background: #142f4b; }
+#nt-page { flex: 1; min-height: 0; position: relative; overflow: hidden; background: linear-gradient(180deg, #ffffff 0%, #f5f7f9 100%); }
+/* v8: the world map is no longer the page background — #wall-wrap is a full-screen paint overlay, shown only while painting */
+#wall-wrap { position: absolute; inset: 0; overflow: hidden; z-index: 40; background: rgba(12,14,18,0.82); display: none; }
+#nt-page.painting #wall-wrap { display: block; }
 #wall { position: absolute; image-rendering: pixelated; display: block; }
-#nt-scrim {
-  position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background:
-    radial-gradient(ellipse 60% 42% at 50% 26%, rgba(0,0,0,0.32), transparent 70%),
-    radial-gradient(ellipse 120% 90% at 50% 50%, transparent 55%, rgba(0,0,0,0.28));
-}
-#nt-page.painting #nt-col,
-#nt-page.painting #sl-card,
-#nt-page.painting #sl-halfL,
-#nt-page.painting #sl-halfR,
-#nt-page.painting #sl-full,
-#nt-page.painting #nt-corner-wrap {
-  opacity: 0.05; pointer-events: none; transition: opacity .2s;
-}
 
 #nt-col { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(560px, 88%); margin: 0 auto; padding-top: clamp(20px, 6vh, 56px); }
-#nt-clock { text-align: center; color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,0.45); user-select: none; }
+#nt-clock { text-align: center; color: #202124; user-select: none; }
 #clock { font-size: clamp(28px, 3.6vw, 38px); font-weight: 300; letter-spacing: 0.03em; }
-#today { margin-top: 2px; font-size: 10.5px; letter-spacing: 0.1em; opacity: 0.9; }
+#today { margin-top: 2px; font-size: 10.5px; letter-spacing: 0.1em; color: #5f6368; }
 #nt-search { width: 100%; }
 #nt-search .pill {
   display: flex; align-items: center; gap: 10px;
@@ -186,14 +174,14 @@ input, textarea, select { font-family: inherit; }
 #sl-line { min-height: 24px; width: 100%; display: flex; align-items: flex-start; justify-content: center; }
 .sl-line-ad {
   position: relative; display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; justify-content: center;
-  color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.55);
+  color: #3c4043;
   font-size: 12.5px; padding: 4px 12px 28px;
 }
-.sl-line-lnk { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
-.sl-line-by { opacity: 0.72; font-size: 10.5px; }
+.sl-line-lnk { color: #1a73e8; text-decoration: underline; text-underline-offset: 2px; }
+.sl-line-by { opacity: 0.6; font-size: 10.5px; }
 #nt-tiles { display: grid; grid-template-columns: repeat(4, 54px); grid-auto-rows: auto; gap: 16px clamp(10px, 2.4vw, 22px); justify-content: center; margin-top: 4px; }
-.nt-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 54px; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.45); font-size: 10px; }
-.nt-tile .bub { width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.94); color: #3c4043; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; transition: transform .15s; }
+.nt-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 54px; color: #5f6368; font-size: 10px; }
+.nt-tile .bub { width: 38px; height: 38px; border-radius: 50%; background: #f1f3f4; border: 1px solid #e4e6e9; color: #3c4043; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; transition: transform .15s; }
 .nt-tile:hover .bub { transform: translateY(-2px); }
 
 #sl-card { position: absolute; right: clamp(14px, 3vw, 34px); bottom: clamp(48px, 7vh, 72px); width: min(320px, 30vw); aspect-ratio: 320 / 220; z-index: 2; display: flex; align-items: center; justify-content: center; transition: right .25s ease; }
@@ -217,11 +205,14 @@ input, textarea, select { font-family: inherit; }
 .sl-line-tag {
   font-family: ui-monospace, Menlo, monospace;
   font-size: 8.5px; font-weight: 700; letter-spacing: 0.16em;
-  color: rgba(255, 255, 255, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #9aa0a6;
+  border: 1px solid #dadce0;
   border-radius: 2px; padding: 1.5px 6px; margin-right: 4px;
   vertical-align: 1px;
 }
+/* v8: world map rendered as a normal ad (canvas) */
+.screen.pixel { position: relative; overflow: hidden; background: #122a44; }
+.screen.pixel .worldcv { position: absolute; image-rendering: pixelated; }
 .sl-full-close {
   position: absolute; top: 14px; right: 14px; z-index: 6;
   width: 30px; height: 30px; border-radius: 50%;
@@ -240,8 +231,8 @@ input, textarea, select { font-family: inherit; }
 #btn-paint:hover { background: rgba(255,255,255,0.26); }
 #wp-stats { color: rgba(255,255,255,0.9); text-shadow: 0 1px 4px rgba(0,0,0,0.4); font-size: 10px; }
 #nt-feed {
-  font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: rgba(255,255,255,0.85);
-  background: rgba(0,0,0,0.42); border-radius: 4px; padding: 5px 9px;
+  font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: #5f6368;
+  background: #fff; border: 1px solid #e4e6e9; border-radius: 4px; padding: 5px 9px;
   opacity: 0; transition: opacity .5s;
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
@@ -371,7 +362,7 @@ button.sl-chip:hover { background: rgba(0, 0, 0, 0.86); }
 
 /* ===== background paint mode ===== */
 #wp-bar {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 20;
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 45;
   display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
   gap: 10px 14px;
   padding: 12px 16px;
@@ -593,10 +584,10 @@ button.sl-chip:hover { background: rgba(0, 0, 0, 0.86); }
 
 #gal-link-nt {
   font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.72); text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  color: #5f6368;
   align-self: flex-start; padding: 1px 0;
 }
-#gal-link-nt:hover { color: #fff; }
+#gal-link-nt:hover { color: #202124; }
 
 /* ===== editor (composer) ===== */
 #composer .frame {
@@ -1060,6 +1051,10 @@ ja: {
   tile_mail: 'メール', tile_video: '動画', tile_news: 'ニュース', tile_maps: '地図', tile_translate: '翻訳', tile_calendar: 'カレンダー', tile_photos: '写真', tile_drive: 'ドライブ',
   mock_tile: 'これは飾りです',
   paint_bg: '背景にペイント',
+  by_everyone: 'みんな',
+  px_count: n => n.toLocaleString('ja') + 'px',
+  px_board: 'ピクセルボード',
+  place_pixels: 'ピクセルを置く',
   wall_stats: (p, ppl) => p.toLocaleString('ja') + 'px · ' + ppl + '人',
   close_ad: '閉じる',
   slot_open: 'この枠、空いています — 出稿する',
@@ -1138,7 +1133,7 @@ ja: {
     '出稿は無料です。新しい広告ほどよく流れ、保存されるとまた巡ってきやすくなります。',
     '広告は消えません。ただし同じ広告を何度も見た人には、しばらく休んでもらいます。',
     '画像を含むすべての広告は、掲載前に人の目で審査されます。リンクは許可リストのみ。',
-    '背景の世界地図はみんなのピクセルボードです。1ドットずつ、みんなで塗っています。',
+    'みんなで塗る世界地図のピクセルボードも、1本の広告としてローテーションに流れてきます。見かけたら、1ドットどうぞ。',
     'ギャラリーで全部見られます。いちばん保存された広告は殿堂に並びます。',
   ],
   surf_title: 'SURFACE',
@@ -1164,6 +1159,10 @@ en: {
   tile_mail: 'Mail', tile_video: 'Video', tile_news: 'News', tile_maps: 'Maps', tile_translate: 'Translate', tile_calendar: 'Calendar', tile_photos: 'Photos', tile_drive: 'Drive',
   mock_tile: 'Just for show',
   paint_bg: 'Paint the background',
+  by_everyone: 'everyone',
+  px_count: n => n.toLocaleString('en') + 'px',
+  px_board: 'PIXEL BOARD',
+  place_pixels: 'Place pixels',
   wall_stats: (p, ppl) => p.toLocaleString('en') + 'px · ' + ppl + ' people',
   close_ad: 'Close',
   slot_open: 'This slot is open — post here',
@@ -1242,7 +1241,7 @@ en: {
     'Posting is free. Newer ads get more airtime, and saved ads keep coming back around.',
     "Ads don't disappear. But if you've seen one a lot, it rests for a while so the mix stays fresh.",
     'Every ad — images included — is reviewed by a human before it goes live. Links from a short allowlist only.',
-    'The world map background is a shared pixel board — everyone paints it, one dot at a time.',
+    'The shared world-map pixel board rolls through the rotation as an ad of its own. When you spot it, drop a pixel.',
     'See everything in the Gallery. The most-saved ads make the Hall of Fame.',
   ],
   surf_title: 'SURFACES',
@@ -1489,6 +1488,16 @@ const HALL_SEED = [
 const loadT = Date.now();
 
 /* ================= model ================= */
+/* v8: the shared world map is a normal ad — a pixel board anyone paints, "by everyone" */
+function worldAd(slot) {
+  const o = store.ovr.world || {};
+  return {
+    id: 'world', slot: slot || 'card', pixel: true,
+    grid: world.grid, placed: world.placed, people: world.people,
+    author: t('by_everyone'), saves: (o.saves != null) ? o.saves : 12,
+    postedAt: loadT, status: o.status || 'live', bg: { c1: '#122a44' },
+  };
+}
 function allAds() {
   return SEED.map(sd => {
     const o = store.ovr[sd.id] || {};
@@ -1498,7 +1507,7 @@ function allAds() {
       saves: (o.saves != null) ? o.saves : sd.saves,
       status: o.status || 'live',
     };
-  }).concat(store.user);
+  }).concat(store.user).concat([worldAd('card')]);
 }
 /* v7: ads never expire — "live" just means approved and not hidden/removed */
 function isLive(p) { return p.status === 'live'; }
@@ -1542,8 +1551,34 @@ function linkLabelText(link) {
   return lbl + (link.host && link.host !== lbl ? ' · ' + link.host : '');
 }
 
+function renderPixelAd(p, opts = {}) {
+  const dims = SLOTS[p.slot];
+  const el = document.createElement('div');
+  el.className = 'screen pixel sl-' + p.slot;
+  el.style.width = dims.W + 'px';
+  el.style.height = dims.H + 'px';
+  const cv = document.createElement('canvas');
+  cv.className = 'worldcv';
+  paintWorldCanvas(cv, p.grid || world.grid);
+  const cover = p.slot === 'full'; // full = cover (crop), card/others = contain (letterbox)
+  const s = cover ? Math.max(dims.W / WORLD_COLS, dims.H / WORLD_ROWS)
+                  : Math.min(dims.W / WORLD_COLS, dims.H / WORLD_ROWS);
+  const w = WORLD_COLS * s, h = WORLD_ROWS * s;
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  cv.style.left = ((dims.W - w) / 2) + 'px';
+  cv.style.top = ((dims.H - h) / 2) + 'px';
+  el.appendChild(cv);
+  const by = document.createElement('div');
+  by.className = 'byline';
+  by.textContent = (t('anon_prefix') === 'anonymous' ? 'by ' : '— ') + (p.author || t('by_everyone')) + ' · ' + t('px_count', p.placed || 0);
+  el.appendChild(by);
+  const tag = document.createElement('span'); tag.className = 'unit-tag'; tag.textContent = t('ad_tag'); el.appendChild(tag);
+  if (opts.chips) attachChips(el, p);
+  return el;
+}
 function renderAd(p, opts = {}) {
   if (p.slot === 'line') return renderLineAd(p, opts);
+  if (p.pixel) return renderPixelAd(p, opts);
   const dims = SLOTS[p.slot];
   const el = document.createElement('div');
   el.className = 'screen sl-' + p.slot;
@@ -1663,6 +1698,7 @@ function attachChips(container, p) {
     b.addEventListener('click', e => { e.stopPropagation(); fn(); });
     return b;
   };
+  if (p.pixel) chips.appendChild(mk(t('place_pixels'), 'place', () => startPaint(), t('place_pixels')));
   const isSaved = (store.savedIds || []).includes(p.id);
   chips.appendChild(mk(isSaved ? t('saved_chip') : t('save_chip', p.saves || 0), isSaved ? 'saved' : '', () => saveAd(p)));
   chips.appendChild(mk('⚑', 'flag', () => confirmReport(chips, p)));
@@ -1709,7 +1745,7 @@ function recordSeen(id) {
 function weightOf(p) {
   if (store.muted && store.muted[p.id]) return 0;
   const ageH = (T() - p.postedAt) / H;
-  const debut = ageH < DEBUT_H1 ? 3.0 : ageH < DEBUT_H2 ? 1.0 : 0.5;
+  const debut = p.pixel ? 1.0 : (ageH < DEBUT_H1 ? 3.0 : ageH < DEBUT_H2 ? 1.0 : 0.5);
   const quality = 1 + Math.min(p.saves || 0, 20) * 0.15;
   const seen = seenOf(p.id);
   let fatigue = 1;
@@ -1726,7 +1762,11 @@ function weightedPick(pool) {
   for (let i = 0; i < pool.length; i++) { r -= weights[i]; if (r <= 0) return pool[i]; }
   return pool[pool.length - 1];
 }
-function poolFor(slotId) { return liveAds().filter(p => p.slot === slotId); }
+function poolFor(slotId) {
+  const pool = liveAds().filter(p => p.slot === slotId);
+  if (slotId === 'full') pool.push(worldAd('full')); // world also does full-screen takeovers
+  return pool;
+}
 function pickForSlot(slotId) { return weightedPick(poolFor(slotId)); }
 
 function drawAllSlots() {
@@ -1786,6 +1826,7 @@ function snapshotOf(p) {
   return {
     id: p.id, slot: p.slot, bg: p.bg, texts: p.texts, stamps: p.stamps, doodle: p.doodle,
     images: p.images, link: p.link, text: p.text, author: p.author, saves: p.saves || 0,
+    pixel: p.pixel || undefined, grid: p.pixel ? p.grid : undefined, placed: p.placed, people: p.people,
   };
 }
 function saveAd(p) {
@@ -1862,13 +1903,30 @@ function renderWallStats() {
   const el = $('wp-stats');
   if (el) el.textContent = t('wall_stats', world.placed || 0, world.people || 0);
 }
+/* v8: the world map is a normal ad; painting happens in a full-screen overlay reachable from its "Place pixels" chip */
+function startPaint() {
+  if ($('gallery') && $('gallery').classList.contains('show')) closeGallery();
+  if (surface !== 'newtab') {
+    surface = 'newtab';
+    document.querySelectorAll('.surf-chip').forEach(x => x.classList.toggle('sel', x.dataset.surf === 'newtab'));
+    showSurface();
+  }
+  enterPaint();
+}
+function refreshWorldSlots() {
+  if (surface === 'newtab') {
+    for (const s of ['card', 'full']) { const cur = slotCurrent[s]; if (cur && cur.id === 'world') mountSlot(s); }
+  }
+  if ($('gallery') && $('gallery').classList.contains('show')) renderGallery();
+}
 function enterPaint() {
   if (surface !== 'newtab' || paintMode) return;
   paintMode = true;
   const page = $('nt-page'); if (page) page.classList.add('painting');
   const wrap = $('wall-wrap');
+  paintWorldCanvas($('wall'), world.grid); // v8: repaint (wall is hidden except while painting)
   const vw = Math.max(1, wrap.clientWidth), vh = Math.max(1, wrap.clientHeight);
-  const fitS = Math.max(vw / WORLD_COLS, vh / WORLD_ROWS);
+  const fitS = Math.min(vw / WORLD_COLS, vh / WORLD_ROWS) * 0.92; // fit whole map with margin
   paintView = { fitS, zoom: 1, ox: (vw - WORLD_COLS * fitS) / 2, oy: (vh - WORLD_ROWS * fitS) / 2 };
   $('wall').classList.add('paint-on');
   applyPaintTransform();
@@ -1882,9 +1940,9 @@ function exitPaint() {
   paintView = null;
   const page = $('nt-page'); if (page) page.classList.remove('painting');
   const cv = $('wall'); if (cv) cv.classList.remove('paint-on');
-  layoutWallCover();
   const bar = $('wp-bar'); if (bar) bar.remove();
   const g = $('wp-ghost'); if (g) g.style.display = 'none';
+  refreshWorldSlots(); // reflect newly placed pixels in the map ad
 }
 function fitPaintView() {
   if (!paintMode) return;
@@ -2084,7 +2142,8 @@ function simulatePaintEvent() {
     world.grid = world.grid.slice(0, idx) + ch + world.grid.slice(idx + 1);
     world.placed = (world.placed || 0) + 1;
     saveWorld();
-    if (surface === 'newtab' && $('wall')) { paintWorldCanvas($('wall'), world.grid); renderWallStats(); spawnRipple(x, y); }
+    if (paintMode && $('wall')) { paintWorldCanvas($('wall'), world.grid); spawnRipple(x, y); }
+    else refreshWorldSlots();
     const handle = t('feed_someone', 1000 + Math.floor(Math.random() * 9000));
     pushFeedEvent(t('feed_paint_body', handle, t('region_' + regionOf(x, y))));
   }
@@ -2231,7 +2290,6 @@ function showNewtab() {
     '<div id="nt-bar"><span class="nav"><span>‹</span><span>›</span><span>⟳</span></span><span class="omni" id="nt-omni"></span><span class="dots">⋯</span></div>' +
     '<div id="nt-page">' +
       '<div id="wall-wrap"><canvas id="wall"></canvas></div>' +
-      '<div id="nt-scrim"></div>' +
       '<div id="nt-col">' +
         '<div id="nt-clock"><div id="clock" class="mono">--:--</div><div id="today" class="mono"></div></div>' +
         '<form id="nt-search" action="https://www.google.com/search" method="get" target="_blank">' +
@@ -2245,7 +2303,7 @@ function showNewtab() {
       '<div id="sl-halfL"></div>' +
       '<div id="sl-halfR"></div>' +
       '<div id="sl-full"></div>' +
-      '<div id="nt-corner-wrap"><div id="nt-feed" class="mono"></div><button id="gal-link-nt"></button><div id="nt-corner"><button id="btn-paint"></button><span id="wp-stats" class="mono"></span></div></div>' +
+      '<div id="nt-corner-wrap"><div id="nt-feed" class="mono"></div><button id="gal-link-nt"></button></div>' +
     '</div>';
   vp.innerHTML = '';
   vp.appendChild(nt);
@@ -2260,13 +2318,8 @@ function showNewtab() {
     a.addEventListener('click', e => { e.preventDefault(); toast(t('mock_tile')); });
     tiles.appendChild(a);
   });
-  $('btn-paint').textContent = t('paint_bg');
-  $('btn-paint').addEventListener('click', enterPaint);
   $('gal-link-nt').textContent = t('gal_see_all');
   $('gal-link-nt').addEventListener('click', openGallery);
-  renderWallStats();
-  paintWorldCanvas($('wall'), world.grid);
-  layoutWallCover();
   bindWallInteract();
   mountAllSlots();
   updatePool();
@@ -3586,7 +3639,7 @@ function fitGalleryThumbs(root) {
 function galCardMeta(p) {
   const meta = document.createElement('div');
   meta.className = 'gal-meta';
-  const tag = document.createElement('span'); tag.className = 'gal-tag'; tag.textContent = SLOT_TAG[p.slot];
+  const tag = document.createElement('span'); tag.className = 'gal-tag'; tag.textContent = p.pixel ? t('px_board') : SLOT_TAG[p.slot];
   const author = document.createElement('span'); author.className = 'gal-author'; author.textContent = p.author || t('anon_prefix');
   meta.appendChild(tag); meta.appendChild(author);
   const saves = document.createElement('span'); saves.className = 'gal-savesn'; saves.textContent = '+' + (p.saves || 0);
@@ -3620,6 +3673,7 @@ function galAttachChips(card, p) {
     b.addEventListener('click', e => { e.stopPropagation(); fn(); });
     return b;
   };
+  if (p.pixel) chips.appendChild(mk(t('place_pixels'), 'place', () => startPaint()));
   const isSaved = (store.savedIds || []).includes(p.id);
   chips.appendChild(mk(isSaved ? t('saved_chip') : t('save_chip', p.saves || 0), isSaved ? 'saved' : '', () => { saveAd(p); renderGallery(); }));
   chips.appendChild(mk('⚑', 'flag', () => galConfirmReport(chips, p)));
