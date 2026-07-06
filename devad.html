@@ -211,7 +211,7 @@ input, textarea, select { font-family: inherit; }
   vertical-align: 1px;
 }
 /* v8: world map rendered as a normal ad (canvas) */
-.screen.pixel { position: relative; overflow: hidden; background: #122a44; }
+.screen.pixel { position: relative; overflow: hidden; background: #0f1216; }
 .screen.pixel .worldcv { position: absolute; image-rendering: pixelated; }
 .sl-full-close {
   position: absolute; top: 14px; right: 14px; z-index: 6;
@@ -1450,12 +1450,26 @@ function seedWorldGrid() {
   g = setCells2x(g, WORLD_COLS, [[54, 45], [55, 45]], 'e');     // pink, South America
   return g;
 }
+/* 台紙は無彩色に寄せる: 海=冷たい墨・陸=暖色寄りグラファイト・海岸=浅瀬の持ち上げ。
+   置かれた16色だけが色を持つ(r/placeの白紙と同じ発想) */
+const WORLD_COAST = (() => {
+  const c = new Uint8Array(WORLD_COLS * WORLD_ROWS);
+  for (let y = 0; y < WORLD_ROWS; y++) for (let x = 0; x < WORLD_COLS; x++) {
+    const i = y * WORLD_COLS + x;
+    if (WORLD_LAND[i] === '#') continue;
+    if ((x > 0 && WORLD_LAND[i - 1] === '#') || (x < WORLD_COLS - 1 && WORLD_LAND[i + 1] === '#') ||
+        (y > 0 && WORLD_LAND[i - WORLD_COLS] === '#') || (y < WORLD_ROWS - 1 && WORLD_LAND[i + WORLD_COLS] === '#')) c[i] = 1;
+  }
+  return c;
+})();
 function worldCellColor(grid, i, x, y) {
   const ch = grid[i];
   if (ch !== '.' && ch !== undefined) return PX_PAL[parseInt(ch, 16)];
-  const land = WORLD_LAND[i] === '#';
   const odd = (x + y) & 1;
-  return land ? (odd ? '#40704d' : '#3c6b49') : (odd ? '#16334f' : '#142f4b');
+  if (WORLD_LAND[i] === '#') return odd ? '#33312c' : '#312f2a';
+  if (WORLD_COAST[i]) return '#1a1f28';
+  if (x % 20 === 0 || y % 20 === 0) return '#11141b'; // 経緯線(海のみ・囁き程度: セル幅なのでズームで太る)
+  return odd ? '#0f1216' : '#101318';
 }
 function paintWorldCanvas(cv, grid) {
   cv.width = WORLD_COLS; cv.height = WORLD_ROWS;
@@ -1655,7 +1669,7 @@ function worldAd(slot) {
     id: 'world', slot: slot || 'card', pixel: true,
     grid: world.grid, placed: world.placed, people: world.people, lastIdx: world.lastIdx,
     author: t('by_everyone'), saves: (o.saves != null) ? o.saves : 12,
-    postedAt: loadT, status: o.status || 'live', bg: { c1: '#122a44' },
+    postedAt: loadT, status: o.status || 'live', bg: { c1: '#0f1216' },
   };
 }
 function allAds() {
