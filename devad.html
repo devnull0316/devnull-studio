@@ -371,6 +371,16 @@ button.sl-chip:hover { background: rgba(0, 0, 0, 0.86); }
 @keyframes chipGlow { 0%, 100% { box-shadow: none; } 30% { box-shadow: 0 0 0 4px rgba(216, 213, 204, 0.4); } }
 .sl-chip.flag:hover, .sl-chip.skip:hover { background: rgba(180, 84, 74, 0.86); }
 .sl-chip.sl-chip-yes { background: var(--danger); }
+.sl-chip.flag.reported { background: var(--danger); }
+/* v10: 通報の理由選択はチップの寄せ集めではなく1枚のパネルとして見せる */
+.sl-chips.rp-mode {
+  background: rgba(10, 10, 12, 0.92); padding: 6px 7px; border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+.sl-chips.rp-mode .sl-chip { background: rgba(255, 255, 255, 0.09); }
+.sl-chips.rp-mode button.sl-chip:hover { background: rgba(180, 84, 74, 0.9); }
+.sl-chips.rp-mode .rp-cancel { background: transparent; color: rgba(255, 255, 255, 0.55); }
+.sl-chips.rp-mode button.rp-cancel:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
 
 /* ===== background paint mode ===== */
 #wp-bar {
@@ -636,6 +646,30 @@ button.sl-chip:hover { background: rgba(0, 0, 0, 0.86); }
 }
 #about .a-go:hover { background: #fff; }
 #about .a-sub { font-size: 11px; color: var(--fg-faint); }
+.gl-inline {
+  display: inline-block; margin-left: 4px;
+  color: var(--fg); font-weight: 700; border-bottom: 1px solid var(--fg-faint);
+}
+.gl-inline:hover { border-color: var(--fg); }
+
+/* ===== guidelines / terms / privacy ===== */
+#gl-modal .card {
+  width: min(580px, calc(100vw - 32px));
+  margin: clamp(20px, 6vh, 70px) auto 40px;
+  background: #171718;
+  border: 1px solid #29292b; border-radius: 10px;
+  padding: clamp(28px, 5vw, 44px);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.7);
+  position: relative;
+}
+.gl-close { position: absolute; right: 14px; top: 14px; font-size: 18px; color: var(--fg-faint); padding: 4px 10px; }
+.gl-close:hover { color: var(--fg); }
+.gl-tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; margin-bottom: 22px; }
+.gl-tab { font-size: 11px; font-weight: 600; color: var(--fg-dim); padding: 8px 14px; }
+.gl-tab:hover { color: var(--fg); }
+.gl-tab.sel { background: rgba(255, 255, 255, 0.1); color: var(--fg); }
+.gl-body h2 { font-size: clamp(18px, 3.4vw, 22px); font-weight: 800; line-height: 1.4; letter-spacing: -0.01em; }
+.gl-body p { font-size: 13px; line-height: 1.9; color: var(--fg-dim); margin-top: 14px; }
 
 /* ===== gallery + hall of fame ===== */
 .gal-frame { width: min(1180px, calc(100vw - 32px)); margin: clamp(20px, 4vh, 50px) auto 60px; }
@@ -882,6 +916,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 .ed-input.sm { width: 140px; }
 .ed-input:focus { outline: none; border-color: var(--bone); }
 #ed-review-note { flex-basis: 100%; text-align: center; margin-top: 4px; font-size: 10.5px; color: var(--fg-faint); line-height: 1.6; }
+#rl-left { flex-basis: 100%; text-align: center; margin-top: 2px; font-size: 10.5px; color: var(--fg-faint); letter-spacing: 0.02em; }
 #link-status, #lk-status { font-size: 10.5px; }
 #link-status.warn, #lk-status.warn { color: var(--danger); }
 #link-status.ok, #lk-status.ok { color: var(--fg-dim); }
@@ -937,6 +972,21 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 .q-tool:hover { color: var(--fg); border-color: #45454e; }
 #q-clock { font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: var(--fg-faint); margin-top: 10px; }
 .q-note { margin-top: 22px; font-size: 11px; line-height: 1.85; color: var(--fg-faint); border-top: 1px dashed #2a2a2c; padding-top: 14px; }
+.q-info .m.rp-reason { color: var(--danger); }
+
+/* ===== admin console, small screens: stack each queue item into one column and give
+   approve/return buttons thumb-sized tap targets (D: mobile review) ===== */
+@media (max-width: 640px) {
+  #console { width: 100vw; }
+  .q-item { flex-wrap: wrap; }
+  .q-mini { order: 1; }
+  .q-info { order: 2; flex-basis: 100%; }
+  .q-acts { order: 3; flex-basis: 100%; flex-direction: row; gap: 8px; }
+  .q-acts .q-btn {
+    flex: 1; min-height: 40px;
+    display: flex; align-items: center; justify-content: center;
+  }
+}
 
 /* ===== responsive ===== */
 @media (max-width: 760px) {
@@ -983,6 +1033,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
       <button class="linky" id="link-about"></button>
       <button class="linky" id="link-gallery"></button>
       <button class="linky" id="link-console"><span id="admin-lbl"></span><span id="queue-dot"></span></button>
+      <button class="linky" id="link-guidelines"></button>
       <button id="btn-lang"></button>
     </div>
     <div class="right">
@@ -997,6 +1048,19 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 <!-- ===== about ===== -->
 <div class="overlay" id="about" role="dialog" aria-modal="true" aria-label="About /dev/ad">
   <div class="card" id="about-card"></div>
+</div>
+
+<!-- ===== guidelines / terms / privacy ===== -->
+<div class="overlay" id="gl-modal" role="dialog" aria-modal="true" aria-label="Guidelines">
+  <div class="card gl-card">
+    <button class="gl-close" id="gl-close" aria-label="Close">✕</button>
+    <div class="gl-tabs" id="gl-tabs">
+      <button class="gl-tab sel" data-tab="1"></button>
+      <button class="gl-tab" data-tab="2"></button>
+      <button class="gl-tab" data-tab="3"></button>
+    </div>
+    <div class="gl-body" id="gl-body"></div>
+  </div>
 </div>
 
 <!-- ===== gallery + hall of fame ===== -->
@@ -1090,6 +1154,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
       <span id="lbl-name" style="margin-left:10px"></span>
       <input class="ed-input sm" id="c-author" maxlength="14">
       <div id="ed-review-note"></div>
+      <div id="rl-left" class="mono"></div>
     </div>
   </div>
 </div>
@@ -1152,8 +1217,11 @@ ja: {
   slot_open_short: '空き枠',
   save_chip: n => '保存 ' + n, saved_chip: '保存済み',
   report: '通報', skip: 'この広告をもう見ない',
-  report_confirm: '隠して管理者に知らせますか?', yes: '通報する', cancel: 'キャンセル',
-  toast_reported: '通報しました。非表示にして管理者が確認します。',
+  cancel: 'キャンセル',
+  rp_r1: '不快・不適切', rp_r2: '権利侵害', rp_r3: 'スパム',
+  rp_done: '通報しました。人間が確認します',
+  rp_keep: '問題なし', rp_empty: '通報はありません',
+  toast_rp_kept: '問題なしにしました',
   toast_saved: 'スクラップブックに保存しました',
   toast_already_saved: 'すでに保存しています',
   toast_muted: 'もう表示しません(ギャラリーには残ります)',
@@ -1211,6 +1279,8 @@ ja: {
   toast_max_text: 'テキストは5つまで', toast_max_sticker: 'ステッカーは12個まで',
   toast_max_image: '画像は3枚まで', toast_image_error: '画像を読み込めませんでした',
   review_note: '画像を含むすべての広告は、掲載前に人の目で審査されます。',
+  rate_limit: '今日の出稿枠を使い切りました。また明日',
+  rate_left: n => '今日はあと' + n + '本出稿できます',
   slot_line: '行', slot_card: 'カード', slot_halfL: '左半面', slot_halfR: '右半面', slot_full: '全面',
   admin_title: '管理', admin_sub: '本番では管理者だけがここを見ます — これは試作なのでどうぞ',
   queue_review: '審査待ち', queue_reports: '通報', queue_demo: 'デモ — 時間送り',
@@ -1245,6 +1315,23 @@ ja: {
   gal_see_all: 'ぜんぶ見る →',
   your_ad_saves: n => 'あなたの広告 · ' + n + '人が保存',
   hall_title: 'いちばん保存された広告たち',
+  gl_link: 'ガイドライン',
+  gl_tab1: 'ガイドライン', gl_tab2: '利用規約', gl_tab3: 'プライバシー',
+  gl_h1: 'ここは、みんなの広告枠です。',
+  gl_p1_1: '宣伝も、作品も、今日の報告も歓迎です。真面目な告知としょうもない一言が同じ枠に並ぶのが、この場所の景色です。',
+  gl_p1_2: 'すべての投稿は、画像も含めて、公開前に人間が確認します。機械まかせにしません。',
+  gl_p1_3: '出せないもの: 誰かを傷つけるもの、権利を侵害するもの、卑猥なもの、危険を広めるもの。迷ったら、たぶんそれは出せないものです。',
+  gl_p1_4: '広告は消えません。ただし、たくさん見た広告はしばらく休み、保存された広告はよく巡ってきます。',
+  gl_p1_5: '見たくない広告は ✕ で二度と表示されません。問題があると思ったら ⚑ で知らせてください。',
+  gl_h2: '短い約束',
+  gl_p2_1: 'これは devnull studio の実験的プロダクトです。無料で使えて、広告の掲載にお金は一切かかりません。',
+  gl_p2_2: '投稿の権利はあなたのものです。掲載のために必要な範囲で、この場所での表示に使わせてもらいます。',
+  gl_p2_3: '審査・掲載・削除の最終判断は運営が行います。権利者からの削除依頼には速やかに応じます。',
+  gl_p2_4: 'サービスは予告なく変更・終了することがあります。実験なので。',
+  gl_h3: '集めないことにしました',
+  gl_p3_1: 'アカウント登録はありません。投稿・保存・ミュートはあなたのブラウザの中に保存されます。',
+  gl_p3_2: 'このプロトタイプは閲覧の追跡をしません。アクセス解析も広告トラッカーも入っていません。',
+  gl_p3_3: '将来、投稿の共有機能を追加するときは、その前にこのページで告知します。',
 },
 en: {
   surf_newtab: 'New Tab', surf_wallpaper: 'Wallpaper', surf_ticker: 'Ticker', surf_terminal: 'Terminal', surf_stream: 'Stream', surf_taskbar: 'Taskbar',
@@ -1266,8 +1353,11 @@ en: {
   slot_open_short: 'Open slot',
   save_chip: n => 'Save ' + n, saved_chip: 'Saved',
   report: 'Report', skip: "Don't show this again",
-  report_confirm: 'Hide this and let the admin know?', yes: 'Report', cancel: 'Cancel',
-  toast_reported: 'Reported. It is hidden and the admin will take a look.',
+  cancel: 'Cancel',
+  rp_r1: 'Inappropriate', rp_r2: 'Rights violation', rp_r3: 'Spam',
+  rp_done: 'Reported. A human will take a look.',
+  rp_keep: 'Not a problem', rp_empty: 'No reports.',
+  toast_rp_kept: 'Marked as not a problem',
   toast_saved: 'Saved to your scrapbook',
   toast_already_saved: 'Already saved',
   toast_muted: "You won't see this again (it stays in the Gallery)",
@@ -1325,6 +1415,8 @@ en: {
   toast_max_text: 'Up to 5 text blocks', toast_max_sticker: 'Up to 12 stickers',
   toast_max_image: 'Up to 3 images', toast_image_error: 'Could not load the image',
   review_note: 'Every ad — images included — is reviewed by a human before it goes live.',
+  rate_limit: "You've used today's slots. Come back tomorrow.",
+  rate_left: n => n + ' post' + (n === 1 ? '' : 's') + ' left today',
   slot_line: 'Line', slot_card: 'Card', slot_halfL: 'Half L', slot_halfR: 'Half R', slot_full: 'Full',
   admin_title: 'Admin', admin_sub: "In production only the admin sees this — it's a prototype, go ahead",
   queue_review: 'REVIEW QUEUE', queue_reports: 'REPORTS', queue_demo: 'DEMO — FAST-FORWARD TIME',
@@ -1359,6 +1451,23 @@ en: {
   gal_see_all: 'See all →',
   your_ad_saves: n => 'Your ad · ' + n + (n === 1 ? ' save' : ' saves'),
   hall_title: 'Most saved of all time',
+  gl_link: 'Guidelines',
+  gl_tab1: 'Guidelines', gl_tab2: 'Terms', gl_tab3: 'Privacy',
+  gl_h1: "This is everyone's ad space.",
+  gl_p1_1: "Promotions, creative work, today's random report — all welcome. Serious announcements and throwaway one-liners share the same space; that's the view here.",
+  gl_p1_2: "Every post, images included, is reviewed by a human before it goes live. We don't leave it to machines.",
+  gl_p1_3: "What we don't allow: things that hurt someone, infringe rights, are obscene, or spread danger. If you're unsure, it's probably not allowed.",
+  gl_p1_4: "Ads never disappear. Ones you've seen a lot take a break for a while, and saved ads come around more often.",
+  gl_p1_5: "Don't want to see an ad again? Tap ✕ and it's gone for you. Think something's wrong? Let us know with ⚑.",
+  gl_h2: 'A short promise',
+  gl_p2_1: "This is an experimental product from devnull studio. It's free to use, and posting an ad never costs anything.",
+  gl_p2_2: 'Your posts stay yours. We only use them for display here, to the extent needed to run the service.',
+  gl_p2_3: 'The team makes the final call on review, publishing, and removal. Rights-holder takedown requests are handled promptly.',
+  gl_p2_4: "The service may change or end without notice. It's an experiment.",
+  gl_h3: "We decided not to collect it",
+  gl_p3_1: 'There are no accounts. Your posts, saves, and mutes are stored inside your own browser.',
+  gl_p3_2: "This prototype doesn't track your browsing. No analytics, no ad trackers.",
+  gl_p3_3: 'If a share feature is added in the future, it will be announced on this page first.',
 },
 };
 function t(key, ...args) {
@@ -1512,6 +1621,8 @@ try { store = JSON.parse(localStorage.getItem(LS) || '{}'); } catch (e) { store 
 store.user = store.user || [];
 store.ovr = store.ovr || {};
 store.muted = store.muted || {};       // v7: id -> true, permanent per-viewer mute (the old ✕)
+store.reports = store.reports || {};   // v10: id -> { reason, at } — this viewer's reports, reviewed by admin
+store.rate = store.rate || {};         // v10: { d: 'YYYY-MM-DD', n } — posts made today (5/day cap)
 store.savedIds = store.savedIds || []; // v7: ids the viewer has saved, in save order
 store.savedSnaps = store.savedSnaps || {}; // v7: id -> snapshot at time of save (survives author deletion)
 store.seen = store.seen || {};         // v7: id -> {d, today, total} view counters for the fatigue weight
@@ -1923,7 +2034,8 @@ function attachChips(container, p) {
   if (p.pixel) chips.appendChild(mk(t('place_pixels'), 'place', () => startPaint(), t('place_pixels')));
   const isSaved = (store.savedIds || []).includes(p.id);
   chips.appendChild(mk(isSaved ? t('saved_chip') : t('save_chip', p.saves || 0), isSaved ? 'saved' : '', () => saveAd(p)));
-  chips.appendChild(mk('⚑', 'flag', () => confirmReport(chips, p)));
+  const isReported = !!(store.reports && store.reports[p.id]);
+  chips.appendChild(mk('⚑', 'flag' + (isReported ? ' reported' : ''), () => reportReasonPopover(chips, p, () => mountSlot(p.slot)), t('report')));
   chips.appendChild(mk('✕', 'skip', () => muteAd(p), t('skip')));
   container.appendChild(chips);
   container.addEventListener('click', e => {
@@ -1931,14 +2043,20 @@ function attachChips(container, p) {
     container.classList.toggle('chips-on');
   });
 }
-function confirmReport(chips, p) {
+/* v10: report popover — 1-tap reason pick instead of a plain yes/no confirm */
+function reportReasonPopover(chips, p, onCancel) {
   chips.innerHTML = '';
-  const q = document.createElement('span'); q.className = 'sl-chip'; q.textContent = t('report_confirm'); chips.appendChild(q);
-  const yes = document.createElement('button'); yes.className = 'sl-chip sl-chip-yes'; yes.textContent = t('yes');
-  yes.addEventListener('click', e => { e.stopPropagation(); reportAd(p); });
-  const no = document.createElement('button'); no.className = 'sl-chip'; no.textContent = t('cancel');
-  no.addEventListener('click', e => { e.stopPropagation(); mountSlot(p.slot); });
-  chips.appendChild(yes); chips.appendChild(no);
+  chips.classList.add('rp-mode');
+  ['rp_r1', 'rp_r2', 'rp_r3'].forEach(key => {
+    const b = document.createElement('button');
+    b.className = 'sl-chip';
+    b.textContent = t(key);
+    b.addEventListener('click', e => { e.stopPropagation(); reportAd(p, key); });
+    chips.appendChild(b);
+  });
+  const no = document.createElement('button'); no.className = 'sl-chip rp-cancel'; no.textContent = t('cancel');
+  no.addEventListener('click', e => { e.stopPropagation(); chips.classList.remove('rp-mode'); onCancel(); });
+  chips.appendChild(no);
 }
 
 /* ================= surfaces ================= */
@@ -1963,6 +2081,22 @@ function recordSeen(id) {
   const cur = seenOf(id);
   store.seen[id] = { d: todayStr(), today: cur.today + 1, total: cur.total + 1 };
   save();
+}
+
+/* ================= v10: posting rate limit — 5 posts / browser / day ================= */
+const RATE_MAX = 5;
+function rateState() {
+  const today = todayStr();
+  if (!store.rate || store.rate.d !== today) store.rate = { d: today, n: 0 };
+  return store.rate;
+}
+function rateLeft() { return Math.max(0, RATE_MAX - rateState().n); }
+function rateConsume() { const r = rateState(); r.n = (r.n || 0) + 1; save(); }
+function updateRateDisplay() {
+  const el = $('rl-left');
+  if (!el) return;
+  const left = rateLeft();
+  el.textContent = left > 0 ? t('rate_left', left) : t('rate_limit');
 }
 function weightOf(p) {
   if (store.muted && store.muted[p.id]) return 0;
@@ -2067,11 +2201,12 @@ function saveAd(p) {
   if (cur && cur.id === p.id) mountSlot(p.slot);
   updatePool();
 }
-function muteAd(p) {
+function muteAd(p, opts) {
+  opts = opts || {};
   store.muted = store.muted || {};
   store.muted[p.id] = true;
   save();
-  toast(t('toast_muted'));
+  if (!opts.silent) toast(t('toast_muted'));
   if (slotCurrent[p.slot] && slotCurrent[p.slot].id === p.id) {
     slotCurrent[p.slot] = pickForSlot(p.slot);
     mountSlot(p.slot);
@@ -2080,17 +2215,15 @@ function muteAd(p) {
   if (surface === 'taskbar' && tbLineCurrent && tbLineCurrent.id === p.id) { tbLineCurrent = pickForSlot('line'); showSurface(); }
   if ($('gallery').classList.contains('show')) renderGallery();
 }
-function reportAd(p) {
-  setOvr(p, { status: 'hidden' });
-  p.status = 'hidden';
-  toast(t('toast_reported'));
-  if (slotCurrent[p.slot] && slotCurrent[p.slot].id === p.id) {
-    slotCurrent[p.slot] = pickForSlot(p.slot);
-    mountSlot(p.slot);
-  }
+/* v10: reporting no longer hides the ad right away for everyone (review is a human's job) —
+   it just records the report for admin and auto-mutes it for the reporter. */
+function reportAd(p, reason) {
+  store.reports = store.reports || {};
+  store.reports[p.id] = { reason, at: Date.now() };
+  save();
+  muteAd(p, { silent: true });
+  toast(t('rp_done'));
   renderConsole();
-  updateQueueDot();
-  updatePool();
 }
 
 function updatePool() {
@@ -3916,6 +4049,7 @@ function renderCtx() {
 
 /* post */
 $('ed-post').addEventListener('click', () => {
+  if (rateLeft() <= 0) { toast(t('rate_limit')); return; }
   stopTextEdit();
   if (cp.slot === 'line') {
     if (!cp.lineText.trim()) {
@@ -3931,6 +4065,7 @@ $('ed-post').addEventListener('click', () => {
       postedAt: T(), saves: 0, status: 'pending',
     };
     store.user.push(p);
+    rateConsume();
     save();
     closeComposer();
     toast(t('toast_posted'));
@@ -3960,6 +4095,7 @@ $('ed-post').addEventListener('click', () => {
     postedAt: T(), saves: 0, status: 'pending',
   };
   store.user.push(p);
+  rateConsume();
   save();
   closeComposer();
   toast(t('toast_posted'));
@@ -4000,7 +4136,7 @@ function miniOf(p) {
   wrap.appendChild(el);
   return wrap;
 }
-function queueItem(p, acts) {
+function queueItem(p, acts, note) {
   const it = document.createElement('div');
   it.className = 'q-item';
   it.appendChild(miniOf(p));
@@ -4010,7 +4146,8 @@ function queueItem(p, acts) {
   info.innerHTML = '<div class="t">' + esc(title) + '</div>' +
     '<div class="m">' + esc(p.author || t('anon_prefix')) + ' · ' + SLOT_TAG[p.slot] +
     (p.link ? ' · ' + esc(p.link.kind === 'yt' ? 'YouTube' : (p.link.host || '')) : '') + '</div>' +
-    (isMine(p) ? '<div class="m mine">' + esc(t('your_ad_saves', p.saves || 0)) + '</div>' : '');
+    (isMine(p) ? '<div class="m mine">' + esc(t('your_ad_saves', p.saves || 0)) + '</div>' : '') +
+    (note ? '<div class="m rp-reason">' + esc(note) + '</div>' : '');
   it.appendChild(info);
   const col = document.createElement('div');
   col.className = 'q-acts';
@@ -4027,7 +4164,11 @@ function queueItem(p, acts) {
 function renderConsole() {
   const all = allAds();
   const pend = all.filter(p => p.status === 'pending');
-  const rep = all.filter(p => p.status === 'hidden');
+  /* v10: reports are tracked separately from status now — reporting no longer force-hides an
+     ad, so this list is driven by store.reports, not p.status. */
+  store.reports = store.reports || {};
+  for (const id of Object.keys(store.reports)) { if (!all.find(x => x.id === id)) delete store.reports[id]; }
+  const rep = Object.keys(store.reports).map(id => all.find(x => x.id === id)).filter(Boolean);
 
   const pWrap = $('q-pending');
   pWrap.innerHTML = '';
@@ -4055,23 +4196,25 @@ function renderConsole() {
   const rWrap = $('q-reported');
   rWrap.innerHTML = '';
   $('q-reported-n').textContent = rep.length ? '· ' + rep.length : '';
-  if (!rep.length) rWrap.innerHTML = '<div class="q-empty">' + esc(t('queue_empty_reports')) + '</div>';
+  if (!rep.length) rWrap.innerHTML = '<div class="q-empty">' + esc(t('rp_empty')) + '</div>';
   for (const p of rep) {
+    const reasonKey = store.reports[p.id] && store.reports[p.id].reason;
     rWrap.appendChild(queueItem(p, [
-      [t('restore'), 'ok', () => {
-        const u = store.user.find(x => x.id === p.id);
-        if (u) { u.status = 'live'; save(); }
-        else setOvr(p, { status: 'live' });
-        toast(t('toast_restored'));
+      [t('rp_keep'), 'ok', () => {
+        delete store.reports[p.id];
+        save();
+        toast(t('toast_rp_kept'));
         renderConsole(); updatePool();
       }],
       [t('remove'), 'no', () => {
-        if (String(p.id).startsWith('u')) { store.user = store.user.filter(x => x.id !== p.id); save(); }
+        if (String(p.id).startsWith('u')) { store.user = store.user.filter(x => x.id !== p.id); }
         else setOvr(p, { status: 'removed' });
+        delete store.reports[p.id];
+        save();
         toast(t('toast_removed'));
         renderConsole(); updatePool();
       }],
-    ]));
+    ], reasonKey ? t(reasonKey) : null));
   }
 
   $('q-clock').textContent = ffH ? t('demo_plus', ffH) : t('demo_realtime');
@@ -4100,7 +4243,7 @@ function buildAbout() {
     '<h2>' + esc(t('about_h2_1')) + '<br>' + esc(t('about_h2_2')) + '</h2>' +
     '<p class="lead">' + esc(t('about_lead')) + '</p>' +
     '<h3>' + esc(t('hiw_title')) + '</h3>' +
-    '<ul>' + hiw.map(s => '<li>' + esc(s) + '</li>').join('') + '</ul>' +
+    '<ul>' + hiw.map((s, i) => '<li>' + esc(s) + (i === 2 ? ' <button type="button" class="gl-inline" id="gl-from-about">' + esc(t('gl_link')) + ' ▸</button>' : '') + '</li>').join('') + '</ul>' +
     '<h3>' + esc(t('surf_title')) + '</h3>' +
     '<ul><li>' + esc(t('surf_note')) + '</li></ul>' +
     '<p class="a-note">' + esc(t('about_rules')) + '</p>' +
@@ -4108,6 +4251,8 @@ function buildAbout() {
     '<p class="a-note">' + esc(t('about_note')) + ' ' + esc(t('about_sim_note')) + '</p>' +
     '<div class="a-cta"><button class="a-go" id="about-go">' + esc(t('about_go')) + '</button><span class="a-sub">' + esc(t('about_sub2')) + '</span></div>';
   $('about-go').addEventListener('click', closeAbout);
+  const glBtn = $('gl-from-about');
+  if (glBtn) glBtn.addEventListener('click', () => { closeAbout(); openGuidelines(1); });
 }
 function openAbout() { buildAbout(); $('about').classList.add('show'); }
 function closeAbout() {
@@ -4116,6 +4261,31 @@ function closeAbout() {
 }
 $('link-about').addEventListener('click', openAbout);
 $('about').addEventListener('click', e => { if (e.target === $('about')) closeAbout(); });
+
+/* ================= v10: guidelines / terms / privacy ================= */
+let glTab = 1;
+function buildGuidelines() {
+  const tabs = [
+    { h: t('gl_h1'), ps: [t('gl_p1_1'), t('gl_p1_2'), t('gl_p1_3'), t('gl_p1_4'), t('gl_p1_5')] },
+    { h: t('gl_h2'), ps: [t('gl_p2_1'), t('gl_p2_2'), t('gl_p2_3'), t('gl_p2_4')] },
+    { h: t('gl_h3'), ps: [t('gl_p3_1'), t('gl_p3_2'), t('gl_p3_3')] },
+  ];
+  const cur = tabs[glTab - 1];
+  $('gl-body').innerHTML = '<h2>' + esc(cur.h) + '</h2>' + cur.ps.map(p => '<p>' + esc(p) + '</p>').join('');
+  document.querySelectorAll('.gl-tab').forEach(b => b.classList.toggle('sel', +b.dataset.tab === glTab));
+}
+function openGuidelines(tab) {
+  glTab = tab || 1;
+  buildGuidelines();
+  $('gl-modal').classList.add('show');
+}
+function closeGuidelines() { $('gl-modal').classList.remove('show'); }
+$('link-guidelines').addEventListener('click', () => openGuidelines(1));
+$('gl-close').addEventListener('click', closeGuidelines);
+$('gl-modal').addEventListener('click', e => { if (e.target === $('gl-modal')) closeGuidelines(); });
+document.querySelectorAll('.gl-tab').forEach(b => {
+  b.addEventListener('click', () => { glTab = +b.dataset.tab; buildGuidelines(); });
+});
 
 /* ================= v7: gallery + scrapbook + hall of fame ================= */
 let gallerySort = 'new';
@@ -4166,30 +4336,22 @@ function galMineBadge(p) {
   badge.textContent = t('your_ad_saves', p.saves || 0);
   return badge;
 }
-/* hover chips: reuse saveAd()/reportAd() (the same functions the main slots use) with a small gallery-local confirm UI */
-function galConfirmReport(chips, p) {
-  chips.innerHTML = '';
-  const q = document.createElement('span'); q.className = 'sl-chip'; q.textContent = t('report_confirm'); chips.appendChild(q);
-  const yes = document.createElement('button'); yes.className = 'sl-chip sl-chip-yes'; yes.textContent = t('yes');
-  yes.addEventListener('click', e => { e.stopPropagation(); reportAd(p); renderGallery(); });
-  const no = document.createElement('button'); no.className = 'sl-chip'; no.textContent = t('cancel');
-  no.addEventListener('click', e => { e.stopPropagation(); renderGallery(); });
-  chips.appendChild(yes); chips.appendChild(no);
-}
 function galAttachChips(card, p) {
   const chips = document.createElement('div');
   chips.className = 'gal-chips';
-  const mk = (txt, cls, fn) => {
+  const mk = (txt, cls, fn, title) => {
     const b = document.createElement('button');
     b.className = 'sl-chip' + (cls ? ' ' + cls : '');
     b.textContent = txt;
+    if (title) { b.title = title; b.setAttribute('aria-label', title); }
     b.addEventListener('click', e => { e.stopPropagation(); fn(); });
     return b;
   };
   if (p.pixel) chips.appendChild(mk(t('place_pixels'), 'place', () => startPaint()));
   const isSaved = (store.savedIds || []).includes(p.id);
   chips.appendChild(mk(isSaved ? t('saved_chip') : t('save_chip', p.saves || 0), isSaved ? 'saved' : '', () => { saveAd(p); renderGallery(); }));
-  chips.appendChild(mk('⚑', 'flag', () => galConfirmReport(chips, p)));
+  const isReported = !!(store.reports && store.reports[p.id]);
+  chips.appendChild(mk('⚑', 'flag' + (isReported ? ' reported' : ''), () => reportReasonPopover(chips, p, () => renderGallery()), t('report')));
   card.appendChild(chips);
 }
 function galSortedAds() {
@@ -4283,6 +4445,7 @@ function buildEditorChrome() {
   $('ed-redo').title = t('redo');
   $('ed-tmpl-close').setAttribute('aria-label', t('close'));
   $('ed-review-note').textContent = t('review_note');
+  updateRateDisplay();
   buildTools();
   buildBgPresets();
   updateLinkField();
@@ -4311,6 +4474,8 @@ function buildChrome() {
   $('link-about').textContent = t('about_link');
   $('link-gallery').textContent = t('gal_link');
   $('admin-lbl').textContent = t('admin_link');
+  $('link-guidelines').textContent = t('gl_link');
+  document.querySelectorAll('.gl-tab').forEach(b => { b.textContent = t('gl_tab' + b.dataset.tab); });
   $('btn-lang').textContent = t('lang_btn');
   $('btn-compose').textContent = t('post_ad');
   updatePool();
@@ -4318,6 +4483,7 @@ function buildChrome() {
   if ($('console').classList.contains('show')) renderConsole();
   if ($('about').classList.contains('show')) buildAbout();
   if ($('gallery').classList.contains('show')) renderGallery();
+  if ($('gl-modal').classList.contains('show')) buildGuidelines();
   if ($('composer').classList.contains('show')) { buildEditorChrome(); buildPlacementPicker(); rebuildPreview(); }
 }
 $('btn-lang').addEventListener('click', () => {
@@ -4349,6 +4515,7 @@ document.addEventListener('keydown', e => {
     else if ($('console').classList.contains('show')) closeConsole();
     else if ($('about').classList.contains('show')) closeAbout();
     else if ($('gallery').classList.contains('show')) closeGallery();
+    else if ($('gl-modal').classList.contains('show')) closeGuidelines();
     else if (paintMode) exitPaint();
     return;
   }
