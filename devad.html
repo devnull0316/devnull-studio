@@ -191,11 +191,14 @@ input, textarea, select { font-family: inherit; }
 .nt-tile .bub { width: 38px; height: 38px; border-radius: 50%; background: #f1f3f4; border: 1px solid #e4e6e9; color: #3c4043; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; transition: transform .15s; }
 .nt-tile:hover .bub { transform: translateY(-2px); }
 
-#sl-card { position: absolute; right: clamp(14px, 3vw, 34px); bottom: clamp(48px, 7vh, 72px); width: min(320px, 30vw); aspect-ratio: 320 / 220; z-index: 2; display: flex; align-items: center; justify-content: center; transition: right .25s ease; }
-/* 右半面が埋まっているときはカードを内側へ寄せて重なりを避ける */
-#nt-page.has-halfR #sl-card { right: calc(34% + 18px); }
-#sl-halfL { position: absolute; left: 0; top: 12%; bottom: 12%; width: 34%; z-index: 2; display: flex; align-items: center; justify-content: flex-start; }
-#sl-halfR { position: absolute; right: 0; top: 12%; bottom: 12%; width: 34%; z-index: 2; display: flex; align-items: center; justify-content: flex-end; }
+/* 枠は全部おなじガター(--nt-gap)と整列線に乗せる: 端ベタ付けのコラージュ感をやめ、
+   左右の半面・カード・コーナーフィードが1つの見えないグリッドを共有する */
+#nt-page { --nt-gap: clamp(16px, 2.2vw, 36px); }
+#sl-card { position: absolute; right: var(--nt-gap); bottom: var(--nt-gap); width: min(320px, 28vw); aspect-ratio: 320 / 220; z-index: 2; display: flex; align-items: flex-end; justify-content: flex-end; transition: right .25s ease; }
+/* 右半面が埋まっているときはカードを内側へ寄せて重なりを避ける(半面の左縁からガター1つ分) */
+#nt-page.has-halfR #sl-card { right: calc(32% + var(--nt-gap) * 2); }
+#sl-halfL { position: absolute; left: var(--nt-gap); top: 50%; transform: translateY(-50%); height: min(76%, 660px); width: 32%; z-index: 2; display: flex; align-items: center; justify-content: flex-start; }
+#sl-halfR { position: absolute; right: var(--nt-gap); top: 50%; transform: translateY(-50%); height: min(76%, 660px); width: 32%; z-index: 2; display: flex; align-items: center; justify-content: flex-end; }
 #sl-full { position: absolute; inset: 0; z-index: 5; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.18); transition: opacity .55s ease; }
 #sl-full.show { display: flex; }
 #sl-full.fading { opacity: 0; pointer-events: none; }
@@ -228,7 +231,7 @@ input, textarea, select { font-family: inherit; }
 }
 .sl-full-close:hover { background: rgba(0,0,0,0.7); }
 
-#nt-corner-wrap { position: absolute; left: clamp(14px, 2.5vw, 26px); bottom: clamp(12px, 2.5vh, 20px); z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; max-width: min(360px, 68vw); }
+#nt-corner-wrap { position: absolute; left: var(--nt-gap); bottom: var(--nt-gap); z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; max-width: min(360px, 68vw); }
 #nt-corner { display: flex; align-items: center; gap: 10px; }
 #nt-feed {
   font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: #5f6368;
@@ -352,8 +355,8 @@ input, textarea, select { font-family: inherit; }
   letter-spacing: 0.1em; padding: 14px 0;
   flex: none;
 }
-#sl-halfL .sl-empty-half { border-left: none; }
-#sl-halfR .sl-empty-half { border-right: none; }
+/* 半面はもう端ベタ付けではないので、空き枠の縦帯も四辺の枠線を持つ */
+#sl-halfL .sl-empty-half, #sl-halfR .sl-empty-half { border-width: 1.5px; border-radius: 8px; }
 
 /* ===== hover chips on every slot ad ===== */
 .sl-wrap { position: relative; }
@@ -1012,8 +1015,9 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
   .sf-cam { display: none; }
   #surfbar { gap: 12px; }
   .surf-chip { font-size: 10px; }
-  #sl-card { width: 44vw; right: 8px; bottom: 44px; }
-  #sl-halfL, #sl-halfR { width: 44%; }
+  /* モバイルは半面が上・カードが下の縦積みなので、has-halfRの横シフトは不要 */
+  #sl-card, #nt-page.has-halfR #sl-card { width: 44vw; right: var(--nt-gap); bottom: calc(var(--nt-gap) + 26px); }
+  #sl-halfL, #sl-halfR { width: 44%; height: min(56%, 480px); }
   #nt-col { width: 94%; padding-top: 16px; gap: 10px; }
   #nt-tiles { display: none; }
   .gal-frame { width: calc(100vw - 20px); margin: 14px auto 40px; }
