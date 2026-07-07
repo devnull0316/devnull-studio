@@ -10,9 +10,9 @@
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
-  --paper: #faf8f2; --paper-2: #f3efe5;
-  --ink: #1d1a16; --ink-dim: #5a544a; --ink-faint: #7d7468;
-  --line: #e6e0d2; --shu: #b3342e;
+  --paper: #fafafa; --paper-2: #f1f2f0;
+  --ink: #17181a; --ink-dim: #55575b; --ink-faint: #797c81;
+  --line: #e3e5e2; --shu: #2e7d4f;
 }
 body {
   font-family: -apple-system, 'Helvetica Neue', 'Hiragino Sans', sans-serif;
@@ -30,9 +30,9 @@ header {
 }
 .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; color: var(--ink); text-decoration: none; }
 .logo .seal {
-  width: 26px; height: 26px; background: var(--shu); color: var(--paper);
+  width: 26px; height: 26px; background: var(--ink); color: #fff;
   border-radius: 5px; display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; transform: rotate(-3deg);
+  font-size: 12.5px; font-weight: 700; font-family: ui-monospace, Menlo, monospace;
 }
 header a.jp { font-size: 13px; color: var(--ink-dim); text-decoration: none; }
 main { max-width: 720px; margin: 0 auto; padding: clamp(44px, 8vh, 80px) clamp(20px, 4vw, 56px) 80px; }
@@ -56,7 +56,7 @@ li b, p b { color: var(--ink); }
   font-size: 13px; font-weight: 700; text-decoration: none;
   color: #fff; background: var(--shu);
   border-radius: 8px; padding: 9px 22px;
-  transform: rotate(-1deg);
+ 
   box-shadow: 2px 2px 0 rgba(29,26,22,0.85);
 }
 .note { font-size: 12px; color: var(--ink-faint); margin-top: 8px; }

@@ -2,6 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://devnull-studio.com/</loc><priority>1.0</priority></url>
   <url><loc>https://devnull-studio.com/sumi.html</loc><priority>0.9</priority></url>
+  <url><loc>https://devnull-studio.com/devad.html</loc><priority>0.6</priority></url>
   <url><loc>https://devnull-studio.com/garden-demo.html</loc><priority>0.6</priority></url>
   <url><loc>https://devnull-studio.com/race-demo.html</loc><priority>0.6</priority></url>
   <url><loc>https://devnull-studio.com/en.html</loc><priority>0.5</priority></url>
