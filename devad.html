@@ -24,6 +24,15 @@
   --bone: #d8d5cc;
   --bone-ink: #161616;
   --danger: #b4544a;
+  /* v14: shared corner radii / shadow / control-height tokens (design-quality pass) */
+  --r-s: 4px;
+  --r-m: 8px;
+  --r-l: 14px;
+  --sh-1: 0 1px 3px rgba(0, 0, 0, .12);
+  --sh-2: 0 8px 28px rgba(0, 0, 0, .22);
+  --sh-3: 0 20px 60px rgba(0, 0, 0, .38);
+  --ctl-s: 28px;
+  --ctl-m: 34px;
 }
 
 html, body { height: 100%; }
@@ -39,7 +48,9 @@ body {
 .mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }
 a { color: inherit; }
 button { font-family: inherit; color: inherit; background: none; border: none; cursor: pointer; }
-:focus-visible { outline: 1.5px solid var(--bone); outline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--bone); outline-offset: 2px; }
+/* light (NTP/gallery) surfaces sit on white/near-white — swap the focus ring to ink so it stays visible */
+#nt :focus-visible, .gal-frame :focus-visible { outline-color: #202124; }
 ::selection { background: rgba(228, 226, 221, 0.2); }
 input, textarea, select { font-family: inherit; }
 
@@ -79,14 +90,17 @@ input, textarea, select { font-family: inherit; }
   transition: color .2s, border-color .2s;
 }
 .surf-chip:hover { color: var(--fg-dim); }
+.surf-chip:active { transform: scale(.98); }
 .surf-chip.sel { color: var(--fg); border-bottom-color: var(--fg); }
 #btn-next {
   display: inline-flex; align-items: center; gap: 8px;
   font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; color: var(--fg);
   padding: 6px 1px; margin-left: 14px;
   border-bottom: 1px solid transparent;
+  transition: border-color .15s ease;
 }
 #btn-next:hover { border-bottom-color: var(--fg); }
+#btn-next:active { transform: scale(.98); }
 
 #foot {
   flex: none;
@@ -96,23 +110,30 @@ input, textarea, select { font-family: inherit; }
   font-size: 11px; color: var(--fg-faint);
 }
 #foot .links { display: flex; align-items: center; gap: 20px; }
-#foot button.linky { font-size: 11px; color: var(--fg-faint); letter-spacing: 0.03em; position: relative; }
-#foot button.linky:hover { color: var(--fg); }
+#foot button.linky {
+  font-size: 11px; color: var(--fg-faint); letter-spacing: 0.03em; position: relative;
+  padding-bottom: 3px; border-bottom: 2px solid transparent;
+  transition: color .15s ease, border-color .15s ease;
+}
+#foot button.linky:hover { color: var(--fg); border-bottom-color: var(--bone); }
 #foot .wordmark { font-family: ui-monospace, Menlo, monospace; font-weight: 700; color: var(--fg-dim); }
 #foot .right { display: flex; align-items: center; gap: 16px; }
 #poolcount { font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: var(--fg-faint); letter-spacing: 0.06em; }
 #btn-compose {
   font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
   background: var(--bone); color: var(--bone-ink);
-  padding: 9px 22px; border-radius: 3px;
-  transition: background .2s;
+  padding: 9px 22px; border-radius: var(--r-m);
+  transition: background .15s ease;
   white-space: nowrap;
 }
 #btn-compose:hover { background: #fff; }
+#btn-compose:active { transform: scale(.98); }
 #btn-lang {
   font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--fg-faint);
-  border: 1px solid var(--line); border-radius: 3px; padding: 6px 10px;
+  border: 1px solid var(--line); border-radius: var(--r-m); padding: 6px 10px;
+  transition: color .15s ease, border-color .15s ease;
 }
+#btn-lang:active { transform: scale(.98); }
 #btn-lang:hover { color: var(--fg); border-color: #3d3d40; }
 #queue-dot {
   display: none;
@@ -166,8 +187,8 @@ input, textarea, select { font-family: inherit; }
 
 #nt-col { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(560px, 88%); margin: 0 auto; padding-top: clamp(20px, 6vh, 56px); }
 #nt-clock { text-align: center; color: #202124; user-select: none; }
-#clock { font-size: clamp(28px, 3.6vw, 38px); font-weight: 300; letter-spacing: 0.03em; }
-#today { margin-top: 2px; font-size: 10.5px; letter-spacing: 0.1em; color: #5f6368; }
+#clock { font-size: clamp(28px, 3.6vw, 38px); font-weight: 200; letter-spacing: 0.02em; }
+#today { margin-top: 2px; font-size: 11px; letter-spacing: 0.1em; color: #9aa0a6; }
 #nt-search { width: 100%; }
 #nt-search .pill {
   display: flex; align-items: center; gap: 10px;
@@ -187,9 +208,10 @@ input, textarea, select { font-family: inherit; }
 .sl-line-lnk { color: #1a73e8; text-decoration: underline; text-underline-offset: 2px; }
 .sl-line-by { opacity: 0.6; font-size: 10.5px; }
 #nt-tiles { display: grid; grid-template-columns: repeat(4, 54px); grid-auto-rows: auto; gap: 16px clamp(10px, 2.4vw, 22px); justify-content: center; margin-top: 4px; }
-.nt-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 54px; color: #5f6368; font-size: 10px; }
-.nt-tile .bub { width: 38px; height: 38px; border-radius: 50%; background: #f1f3f4; border: 1px solid #e4e6e9; color: #3c4043; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; transition: transform .15s; }
-.nt-tile:hover .bub { transform: translateY(-2px); }
+/* v14: tiles are shortcuts, not links — no underline, quieter bubble, hover is a soft lift only */
+.nt-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 54px; font-size: 10.5px; color: #80868b; text-decoration: none; }
+.nt-tile .bub { width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 1px solid #e8eaed; color: #5f6368; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; transition: box-shadow .15s ease; }
+.nt-tile:hover .bub { box-shadow: var(--sh-1); }
 
 /* 枠は全部おなじガター(--nt-gap)と整列線に乗せる: 端ベタ付けのコラージュ感をやめ、
    左右の半面・カード・コーナーフィードが1つの見えないグリッドを共有する */
@@ -225,11 +247,13 @@ input, textarea, select { font-family: inherit; }
 .screen.pixel .worldcv { position: absolute; image-rendering: pixelated; }
 .sl-full-close {
   position: absolute; top: 14px; right: 14px; z-index: 6;
-  width: 30px; height: 30px; border-radius: 50%;
-  background: rgba(0,0,0,0.5); color: #fff; font-size: 14px;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(32, 33, 36, 0.55); color: #fff; font-size: 14px;
   display: flex; align-items: center; justify-content: center;
+  transition: opacity .15s ease;
 }
-.sl-full-close:hover { background: rgba(0,0,0,0.7); }
+.sl-full-close:hover { opacity: .75; }
+.sl-full-close:active { transform: scale(.96); }
 
 #nt-corner-wrap { position: absolute; left: var(--nt-gap); bottom: var(--nt-gap); z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; max-width: min(360px, 68vw); }
 #nt-corner { display: flex; align-items: center; gap: 10px; }
@@ -324,10 +348,11 @@ input, textarea, select { font-family: inherit; }
 .lk-block.lk-yt-playing { padding: 0; background: #000; border-color: transparent; aspect-ratio: 16/9; overflow: hidden; }
 .lk-block.lk-yt-playing iframe { width: 100%; height: 100%; border: 0; display: block; }
 
-.enter { animation: pwron .5s cubic-bezier(.2, .9, .3, 1); }
+/* v14: one plain, purposeful mount animation for a fresh ad — no scale/rotate/brightness flourish */
+.enter { animation: pwron .35s ease; }
 @keyframes pwron {
-  0% { opacity: 0; transform: scale(0.97); filter: brightness(1.8) saturate(0.2); }
-  100% { opacity: 1; }
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 .rot-enter { animation: rotFade .6s ease; }
 @keyframes rotFade {
@@ -372,13 +397,24 @@ input, textarea, select { font-family: inherit; }
 .sl-chip {
   font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: 0.02em;
   background: rgba(0, 0, 0, 0.68); color: #fff;
-  padding: 4px 8px; border-radius: 3px; white-space: nowrap;
+  padding: 4px 8px; border-radius: var(--r-s); white-space: nowrap;
+  transition: background .15s ease;
 }
 button.sl-chip:hover { background: rgba(0, 0, 0, 0.86); }
+button.sl-chip:active { transform: scale(.98); }
 .sl-chip.saved { background: var(--bone); color: var(--bone-ink); }
 .chip-glow .sl-chips { opacity: 1; pointer-events: auto; }
 .chip-glow .sl-chip:first-child { animation: chipGlow 1.2s ease; }
 @keyframes chipGlow { 0%, 100% { box-shadow: none; } 30% { box-shadow: 0 0 0 4px rgba(216, 213, 204, 0.4); } }
+/* v14: floating "+1" on save (5.2) — fixed-position, self-removing, skipped entirely under
+   prefers-reduced-motion via the `calm` check in saveBump() rather than just dropping the motion */
+.save-bump {
+  position: fixed; z-index: 300; pointer-events: none;
+  transform: translate(-50%, 0);
+  font-size: 12px; font-weight: 700; color: var(--bone);
+  animation: saveBump .3s ease forwards;
+}
+@keyframes saveBump { 0% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -16px); } }
 .sl-chip.flag:hover, .sl-chip.skip:hover { background: rgba(180, 84, 74, 0.86); }
 .sl-chip.sl-chip-yes { background: var(--danger); }
 .sl-chip.flag.reported { background: var(--danger); }
@@ -449,9 +485,9 @@ button.sl-chip:hover { background: rgba(0, 0, 0, 0.86); }
   background: #1a1a1b; color: var(--fg);
   border: 1px solid #2e2e30;
   font-size: 12.5px; font-weight: 600;
-  padding: 11px 20px; border-radius: 3px;
-  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.6);
-  transition: transform .35s cubic-bezier(.2, .9, .3, 1.1);
+  padding: 11px 20px; border-radius: var(--r-m);
+  box-shadow: var(--sh-2);
+  transition: transform .25s ease;
   max-width: 88vw;
 }
 #toast.show { transform: translateX(-50%) translateY(0); }
@@ -627,56 +663,66 @@ button.sl-chip:hover { background: rgba(0, 0, 0, 0.86); }
   overscroll-behavior: contain;
 }
 .overlay.show { display: block; }
+/* v14: consistent, subtle modal entrance across about/gallery/guidelines/composer — a CSS
+   animation (not a transition) so it still plays from the display:none -> block flip, and is
+   automatically dropped by the blanket prefers-reduced-motion rule below. */
+@keyframes modalIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.overlay.show > .card, .overlay.show > .frame, .overlay.show > .gal-frame { animation: modalIn .22s ease; }
 
-/* ===== about ===== */
+/* ===== about (v14: heading / lead / 3-step / CTA / footnote — nothing else) ===== */
 #about .card {
-  width: min(580px, calc(100vw - 32px));
+  width: min(560px, calc(100vw - 32px));
   margin: clamp(20px, 6vh, 70px) auto 40px;
   background: #171718;
-  border: 1px solid #29292b; border-radius: 10px;
-  padding: clamp(28px, 5vw, 44px);
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.7);
+  border: 1px solid #29292b; border-radius: var(--r-l);
+  padding: clamp(26px, 5vw, 40px);
+  box-shadow: var(--sh-3);
 }
 #about .a-mark { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--fg); }
 #about .a-mark span { margin-left: 12px; color: var(--fg-faint); letter-spacing: 0.12em; }
 #about h2 { font-size: clamp(21px, 4vw, 28px); font-weight: 800; line-height: 1.45; margin-top: 16px; letter-spacing: -0.01em; }
-#about .lead { font-size: 13.5px; line-height: 1.95; margin-top: 14px; color: var(--fg-dim); }
-#about h3 { margin-top: 26px; font-family: ui-monospace, Menlo, monospace; font-size: 10px; letter-spacing: 0.24em; color: var(--fg-faint); font-weight: 700; }
-#about ul { list-style: none; margin-top: 12px; display: flex; flex-direction: column; gap: 11px; }
-#about li { font-size: 13px; line-height: 1.8; color: var(--fg-dim); padding-left: 18px; position: relative; }
-#about li::before { content: '—'; position: absolute; left: 0; color: var(--fg-faint); }
-#about li b { color: var(--fg); }
-#about .a-note { margin-top: 24px; font-size: 11.5px; line-height: 1.85; color: var(--fg-faint); border-top: 1px dashed #2a2a2c; padding-top: 16px; }
-#about .a-cta { margin-top: 26px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+#about .lead { font-size: 13.5px; line-height: 1.7; margin-top: 12px; color: var(--fg-dim); }
+.a-steps { margin-top: 28px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.a-step { border: 1px solid var(--line); border-radius: var(--r-m); padding: 14px 14px 15px; background: rgba(255, 255, 255, 0.02); }
+.a-step .n { font-family: ui-monospace, Menlo, monospace; font-size: 11px; font-weight: 700; color: var(--bone); letter-spacing: 0.06em; }
+.a-step .stitle { margin-top: 8px; font-size: 12.5px; font-weight: 700; line-height: 1.4; color: var(--fg); }
+.a-step .sbody { margin-top: 5px; font-size: 11.5px; line-height: 1.55; color: var(--fg-faint); }
+#about .a-cta { margin-top: 26px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 #about .a-go {
   font-size: 13px; font-weight: 700; letter-spacing: 0.06em;
   background: var(--bone); color: var(--bone-ink);
-  padding: 13px 34px; border-radius: 3px;
-  transition: background .2s;
+  padding: 13px 40px; border-radius: var(--r-m);
+  transition: background .15s ease;
+  width: 100%; max-width: 320px; text-align: center;
 }
 #about .a-go:hover { background: #fff; }
-#about .a-sub { font-size: 11px; color: var(--fg-faint); }
-.gl-inline {
-  display: inline-block; margin-left: 4px;
-  color: var(--fg); font-weight: 700; border-bottom: 1px solid var(--fg-faint);
+#about .a-go:active { transform: scale(.98); }
+.a-sublinks { display: flex; align-items: center; gap: 18px; }
+.a-sublink { font-size: 11.5px; color: var(--fg-faint); border-bottom: 1px solid transparent; transition: color .15s ease, border-color .15s ease; }
+.a-sublink:hover { color: var(--fg); border-bottom-color: var(--fg-faint); }
+#about .a-sub { font-size: 11px; color: var(--fg-faint); margin-top: 4px; }
+#about .a-note { margin-top: 24px; font-size: 11px; line-height: 1.7; color: var(--fg-faint); border-top: 1px dashed #2a2a2c; padding-top: 14px; }
+@media (max-width: 560px) {
+  .a-steps { grid-template-columns: 1fr; }
 }
-.gl-inline:hover { border-color: var(--fg); }
 
 /* ===== guidelines / terms / privacy ===== */
 #gl-modal .card {
   width: min(580px, calc(100vw - 32px));
   margin: clamp(20px, 6vh, 70px) auto 40px;
   background: #171718;
-  border: 1px solid #29292b; border-radius: 10px;
+  border: 1px solid #29292b; border-radius: var(--r-l);
   padding: clamp(28px, 5vw, 44px);
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.7);
+  box-shadow: var(--sh-3);
   position: relative;
 }
-.gl-close { position: absolute; right: 14px; top: 14px; font-size: 18px; color: var(--fg-faint); padding: 4px 10px; }
+.gl-close { position: absolute; right: 14px; top: 14px; font-size: 18px; color: var(--fg-faint); padding: 4px 10px; transition: color .15s ease; }
 .gl-close:hover { color: var(--fg); }
-.gl-tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; margin-bottom: 22px; }
-.gl-tab { font-size: 11px; font-weight: 600; color: var(--fg-dim); padding: 8px 14px; }
+.gl-close:active { transform: scale(.98); }
+.gl-tabs { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-s); overflow: hidden; margin-bottom: 22px; }
+.gl-tab { font-size: 11px; font-weight: 600; color: var(--fg-dim); padding: 8px 14px; transition: color .15s ease, background .15s ease; }
 .gl-tab:hover { color: var(--fg); }
+.gl-tab:active { transform: scale(.98); }
 .gl-tab.sel { background: rgba(255, 255, 255, 0.1); color: var(--fg); }
 .gl-body h2 { font-size: clamp(18px, 3.4vw, 22px); font-weight: 800; line-height: 1.4; letter-spacing: -0.01em; }
 .gl-body p { font-size: 13px; line-height: 1.9; color: var(--fg-dim); margin-top: 14px; }
@@ -684,45 +730,64 @@ button.sl-chip:hover { background: rgba(0, 0, 0, 0.86); }
 .gl-data-actions { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; }
 .gl-data-btn {
   font-size: 11px; font-weight: 700; letter-spacing: 0.04em; color: var(--fg);
-  border: 1px solid var(--line); border-radius: 3px; padding: 8px 16px;
+  border: 1px solid var(--line); border-radius: var(--r-m); padding: 8px 16px;
   transition: background .15s, border-color .15s;
 }
 .gl-data-btn:hover { background: rgba(255, 255, 255, 0.08); border-color: #3d3d40; }
+.gl-data-btn:active { transform: scale(.98); }
 
 /* ===== gallery + hall of fame ===== */
+/* v14: gallery gets its own, stronger backdrop treatment — more blur to quiet the NTP behind it */
+#gallery { background: rgba(10, 10, 12, 0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
 .gal-frame { width: min(1180px, calc(100vw - 32px)); margin: clamp(20px, 4vh, 50px) auto 60px; }
 .gal-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 0 4px 18px; border-bottom: 1px solid #29292b; margin-bottom: 24px; }
 .gal-head-txt { display: flex; flex-direction: column; gap: 4px; margin-right: auto; }
 .gal-ttl { font-size: clamp(16px, 2.4vw, 20px); font-weight: 800; letter-spacing: -0.01em; }
 .gal-count { font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: var(--fg-faint); letter-spacing: 0.04em; }
-.gal-sort, .gal-tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
-.gal-sort button, .gal-tabs button { font-size: 11px; font-weight: 600; color: var(--fg-dim); padding: 7px 12px; }
+/* v14: tabs read as a real segmented control — selected pill sits on bone, not a translucent wash */
+.gal-sort, .gal-tabs { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-s); overflow: hidden; padding: 2px; gap: 2px; }
+.gal-sort button, .gal-tabs button {
+  font-size: 11px; font-weight: 600; color: var(--fg-dim); padding: 6px 12px; border-radius: calc(var(--r-s) - 1px);
+  transition: color .15s ease, background .15s ease;
+}
 .gal-sort button:hover, .gal-tabs button:hover { color: var(--fg); }
-.gal-sort button.sel, .gal-tabs button.sel { background: rgba(255, 255, 255, 0.1); color: var(--fg); }
-.gal-close { font-size: 18px; color: var(--fg-faint); padding: 4px 10px; }
+.gal-sort button:active, .gal-tabs button:active { transform: scale(.98); }
+.gal-sort button.sel, .gal-tabs button.sel { background: var(--bone); color: var(--bone-ink); }
+.gal-close { font-size: 18px; color: var(--fg-faint); padding: 4px 10px; transition: color .15s ease; }
 .gal-close:hover { color: var(--fg); }
+.gal-close:active { transform: scale(.98); }
 
-.gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; padding: 0 4px; }
-.gal-card { position: relative; display: flex; flex-direction: column; gap: 8px; }
-.gal-thumb-media { position: relative; overflow: hidden; border-radius: 6px; border: 1px solid var(--line); background: #0d0d0e; }
-.gal-thumb-media .screen { border-radius: 6px; }
+.gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; padding: 0 4px; }
+.gal-card {
+  position: relative; display: flex; flex-direction: column; gap: 8px;
+  padding: 6px; border-radius: var(--r-m);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.gal-card:hover, .gal-card:focus-within { transform: translateY(-3px); box-shadow: var(--sh-2); }
+.gal-thumb-media { position: relative; overflow: hidden; border-radius: var(--r-m); border: 1px solid var(--line); background: #0d0d0e; }
+.gal-thumb-media .screen { border-radius: var(--r-m); }
 .gal-thumb-line {
   min-height: 100px; display: flex; align-items: center; justify-content: center; text-align: center;
-  padding: 14px; border-radius: 6px; border: 1px solid var(--line); background: #1a1a1c;
+  padding: 14px; border-radius: var(--r-m); border: 1px solid var(--line); background: #1a1a1c;
 }
-.gal-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 10.5px; color: var(--fg-faint); padding: 0 2px; }
-.gal-tag { font-family: ui-monospace, Menlo, monospace; font-size: 9px; letter-spacing: 0.12em; color: var(--fg-dim); border: 1px solid var(--line); border-radius: 2px; padding: 2px 6px; }
-.gal-author { color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
-.gal-savesn { margin-left: auto; font-family: ui-monospace, Menlo, monospace; color: var(--fg-dim); }
-.gal-empty { grid-column: 1 / -1; text-align: center; padding: 44px 20px; color: var(--fg-faint); border: 1px dashed var(--line); border-radius: 8px; }
+.gal-meta { display: flex; flex-direction: column; gap: 4px; font-size: 10.5px; color: var(--fg-faint); padding: 2px 2px 0; }
+.gal-meta-row1 { display: flex; align-items: center; gap: 8px; }
+.gal-tag { font-family: ui-monospace, Menlo, monospace; font-size: 9px; letter-spacing: 0.12em; color: var(--fg-dim); border: 1px solid var(--line); border-radius: var(--r-s); padding: 2px 6px; }
+.gal-author { color: var(--fg-dim); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gal-savesn { margin-left: auto; font-family: ui-monospace, Menlo, monospace; color: var(--fg-dim); white-space: nowrap; }
+.gal-empty { grid-column: 1 / -1; text-align: center; padding: 44px 20px; color: var(--fg-faint); border: 1px dashed var(--line); border-radius: var(--r-m); }
 
-.gal-chips { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); z-index: 5; display: flex; gap: 5px; opacity: 0; pointer-events: none; transition: opacity .15s; }
+.gal-chips { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); z-index: 5; display: flex; gap: 5px; opacity: 0; pointer-events: none; transition: opacity .15s ease; }
 .gal-card:hover .gal-chips, .gal-card:focus-within .gal-chips { opacity: 1; pointer-events: auto; }
+/* touch: no hover state to reveal chips on, so keep them on-screen */
+@media (pointer: coarse) {
+  .gal-chips { opacity: 1; pointer-events: auto; }
+}
 
 .gal-mine-badge {
   position: absolute; right: 7px; top: 7px; z-index: 6;
   font-family: ui-monospace, Menlo, monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em;
-  padding: 3px 7px; border-radius: 2px;
+  padding: 3px 7px; border-radius: var(--r-s);
   background: var(--bone); color: var(--bone-ink);
 }
 .hall-card { position: relative; }
@@ -740,52 +805,79 @@ button.sl-chip:hover { background: rgba(0, 0, 0, 0.86); }
   display: flex; flex-direction: column;
   background: #141415;
 }
+/* v14: the bar reads as 5 zones — [close|title] [history] [placement] [background] …[post] —
+   separated by thin 1px rules instead of one long run of controls. */
 #ed-top {
   flex: none;
-  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
-  padding: 12px clamp(14px, 2.5vw, 26px);
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 10px clamp(14px, 2.5vw, 26px);
   border-bottom: 1px solid var(--line);
   background: #171718;
 }
 #ed-top .ttl { font-size: 13.5px; font-weight: 800; letter-spacing: 0.03em; margin-right: 6px; }
-#ed-close { font-size: 18px; color: var(--fg-faint); padding: 4px 10px; }
+.ed-group-ttl { gap: 4px; }
+#ed-close { font-size: 18px; color: var(--fg-faint); padding: 4px 10px; transition: color .15s ease; }
 #ed-close:hover { color: var(--fg); }
+#ed-close:active { transform: scale(.98); }
+.ed-sep { width: 1px; align-self: stretch; min-height: var(--ctl-s); background: rgba(255, 255, 255, 0.08); }
 .ed-group { display: flex; align-items: center; gap: 8px; }
 .ed-group .glbl { font-family: ui-monospace, Menlo, monospace; font-size: 9px; letter-spacing: 0.2em; color: var(--fg-faint); }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
-.seg button { font-size: 11px; font-weight: 600; color: var(--fg-dim); padding: 7px 12px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-s); overflow: hidden; height: var(--ctl-s); }
+.seg button { font-size: 11px; font-weight: 600; color: var(--fg-dim); padding: 0 11px; transition: color .15s ease, background .15s ease; }
 .seg button:hover { color: var(--fg); }
+.seg button:active { transform: scale(.98); }
 .seg button.sel { background: rgba(255, 255, 255, 0.1); color: var(--fg); }
 .seg button:disabled { opacity: 0.35; pointer-events: none; }
 input[type="color"] {
-  width: 30px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 5px;
+  width: var(--ctl-s); height: var(--ctl-s); padding: 0; border: 1px solid var(--line); border-radius: var(--r-s);
   background: none; cursor: pointer;
 }
 input[type="color"]::-webkit-color-swatch-wrapper { padding: 3px; }
-input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
-#bg-ang { width: 76px; accent-color: var(--bone); }
+input[type="color"]::-webkit-color-swatch { border: none; border-radius: 2px; }
+#bg-ang { width: 120px; accent-color: var(--bone); }
 .preset-row { display: flex; gap: 6px; }
-.preset { width: 22px; height: 22px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.14); transition: transform .12s; }
-.preset:hover { transform: scale(1.16); }
+/* v14: background presets are the "background color chips" from the spec — 20px, 2px ring when selected */
+.preset { width: 20px; height: 20px; border-radius: var(--r-s); border: 1px solid rgba(255, 255, 255, 0.14); transition: transform .12s ease, outline-color .12s ease; outline: 2px solid transparent; outline-offset: 2px; }
+.preset:hover { transform: scale(1.1); }
+.preset:active { transform: scale(1.02); }
+.preset.sel { outline-color: var(--bone); }
 #ed-post {
   margin-left: auto;
+  height: var(--ctl-m);
+  display: inline-flex; align-items: center;
   font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em;
   background: var(--bone); color: var(--bone-ink);
-  padding: 10px 26px; border-radius: 3px;
-  transition: background .2s;
+  padding: 0 24px; border-radius: var(--r-m);
+  transition: background .15s ease;
 }
 #ed-post:hover { background: #fff; }
+#ed-post:active { transform: scale(.98); }
+#ed-post.at-limit { background: rgba(255, 255, 255, 0.08); color: var(--fg-faint); }
+#ed-post.at-limit:hover { background: rgba(255, 255, 255, 0.08); }
 
-/* placement picker */
-#ed-placement { position: relative; width: 210px; height: 128px; border-radius: 6px; overflow: hidden; background: #e9ebee; border: 1px solid #3a3a3d; cursor: pointer; }
+/* placement: a compact trigger + popover (v14) — the full zone map only appears on click, so it
+   never sits open over the template picker when the editor first opens */
+#ed-placement-btn { min-width: 74px; }
+#ed-group-placement { position: relative; }
+.ed-pop {
+  position: absolute; left: 0; top: calc(100% + 8px); z-index: 30;
+  display: none;
+  background: #1a1a1c; border: 1px solid var(--line); border-radius: var(--r-m);
+  padding: 8px; box-shadow: var(--sh-2);
+}
+.ed-pop.open { display: block; }
+/* v14: this <span> used to be blockified for free by being a flex item directly inside .ed-group;
+   now that it's nested one level deeper inside .ed-pop (a plain block, not a flex/grid container),
+   it needs an explicit display or width/height/position are all no-ops on an inline element. */
+#ed-placement { display: block; position: relative; width: 210px; height: 128px; border-radius: var(--r-s); overflow: hidden; background: #e9ebee; border: 1px solid #3a3a3d; cursor: pointer; }
 .pp-zone { position: absolute; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; color: #63656a; background: transparent; transition: background .15s, color .15s; }
 .pp-zone:hover { background: rgba(20,20,22,0.14); color: #33343a; }
 .pp-zone.sel { background: var(--bone); color: var(--bone-ink); }
 .pp-full { inset: 0; z-index: 1; }
 .pp-halfL { left: 0; top: 0; bottom: 0; width: 30%; z-index: 2; }
 .pp-halfR { right: 0; top: 0; bottom: 0; width: 30%; z-index: 2; }
-.pp-card { right: 6px; bottom: 6px; width: 66px; height: 42px; border-radius: 3px; z-index: 3; }
-.pp-line { left: 30%; right: 30%; top: 7px; height: 17px; border-radius: 3px; z-index: 3; }
+.pp-card { right: 6px; bottom: 6px; width: 66px; height: 42px; border-radius: var(--r-s); z-index: 3; }
+.pp-line { left: 30%; right: 30%; top: 7px; height: 17px; border-radius: var(--r-s); z-index: 3; }
 
 #ed-main { flex: 1; min-height: 0; display: flex; }
 #ed-tools {
@@ -796,15 +888,16 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
   background: #171718;
 }
 .tool {
-  width: 42px; height: 42px; border-radius: 6px;
+  width: 42px; height: 42px; border-radius: var(--r-m);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   color: var(--fg-dim);
-  transition: background .15s, color .15s;
+  transition: background .15s ease, color .15s ease;
 }
 .tool svg { width: 17px; height: 17px; }
 .tool svg * { stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .tool .tl { font-size: 8px; letter-spacing: 0.04em; }
 .tool:hover { color: var(--fg); background: rgba(255, 255, 255, 0.05); }
+.tool:active { transform: scale(.98); }
 .tool.sel { color: var(--fg); background: rgba(255, 255, 255, 0.1); }
 #ed-canvas {
   flex: 1; min-width: 0;
@@ -859,23 +952,29 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 #mp-halfR { right: 0; top: 14%; bottom: 14%; width: 26%; }
 #mp-full { inset: 0; z-index: 4; }
 
-/* contextual options bar */
+/* contextual options bar — v14: row 1 of a 2-row (3-line) block; a labelled 28px-tall strip */
 #ed-ctx {
   flex: none;
-  min-height: 56px;
+  min-height: var(--ctl-s);
   display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
-  gap: 10px 16px;
-  padding: 9px clamp(14px, 2.5vw, 26px);
+  gap: 8px 14px;
+  padding: 8px clamp(14px, 2.5vw, 26px);
   border-top: 1px solid var(--line);
   background: #171718;
 }
 #ed-ctx .hint { font-size: 11.5px; color: var(--fg-faint); }
+#ed-ctx .ctx-grp { display: flex; align-items: center; gap: 8px; }
+#ed-ctx .ctx-grp .glbl { font-family: ui-monospace, Menlo, monospace; font-size: 9px; letter-spacing: 0.2em; color: var(--fg-faint); }
 .mini-btn {
+  height: var(--ctl-s);
+  display: inline-flex; align-items: center;
   font-size: 11px; font-weight: 700; color: var(--fg-dim);
-  border: 1px solid var(--line); border-radius: 4px;
-  padding: 7px 12px;
+  border: 1px solid var(--line); border-radius: var(--r-m);
+  padding: 0 12px;
+  transition: color .15s ease, border-color .15s ease;
 }
 .mini-btn:hover { color: var(--fg); border-color: #3d3d40; }
+.mini-btn:active { transform: scale(.98); }
 .mini-btn.danger:hover { color: var(--danger); border-color: rgba(180, 84, 74, 0.5); }
 .mini-btn:disabled { opacity: 0.32; pointer-events: none; }
 
@@ -895,18 +994,49 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 .ed-snap-line.show { display: block; }
 
 /* template picker overlay */
-#ed-tmpl { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(10, 10, 11, 0.72); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); border-radius: 6px; }
+#ed-tmpl { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(10, 10, 11, 0.72); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); border-radius: var(--r-m); padding: 12px; }
 #ed-tmpl.show { display: flex; }
-.ed-tmpl-panel { position: relative; width: min(420px, 92%); background: #1a1a1c; border: 1px solid var(--line); border-radius: 8px; padding: 22px 22px 18px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55); }
-.ed-tmpl-close { position: absolute; top: 8px; right: 8px; font-size: 14px; color: var(--fg-faint); padding: 6px; }
+.ed-tmpl-panel {
+  position: relative; width: min(560px, 94%); background: #1a1a1c; border: 1px solid var(--line); border-radius: var(--r-l); padding: 22px 22px 18px; box-shadow: var(--sh-3);
+  max-height: 100%; overflow-y: auto; /* #ed-canvas is short on a phone-height composer — scroll inside the panel rather than clip the bottom row */
+}
+.ed-tmpl-close { position: absolute; top: 8px; right: 8px; font-size: 14px; color: var(--fg-faint); padding: 6px; transition: color .15s ease; }
 .ed-tmpl-close:hover { color: var(--fg); }
+.ed-tmpl-close:active { transform: scale(.98); }
 .ed-tmpl-ttl { font-family: ui-monospace, Menlo, monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.2em; color: var(--fg-faint); margin-bottom: 14px; text-align: center; }
-.ed-tmpl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.ed-tmpl-card { display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 12px; font-weight: 700; color: var(--fg-dim); background: rgba(255, 255, 255, 0.02); text-align: center; }
-.ed-tmpl-card:hover { border-color: var(--bone); color: var(--fg); background: rgba(255, 255, 255, 0.05); }
-.ed-tmpl-sw { display: block; width: 100%; height: 30px; border-radius: 4px; }
-.ed-tmpl-blank { margin-top: 12px; width: 100%; text-align: center; font-size: 11.5px; color: var(--fg-faint); padding: 10px; border-radius: 5px; border: 1px dashed var(--line); }
-.ed-tmpl-blank:hover { color: var(--fg); border-color: #45454e; }
+.ed-tmpl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+/* v14: cards render the actual template through renderAd() (see #ed-tmpl-thumb), not a flat color swatch */
+.ed-tmpl-card {
+  display: flex; flex-direction: column; align-items: stretch; gap: 7px; padding: 8px;
+  border: 1px solid var(--line); border-radius: var(--r-m); font-size: 11px; font-weight: 700; color: var(--fg-dim);
+  background: rgba(255, 255, 255, 0.02); text-align: center;
+  transition: border-color .15s ease, color .15s ease, background .15s ease, transform .15s ease, box-shadow .15s ease;
+  min-width: 0; /* the full-slot template's 1160px-wide ad, before it's scaled down, must not blow out the grid track */
+}
+.ed-tmpl-card:hover { border-color: var(--bone); color: var(--fg); background: rgba(255, 255, 255, 0.05); transform: translateY(-2px); box-shadow: var(--sh-2); }
+.ed-tmpl-card:active { transform: scale(.98); }
+.ed-tmpl-thumb {
+  position: relative; width: 100%; height: 96px; border-radius: var(--r-s); overflow: hidden;
+  background: #e9ebee;
+  min-width: 0;
+  /* flexbox centers the (oversized, pre-scale) ad box on both axes; transform:scale() then shrinks
+     it around that same center point — simpler and more reliable than a translate(-50%,-50%)
+     + scale() combo, which scales the fixed pixel translate too and throws the centering off */
+  display: flex; align-items: center; justify-content: center;
+}
+.ed-tmpl-thumb .screen, .ed-tmpl-thumb .sl-line-ad {
+  flex: none; transform-origin: center center; pointer-events: none;
+}
+.ed-tmpl-thumb.is-line { background: #fff; }
+.ed-tmpl-thumb.is-line .sl-line-ad { position: static; transform: scale(.86); padding-bottom: 4px; }
+.ed-tmpl-blank {
+  display: flex; flex-direction: column; align-items: stretch; gap: 7px; padding: 8px;
+  border: 1px dashed var(--line); border-radius: var(--r-m); font-size: 11px; color: var(--fg-faint); text-align: center;
+  transition: color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.ed-tmpl-blank:hover { color: var(--fg); border-color: #45454e; transform: translateY(-2px); box-shadow: var(--sh-2); }
+.ed-tmpl-blank:active { transform: scale(.98); }
+.ed-tmpl-blank .ed-tmpl-thumb { display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.03); font-size: 22px; color: var(--fg-faint); }
 .sticker-row { display: flex; gap: 5px; overflow-x: auto; max-width: min(560px, 70vw); padding: 2px; }
 .sticker-row button {
   flex: none; width: 34px; height: 34px; border-radius: 6px; font-size: 17px;
@@ -916,28 +1046,35 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 .sticker-row button:hover { border-color: var(--bone); }
 .sticker-row button.sel { border-color: var(--bone); background: rgba(255, 255, 255, 0.06); }
 
-/* details row (link / name) */
+/* details row (link / caption / name) — v14: one meta grid row + one thin note line beneath it,
+   so together with #ed-ctx above the editor's contextual chrome is 3 lines / 2 visual blocks. */
 #ed-details {
   flex: none;
-  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
-  gap: 8px 14px;
-  padding: 9px clamp(14px, 2.5vw, 26px) 12px;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 9px clamp(14px, 2.5vw, 26px) 10px;
   background: #171718;
+  border-top: 1px solid var(--line);
   font-size: 11px; color: var(--fg-faint);
 }
+#ed-meta-row { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 20px; width: 100%; }
+.ed-meta-item { display: flex; align-items: center; gap: 8px; }
+#rl-left { margin-left: auto; font-size: 10.5px; color: var(--fg-faint); letter-spacing: 0.02em; white-space: nowrap; }
 .ed-input {
   background: #101011; color: var(--fg);
-  border: 1px solid var(--line); border-radius: 4px;
-  padding: 8px 11px; font-size: 12px;
-  width: 250px; max-width: 68vw;
+  border: 1px solid var(--line); border-radius: var(--r-m);
+  padding: 0 11px; font-size: 12px; height: var(--ctl-s);
+  width: 250px; max-width: 50vw;
+  transition: border-color .15s ease;
 }
 .ed-input.sm { width: 140px; }
 .ed-input:focus { outline: none; border-color: var(--bone); }
-#ed-review-note { flex-basis: 100%; text-align: center; margin-top: 4px; font-size: 10.5px; color: var(--fg-faint); line-height: 1.6; }
-#rl-left { flex-basis: 100%; text-align: center; margin-top: 2px; font-size: 10.5px; color: var(--fg-faint); letter-spacing: 0.02em; }
+#ed-review-note { text-align: center; font-size: 10.5px; color: var(--fg-faint); line-height: 1.6; }
 #link-status, #lk-status { font-size: 10.5px; }
 #link-status.warn, #lk-status.warn { color: var(--danger); }
 #link-status.ok, #lk-status.ok { color: var(--fg-dim); }
+@media (max-width: 640px) {
+  .ed-input { max-width: 62vw; }
+}
 .shakeit { animation: shakeit .4s ease; }
 @keyframes shakeit { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 
@@ -948,11 +1085,13 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
   position: fixed; top: 0; right: 0; bottom: 0; z-index: 150;
   width: min(430px, 100vw);
   background: #151516; border-left: 1px solid var(--line);
+  box-shadow: var(--sh-3);
   transform: translateX(105%);
-  transition: transform .35s cubic-bezier(.2, .9, .3, 1);
+  opacity: 0;
+  transition: transform .35s cubic-bezier(.2, .9, .3, 1), opacity .22s ease;
   display: flex; flex-direction: column;
 }
-#console.show { transform: translateX(0); }
+#console.show { transform: translateX(0); opacity: 1; }
 #console header {
   flex: none; display: flex; align-items: center; justify-content: space-between;
   padding: 20px 24px 14px;
@@ -960,8 +1099,9 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 }
 #console header h3 { font-size: 14px; font-weight: 800; letter-spacing: 0.03em; }
 #console header .sub { display: block; margin-top: 3px; font-size: 10px; color: var(--fg-faint); font-weight: 500; }
-#console-close { font-size: 18px; color: var(--fg-faint); padding: 4px 10px; }
+#console-close { font-size: 18px; color: var(--fg-faint); padding: 4px 10px; transition: color .15s ease; }
 #console-close:hover { color: var(--fg); }
+#console-close:active { transform: scale(.98); }
 #console .body { flex: 1; overflow-y: auto; padding: 18px 24px 40px; }
 .q-sec { margin-top: 18px; }
 .q-sec:first-child { margin-top: 0; }
@@ -981,13 +1121,15 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 .q-info .m { margin-top: 3px; font-size: 10.5px; color: var(--fg-faint); }
 .q-info .m.mine { color: var(--bone); font-weight: 700; }
 .q-acts { display: flex; flex-direction: column; gap: 7px; }
-.q-btn { font-size: 11.5px; font-weight: 700; border-radius: 3px; padding: 8px 13px; white-space: nowrap; }
+.q-btn { font-size: 11.5px; font-weight: 700; border-radius: var(--r-m); padding: 8px 13px; white-space: nowrap; transition: background .15s ease, color .15s ease, border-color .15s ease; }
 .q-btn.ok { background: var(--bone); color: var(--bone-ink); }
 .q-btn.no { border: 1px solid var(--line); color: var(--fg-dim); }
 .q-btn.no:hover { color: var(--fg); border-color: #45454e; }
+.q-btn:active { transform: scale(.98); }
 .q-tools { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
-.q-tool { font-size: 11.5px; font-weight: 700; border: 1px solid var(--line); border-radius: 3px; padding: 8px 13px; color: var(--fg-dim); }
+.q-tool { font-size: 11.5px; font-weight: 700; border: 1px solid var(--line); border-radius: var(--r-m); padding: 8px 13px; color: var(--fg-dim); transition: color .15s ease, border-color .15s ease; }
 .q-tool:hover { color: var(--fg); border-color: #45454e; }
+.q-tool:active { transform: scale(.98); }
 #q-clock { font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: var(--fg-faint); margin-top: 10px; }
 .q-note { margin-top: 22px; font-size: 11px; line-height: 1.85; color: var(--fg-faint); border-top: 1px dashed #2a2a2c; padding-top: 14px; }
 .q-info .m.rp-reason { color: var(--danger); }
@@ -1011,6 +1153,14 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
   #ed-main { flex-direction: column; }
   #ed-tools { width: 100%; height: 54px; flex-direction: row; justify-content: center; padding: 0; border-right: none; border-bottom: 1px solid var(--line); }
   #ed-preview { width: 100%; border-left: none; border-top: 1px solid var(--line); padding: 12px; }
+  /* v14: the 5-zone top bar with separators reads fine at desktop width, but on a narrow phone
+     screen the separators + a full-width slider just add wrapped rows that push #ed-canvas down
+     to almost nothing — drop the separators and shrink the widest controls instead. */
+  #ed-top { gap: 8px 10px; padding: 8px 12px; }
+  .ed-sep { display: none; }
+  #bg-ang { width: 90px; }
+  .ed-tmpl-grid { grid-template-columns: repeat(2, 1fr); }
+  .ed-tmpl-thumb { height: 68px; }
   #nt-tabs .tab { min-width: 110px; }
   .sf-cam { display: none; }
   #surfbar { gap: 12px; }
@@ -1109,16 +1259,24 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
 <div class="overlay" id="composer" role="dialog" aria-modal="true" aria-label="New ad">
   <div class="frame">
     <div id="ed-top">
-      <button id="ed-close" aria-label="Close">✕</button>
-      <span class="ttl" id="ed-ttl"></span>
-      <span class="ed-group">
-        <button class="mini-btn" id="ed-undo" disabled>↺</button>
-        <button class="mini-btn" id="ed-redo" disabled>↻</button>
+      <span class="ed-group ed-group-ttl">
+        <button id="ed-close" aria-label="Close">✕</button>
+        <span class="ttl" id="ed-ttl"></span>
       </span>
+      <span class="ed-sep"></span>
       <span class="ed-group">
+        <button class="mini-btn" id="ed-undo" disabled aria-label="Undo">↺</button>
+        <button class="mini-btn" id="ed-redo" disabled aria-label="Redo">↻</button>
+      </span>
+      <span class="ed-sep"></span>
+      <span class="ed-group" id="ed-group-placement">
         <span class="glbl" id="lbl-placement"></span>
-        <span id="ed-placement"></span>
+        <button type="button" class="mini-btn" id="ed-placement-btn"></button>
+        <div class="ed-pop" id="ed-placement-pop">
+          <span id="ed-placement"></span>
+        </div>
       </span>
+      <span class="ed-sep"></span>
       <span class="ed-group" id="ed-bg-group">
         <span class="glbl" id="lbl-background"></span>
         <input type="color" id="bg-c1" value="#1c2440" aria-label="Background color 1">
@@ -1166,14 +1324,20 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 3px; }
     </div>
     <div id="ed-ctx"></div>
     <div id="ed-details">
-      <span id="lbl-link"></span>
-      <input class="ed-input" id="c-url" inputmode="url" placeholder="https://youtube.com/watch?v=…">
-      <input class="ed-input sm" id="c-url-label" maxlength="20">
-      <span id="link-status"></span>
-      <span id="lbl-name" style="margin-left:10px"></span>
-      <input class="ed-input sm" id="c-author" maxlength="14">
+      <div id="ed-meta-row">
+        <span class="ed-meta-item ed-meta-link">
+          <span id="lbl-link"></span>
+          <input class="ed-input" id="c-url" inputmode="url" placeholder="https://youtube.com/watch?v=…">
+          <input class="ed-input sm" id="c-url-label" maxlength="20">
+          <span id="link-status"></span>
+        </span>
+        <span class="ed-meta-item">
+          <span id="lbl-name"></span>
+          <input class="ed-input sm" id="c-author" maxlength="14">
+        </span>
+        <span id="rl-left" class="mono"></span>
+      </div>
       <div id="ed-review-note"></div>
-      <div id="rl-left" class="mono"></div>
     </div>
   </div>
 </div>
@@ -1262,6 +1426,7 @@ ja: {
   hint_sticker: 'クリックしてキャンバスに配置',
   hint_erase: '描いた線を消します',
   style_bold: '太字', style_mono: 'モノ', style_wide: 'ワイド',
+  ctx_size: 'サイズ', ctx_style: 'スタイル', ctx_color: '色',
   smaller: '縮小', bigger: '拡大', rot_ccw: '回転 ↺', rot_cw: '回転 ↻',
   delete: '削除', undo: '元に戻す', redo: 'やり直す', clear: 'クリア',
   layer_front: '前面へ', layer_back: '背面へ', duplicate: '複製',
@@ -1281,10 +1446,7 @@ ja: {
   feed_save_body_sim: author => author + ' が保存された',
   region_japan: '日本のあたり', region_na: '北米', region_sa: '南米', region_eu: 'ヨーロッパ',
   region_af: 'アフリカ', region_asia: 'アジア', region_oceania: 'オセアニア', region_sea: '海のうえ',
-  about_sim_note: 'この試作では、他の人の活動をシミュレーションで再現しています。',
   ad_tag: '広告',
-  about_rules: 'ここでは広告が主役です。枠は出し惜しみせず、全面広告もローテーションで巡ってきては通り過ぎていきます(✕でいつでも閉じられます)。全部まとめて見たい人は「ギャラリー」へ。',
-  economy_note: '広告は消えません。新しい広告ほどよく流れ、保存された広告はまた巡ってきます。同じ広告ばかりにならないよう、あなたが何度も見たものはしばらく休みます。いらない広告は✕で、あなたにはもう表示されません。保存はあなたのスクラップブックに残り、作者にも伝わります。',
   link_label: 'リンク(任意)', caption_ph: 'キャプション', name_label: '名前',
   link_allow: 'リンク許可: YouTube · Spotify · X · GitHub · pixiv · note · Twitch · SoundCloud · Bandcamp · niconico',
   link_bad_url: 'URLの形式が正しくないようです', link_not_allowed: h => h + ' は許可リストにありません',
@@ -1304,6 +1466,7 @@ ja: {
   review_note: '画像を含むすべての広告は、掲載前に人の目で審査されます。',
   rate_limit: '今日の出稿枠を使い切りました。また明日',
   rate_left: n => '今日はあと' + n + '本出稿できます',
+  rate_left_short: n => '残り' + n + '本',
   slot_line: '行', slot_card: 'カード', slot_halfL: '左半面', slot_halfR: '右半面', slot_full: '全面',
   admin_title: '管理', admin_sub: '本番では管理者だけがここを見ます — これは試作なのでどうぞ',
   queue_review: '審査待ち', queue_reports: '通報', queue_demo: 'デモ — 時間送り',
@@ -1318,16 +1481,10 @@ ja: {
   about_sub: 'β — 試作中',
   about_h2_1: '広告枠は、ずっと読み取り専用だった。', about_h2_2: 'この新しいタブでは、誰でも書き込める。',
   about_lead: '好きな枠を選んで、無料で出稿できます。目立たせたいなら、注目を集めてください。',
-  hiw_title: '仕組み',
-  hiw: [
-    '出稿は無料です。新しい広告ほどよく流れ、保存されるとまた巡ってきやすくなります。',
-    '広告は消えません。ただし同じ広告を何度も見た人には、しばらく休んでもらいます。',
-    '画像を含むすべての広告は、掲載前に人の目で審査されます。リンクは許可リストのみ。',
-    'みんなで塗る世界地図のピクセルボードも、1本の広告としてローテーションに流れてきます。見かけたら、1ドットどうぞ。',
-    'ギャラリーで全部見られます。いちばん保存された広告は殿堂に並びます。',
-  ],
-  surf_title: 'SURFACE',
-  surf_note: '同じ広告プールは、壁紙・ティッカー・ターミナル・配信オーバーレイ・タスクバーにも差し込めます。下のSURFACE切り替えで試せます。',
+  about_s1_title: '枠を選んで無料で出す', about_s1_body: '気に入った枠をタップして、その場で作れます。',
+  about_s2_title: '人間が審査して掲載', about_s2_body: '画像を含め、掲載前に必ず人の目で確認します。',
+  about_s3_title: '保存されるほどよく巡る', about_s3_body: '新しい広告ほどよく流れ、保存されるとまた巡ってきます。',
+  about_gallery_link: 'ギャラリーを見る',
   about_note: 'この試作はブラウザの中だけで完結しています。まだ何も共有されていません。管理画面で審査したり、時間を送って露出の重みが移り変わる様子を見てみてください。',
   about_go: '枠を見る', about_sub2: 'devnull studio による実験',
   gal_link: 'ギャラリー', gal_title: 'ギャラリー',
@@ -1336,6 +1493,7 @@ ja: {
   gal_tab_all: 'すべて', gal_tab_saved: '保存済み', gal_tab_hall: '殿堂',
   gal_sort_new: '新着', gal_sort_saves: '保存順',
   gal_see_all: 'ぜんぶ見る →',
+  gal_saves_n: n => '保存 ' + n,
   png_save: '画像で保存',
   your_ad_saves: n => 'あなたの広告 · ' + n + '人が保存',
   hall_title: 'いちばん保存された広告たち',
@@ -1403,6 +1561,7 @@ en: {
   hint_sticker: 'then click the canvas to place it',
   hint_erase: 'Erase your drawing',
   style_bold: 'Bold', style_mono: 'Mono', style_wide: 'Wide',
+  ctx_size: 'Size', ctx_style: 'Style', ctx_color: 'Color',
   smaller: 'Smaller', bigger: 'Bigger', rot_ccw: 'Rotate ↺', rot_cw: 'Rotate ↻',
   delete: 'Delete', undo: 'Undo', redo: 'Redo', clear: 'Clear',
   layer_front: 'Bring front', layer_back: 'Send back', duplicate: 'Duplicate',
@@ -1422,10 +1581,7 @@ en: {
   feed_save_body_sim: author => author + ' got saved',
   region_japan: 'Japan', region_na: 'North America', region_sa: 'South America', region_eu: 'Europe',
   region_af: 'Africa', region_asia: 'Asia', region_oceania: 'Oceania', region_sea: 'out at sea',
-  about_sim_note: "In this prototype, other people's activity is simulated.",
   ad_tag: 'AD',
-  about_rules: "Here, the ads are the main attraction. Slots don't hold back, and full-page ads roll through in rotation and pass by (close them anytime with ✕). Want to binge them all? Open the Gallery.",
-  economy_note: "Ads don't disappear. Newer ads get more airtime, and saved ads keep coming back around. So you don't see the same one over and over, anything you've viewed a lot rests for a while. Don't want an ad? Tap ✕ and you won't see it again. Saves live in your scrapbook, and the poster can see them too.",
   link_label: 'Link (optional)', caption_ph: 'Caption', name_label: 'Name',
   link_allow: 'Allowlist: YouTube · Spotify · X · GitHub · pixiv · note · Twitch · SoundCloud · Bandcamp · niconico',
   link_bad_url: "That doesn't look like a URL", link_not_allowed: h => h + ' is not on the allowlist',
@@ -1445,6 +1601,7 @@ en: {
   review_note: 'Every ad — images included — is reviewed by a human before it goes live.',
   rate_limit: "You've used today's slots. Come back tomorrow.",
   rate_left: n => n + ' post' + (n === 1 ? '' : 's') + ' left today',
+  rate_left_short: n => n + ' left',
   slot_line: 'Line', slot_card: 'Card', slot_halfL: 'Half L', slot_halfR: 'Half R', slot_full: 'Full',
   admin_title: 'Admin', admin_sub: "In production only the admin sees this — it's a prototype, go ahead",
   queue_review: 'REVIEW QUEUE', queue_reports: 'REPORTS', queue_demo: 'DEMO — FAST-FORWARD TIME',
@@ -1459,16 +1616,10 @@ en: {
   about_sub: 'β — working prototype',
   about_h2_1: 'Ad space has always been read-only.', about_h2_2: 'This new tab lets anyone write to it.',
   about_lead: 'Pick a slot and post for free. Want to stand out? Earn attention.',
-  hiw_title: 'HOW IT WORKS',
-  hiw: [
-    'Posting is free. Newer ads get more airtime, and saved ads keep coming back around.',
-    "Ads don't disappear. But if you've seen one a lot, it rests for a while so the mix stays fresh.",
-    'Every ad — images included — is reviewed by a human before it goes live. Links from a short allowlist only.',
-    'The shared world-map pixel board rolls through the rotation as an ad of its own. When you spot it, drop a pixel.',
-    'See everything in the Gallery. The most-saved ads make the Hall of Fame.',
-  ],
-  surf_title: 'SURFACES',
-  surf_note: 'The same pool can run anywhere: wallpaper, ticker, terminal, stream overlay, taskbar. Try the SURFACE switcher below.',
+  about_s1_title: 'Pick a slot, post for free', about_s1_body: 'Tap any open slot and build your ad right there.',
+  about_s2_title: 'A human reviews it', about_s2_body: 'Every ad, images included, gets a human check before going live.',
+  about_s3_title: 'Saves bring it back around', about_s3_body: 'Newer ads get more airtime, and saved ones keep coming back.',
+  about_gallery_link: 'See the gallery',
   about_note: "This prototype runs entirely in your browser — nothing you post is shared yet. Open Admin to review posts and fast-forward time to watch exposure weights shift.",
   about_go: 'Open the slot', about_sub2: 'an experiment by devnull studio',
   gal_link: 'Gallery', gal_title: 'Gallery',
@@ -1477,6 +1628,7 @@ en: {
   gal_tab_all: 'All', gal_tab_saved: 'Saved', gal_tab_hall: 'Hall of Fame',
   gal_sort_new: 'Newest', gal_sort_saves: 'Most saved',
   gal_see_all: 'See all →',
+  gal_saves_n: n => n + ' saved',
   png_save: 'Save as image',
   your_ad_saves: n => 'Your ad · ' + n + (n === 1 ? ' save' : ' saves'),
   hall_title: 'Most saved of all time',
@@ -2229,12 +2381,16 @@ function attachChips(container, p) {
     b.className = 'sl-chip' + (cls ? ' ' + cls : '');
     b.textContent = txt;
     if (title) { b.title = title; b.setAttribute('aria-label', title); }
-    b.addEventListener('click', e => { e.stopPropagation(); fn(); });
+    b.addEventListener('click', e => { e.stopPropagation(); fn(e); });
     return b;
   };
   if (p.pixel) chips.appendChild(mk(t('place_pixels'), 'place', () => startPaint(), t('place_pixels')));
   const isSaved = (store.savedIds || []).includes(p.id);
-  chips.appendChild(mk(isSaved ? t('saved_chip') : t('save_chip', p.saves || 0), isSaved ? 'saved' : '', () => saveAd(p)));
+  chips.appendChild(mk(isSaved ? t('saved_chip') : t('save_chip', p.saves || 0), isSaved ? 'saved' : '', e => {
+    const rect = isSaved ? null : e.currentTarget.getBoundingClientRect();
+    saveAd(p);
+    if (rect) saveBump(rect);
+  }));
   const isReported = !!(store.reports && store.reports[p.id]);
   chips.appendChild(mk('⚑', 'flag' + (isReported ? ' reported' : ''), () => reportReasonPopover(chips, p, () => mountSlot(p.slot)), t('report')));
   chips.appendChild(mk('✕', 'skip', () => muteAd(p), t('skip')));
@@ -2562,7 +2718,10 @@ function updateRateDisplay() {
   const el = $('rl-left');
   if (!el) return;
   const left = rateLeft();
-  el.textContent = left > 0 ? t('rate_left', left) : t('rate_limit');
+  el.textContent = left > 0 ? t('rate_left_short', left) : t('rate_limit');
+  el.title = left > 0 ? t('rate_left', left) : t('rate_limit');
+  const postBtn = $('ed-post');
+  if (postBtn) postBtn.classList.toggle('at-limit', left <= 0);
 }
 function weightOf(p) {
   if (store.muted && store.muted[p.id]) return 0;
@@ -2651,6 +2810,18 @@ function snapshotOf(p) {
     pixel: p.pixel || undefined, px: p.pixel ? { ...p.px } : undefined, placed: p.placed, people: p.people,
     lastIdx: p.pixel ? p.lastIdx : undefined,
   };
+}
+/* v14: a small "+1" that lifts off the save chip and fades — purely decorative, so it's skipped
+   outright under prefers-reduced-motion rather than just losing its transition. */
+function saveBump(rect) {
+  if (calm) return;
+  const el = document.createElement('span');
+  el.className = 'save-bump mono';
+  el.textContent = '+1';
+  el.style.left = (rect.left + rect.width / 2) + 'px';
+  el.style.top = rect.top + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 320);
 }
 function saveAd(p) {
   store.savedIds = store.savedIds || [];
@@ -3875,23 +4046,68 @@ const TEMPLATES = [
   { key: 'oneliner', nameKey: 'tmpl_oneliner', slot: 'line',
     lineText: () => t('tmpl_oneliner_ph') },
 ];
+/* v14: build a throwaway ad object shaped just like the templates so the same renderAd() used
+   everywhere else (mini preview, gallery thumbs, admin queue) can draw the real template art
+   instead of a flat color swatch. */
+function templatePreviewAd(tpl) {
+  if (tpl.slot === 'line') {
+    return { id: 'tpl-' + tpl.key, slot: 'line', text: tpl.lineText ? tpl.lineText() : '', link: null, author: t('anon_prefix'), postedAt: T(), saves: 0, status: 'live' };
+  }
+  return {
+    id: 'tpl-' + tpl.key, slot: tpl.slot, bg: tpl.bg,
+    texts: tpl.texts ? tpl.texts() : [], stamps: tpl.stamps || [], doodle: null, images: [], link: null, links: [],
+    author: t('anon_prefix'), postedAt: T(), saves: 0, status: 'live',
+  };
+}
+function buildTemplateThumb(tpl) {
+  const thumb = document.createElement('span');
+  thumb.className = 'ed-tmpl-thumb';
+  const ad = templatePreviewAd(tpl);
+  if (tpl.slot === 'line') {
+    thumb.classList.add('is-line');
+    thumb.appendChild(renderAd(ad, { fresh: true, editable: true }));
+    return thumb;
+  }
+  thumb.dataset.slot = tpl.slot;
+  thumb.appendChild(renderAd(ad, { fresh: true, editable: true }));
+  return thumb;
+}
+/* the thumb box's real pixel size depends on the grid column width, which only exists once the
+   card is in the DOM — so scale is set in a second pass, the same two-step approach already used
+   for gallery thumbnails (fitGalleryThumbs). */
+function fitTemplateThumbs() {
+  document.querySelectorAll('#ed-tmpl-grid .ed-tmpl-thumb[data-slot]').forEach(box => {
+    const dims = SLOTS[box.dataset.slot];
+    if (!dims) return;
+    const el = box.querySelector('.screen');
+    if (!el) return;
+    const s = Math.min((box.clientWidth || 1) / dims.W, (box.clientHeight || 1) / dims.H);
+    el.style.transform = 'scale(' + s + ')';
+  });
+}
 function buildTemplateOverlay() {
   $('ed-tmpl-ttl').textContent = t('tmpl_title');
-  $('ed-tmpl-blank').textContent = t('tmpl_blank');
   const grid = $('ed-tmpl-grid');
+  // the blank card lives in the static markup (keeps its one-time click listener) and gets
+  // reparented into the grid below — detach it *before* wiping the grid's innerHTML, or the
+  // second time this runs (blank now lives inside grid from the first run) it gets destroyed
+  // along with everything else and $('ed-tmpl-blank') goes null.
+  const blank = $('ed-tmpl-blank');
+  blank.remove();
   grid.innerHTML = '';
   for (const tpl of TEMPLATES) {
     const b = document.createElement('button');
     b.className = 'ed-tmpl-card';
-    const sw = document.createElement('span');
-    sw.className = 'ed-tmpl-sw';
-    sw.style.background = tpl.bg ? bgCss(tpl.bg) : 'linear-gradient(135deg,#3a3a3c,#1c1b1e)';
+    b.appendChild(buildTemplateThumb(tpl));
     const lbl = document.createElement('span');
     lbl.textContent = t(tpl.nameKey);
-    b.appendChild(sw); b.appendChild(lbl);
+    b.appendChild(lbl);
     b.addEventListener('click', () => applyTemplate(tpl));
     grid.appendChild(b);
   }
+  blank.innerHTML = '<span class="ed-tmpl-thumb">+</span><span>' + esc(t('tpl_blank')) + '</span>';
+  grid.appendChild(blank);
+  fitTemplateThumbs();
 }
 function applyTemplate(tpl) {
   const pre = snapCP();
@@ -3908,6 +4124,7 @@ function applyTemplate(tpl) {
     cp.strokes = [];
     $('bg-c1').value = cp.bg.c1; $('bg-c2').value = cp.bg.c2; $('bg-ang').value = cp.bg.ang;
     setBgMode(cp.bg.grad);
+    markSelectedPreset();
   }
   commitInstant(pre);
   buildPlacementPicker();
@@ -3917,7 +4134,13 @@ function applyTemplate(tpl) {
   hideTemplateOverlay();
 }
 function hideTemplateOverlay() { $('ed-tmpl').classList.remove('show'); }
-function showTemplateOverlay() { buildTemplateOverlay(); $('ed-tmpl').classList.add('show'); }
+function showTemplateOverlay() {
+  // #ed-tmpl must already be display:flex before buildTemplateOverlay() measures thumb boxes —
+  // otherwise every clientWidth/clientHeight reads 0 and the (0 || 1) fallback in
+  // fitTemplateThumbs() scales the real-template thumbnails down to a single invisible pixel.
+  $('ed-tmpl').classList.add('show');
+  buildTemplateOverlay();
+}
 $('ed-tmpl-close').addEventListener('click', hideTemplateOverlay);
 $('ed-tmpl-blank').addEventListener('click', hideTemplateOverlay);
 
@@ -4025,7 +4248,7 @@ function openComposer(initSlot) {
   resetUndo();
   showTemplateOverlay();
 }
-function closeComposer() { stopTextEdit(); $('composer').classList.remove('show'); }
+function closeComposer() { stopTextEdit(); closePlacementPop(); $('composer').classList.remove('show'); }
 $('btn-compose').addEventListener('click', () => openComposer());
 $('ed-close').addEventListener('click', closeComposer);
 
@@ -4039,10 +4262,23 @@ function buildPlacementPicker() {
     b.textContent = t('slot_' + k);
     b.title = t('slot_' + k);
     b.classList.toggle('sel', cp.slot === k);
-    b.addEventListener('click', () => { cp.slot = k; buildPlacementPicker(); applyEditorMode(); rebuildPreview(); });
+    b.addEventListener('click', () => { cp.slot = k; buildPlacementPicker(); applyEditorMode(); rebuildPreview(); closePlacementPop(); });
     wrap.appendChild(b);
   }
+  $('ed-placement-btn').textContent = t('slot_' + cp.slot);
 }
+/* v14: placement is a click-to-open popover, not an always-open panel — it must never be the
+   thing sitting open behind the template picker when the editor first appears. */
+function openPlacementPop() { $('ed-placement-pop').classList.add('open'); }
+function closePlacementPop() { $('ed-placement-pop').classList.remove('open'); }
+$('ed-placement-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  $('ed-placement-pop').classList.toggle('open');
+});
+document.addEventListener('click', e => {
+  if (!$('ed-group-placement').contains(e.target)) closePlacementPop();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePlacementPop(); });
 function applyEditorMode() {
   const isLine = cp.slot === 'line';
   $('ed-tools').style.display = isLine ? 'none' : '';
@@ -4060,9 +4296,9 @@ function setBgMode(grad) {
   $('bg-ang').style.opacity = grad ? 1 : 0.3;
   rebuildPreviewSoft();
 }
-document.querySelectorAll('#bg-mode button').forEach(b => b.addEventListener('click', () => setBgMode(b.dataset.m === 'grad')));
-$('bg-c1').addEventListener('input', () => { cp.bg.c1 = $('bg-c1').value; rebuildPreviewSoft(); });
-$('bg-c2').addEventListener('input', () => { cp.bg.c2 = $('bg-c2').value; rebuildPreviewSoft(); });
+document.querySelectorAll('#bg-mode button').forEach(b => b.addEventListener('click', () => { setBgMode(b.dataset.m === 'grad'); markSelectedPreset(); }));
+$('bg-c1').addEventListener('input', () => { cp.bg.c1 = $('bg-c1').value; rebuildPreviewSoft(); markSelectedPreset(); });
+$('bg-c2').addEventListener('input', () => { cp.bg.c2 = $('bg-c2').value; rebuildPreviewSoft(); markSelectedPreset(); });
 $('bg-ang').addEventListener('input', () => { cp.bg.ang = +$('bg-ang').value; rebuildPreviewSoft(); });
 function buildBgPresets() {
   const wrap = $('bg-presets');
@@ -4070,15 +4306,25 @@ function buildBgPresets() {
   for (const [c1, c2] of BG_PRESETS) {
     const b = document.createElement('button');
     b.className = 'preset';
+    b.dataset.c1 = c1; b.dataset.c2 = c2;
     b.style.background = 'linear-gradient(135deg,' + c1 + ',' + c2 + ')';
     b.setAttribute('aria-label', 'Background preset');
     b.addEventListener('click', () => {
       cp.bg.c1 = c1; cp.bg.c2 = c2;
       $('bg-c1').value = c1; $('bg-c2').value = c2;
       setBgMode(true);
+      markSelectedPreset();
     });
     wrap.appendChild(b);
   }
+  markSelectedPreset();
+}
+/* v14: give the background presets a visible "this one is active" ring instead of leaving every
+   chip looking equally unselected once you've picked one. */
+function markSelectedPreset() {
+  document.querySelectorAll('#bg-presets .preset').forEach(b => {
+    b.classList.toggle('sel', cp.bg && cp.bg.grad && b.dataset.c1 === cp.bg.c1 && b.dataset.c2 === cp.bg.c2);
+  });
 }
 
 /* link + name */
@@ -4449,21 +4695,31 @@ function renderCtx() {
   ctx.innerHTML = '';
   const add = el => ctx.appendChild(el);
   const hint = txt => { const s = document.createElement('span'); s.className = 'hint'; s.textContent = txt; add(s); };
+  // v14: give each control cluster a tiny mono label (サイズ/スタイル/色), matching the PLACEMENT/
+  // BACKGROUND treatment already used up in #ed-top, instead of a bare row of unlabeled controls.
+  const addLabeled = (labelKey, el) => {
+    const grp = document.createElement('span');
+    grp.className = 'ctx-grp';
+    const lbl = document.createElement('span');
+    lbl.className = 'glbl'; lbl.textContent = t(labelKey);
+    grp.appendChild(lbl); grp.appendChild(el);
+    add(grp);
+  };
 
   if (tool === 'select') {
     const d = selData();
     if (!d) { hint(t('hint_select_empty')); return; }
     const styleEdit = fn => { const pre = snapCP(); fn(); commitInstant(pre); rebuildPreview(); };
     if (sel.kind === 'text') {
-      add(segBtns([[1, 'S'], [2, 'M'], [3, 'L'], [4, 'XL']], v => d.s === v, v => styleEdit(() => { d.s = v; })));
-      add(segBtns([['g', t('style_bold')], ['m', t('style_mono')], ['r', t('style_wide')]], v => d.f === v, v => styleEdit(() => { d.f = v; })));
+      addLabeled('ctx_size', segBtns([[1, 'S'], [2, 'M'], [3, 'L'], [4, 'XL']], v => d.s === v, v => styleEdit(() => { d.s = v; })));
+      addLabeled('ctx_style', segBtns([['g', t('style_bold')], ['m', t('style_mono')], ['r', t('style_wide')]], v => d.f === v, v => styleEdit(() => { d.f = v; })));
       const col = document.createElement('input');
       col.type = 'color'; col.value = d.c || '#ffffff';
       col.setAttribute('aria-label', 'Text color');
       let colPre = null;
       col.addEventListener('input', () => { if (colPre === null) colPre = snapCP(); d.c = col.value; rebuildPreviewSoft(); });
       col.addEventListener('change', () => { if (colPre !== null) { commitInstant(colPre); colPre = null; } });
-      add(col);
+      addLabeled('ctx_color', col);
     }
     if (sel.kind === 'link') {
       const urlIn = document.createElement('input');
@@ -4500,13 +4756,13 @@ function renderCtx() {
   }
   if (tool === 'text') {
     hint(t('hint_text'));
-    add(segBtns([[1, 'S'], [2, 'M'], [3, 'L'], [4, 'XL']], v => defText.s === v, v => { defText.s = v; renderCtx(); }));
-    add(segBtns([['g', t('style_bold')], ['m', t('style_mono')], ['r', t('style_wide')]], v => defText.f === v, v => { defText.f = v; renderCtx(); }));
+    addLabeled('ctx_size', segBtns([[1, 'S'], [2, 'M'], [3, 'L'], [4, 'XL']], v => defText.s === v, v => { defText.s = v; renderCtx(); }));
+    addLabeled('ctx_style', segBtns([['g', t('style_bold')], ['m', t('style_mono')], ['r', t('style_wide')]], v => defText.f === v, v => { defText.f = v; renderCtx(); }));
     const col = document.createElement('input');
     col.type = 'color'; col.value = defText.c;
     col.setAttribute('aria-label', 'Text color');
     col.addEventListener('input', () => { defText.c = col.value; });
-    add(col);
+    addLabeled('ctx_color', col);
     return;
   }
   if (tool === 'draw' || tool === 'erase') {
@@ -4737,24 +4993,35 @@ document.querySelectorAll('.q-tool[data-ff]').forEach(b => {
 $('q-reset').addEventListener('click', () => { localStorage.removeItem(LS); location.reload(); });
 
 /* ================= about ================= */
+/* v14: about is now heading / 1-line lead / 3-step cards / one CTA / footnote — nothing else.
+   The old HOW IT WORKS bullet list, SURFACES section and repeated closing paragraphs are gone;
+   their content is folded into the 3 steps and the single footnote below. */
 function buildAbout() {
   const card = $('about-card');
-  const hiw = L[store.lang].hiw;
+  const steps = [
+    ['1', t('about_s1_title'), t('about_s1_body')],
+    ['2', t('about_s2_title'), t('about_s2_body')],
+    ['3', t('about_s3_title'), t('about_s3_body')],
+  ];
   card.innerHTML =
     '<div class="a-mark">/dev/ad <span>' + esc(t('about_sub')) + '</span></div>' +
     '<h2>' + esc(t('about_h2_1')) + '<br>' + esc(t('about_h2_2')) + '</h2>' +
     '<p class="lead">' + esc(t('about_lead')) + '</p>' +
-    '<h3>' + esc(t('hiw_title')) + '</h3>' +
-    '<ul>' + hiw.map((s, i) => '<li>' + esc(s) + (i === 2 ? ' <button type="button" class="gl-inline" id="gl-from-about">' + esc(t('gl_link')) + ' ▸</button>' : '') + '</li>').join('') + '</ul>' +
-    '<h3>' + esc(t('surf_title')) + '</h3>' +
-    '<ul><li>' + esc(t('surf_note')) + '</li></ul>' +
-    '<p class="a-note">' + esc(t('about_rules')) + '</p>' +
-    '<p class="a-note">' + esc(t('economy_note')) + '</p>' +
-    '<p class="a-note">' + esc(t('about_note')) + ' ' + esc(t('about_sim_note')) + '</p>' +
-    '<div class="a-cta"><button class="a-go" id="about-go">' + esc(t('about_go')) + '</button><span class="a-sub">' + esc(t('about_sub2')) + '</span></div>';
+    '<div class="a-steps">' + steps.map(([n, title, body]) =>
+      '<div class="a-step"><span class="n mono">' + n + '</span><div class="stitle">' + esc(title) + '</div><div class="sbody">' + esc(body) + '</div></div>'
+    ).join('') + '</div>' +
+    '<div class="a-cta">' +
+      '<button class="a-go" id="about-go">' + esc(t('about_go')) + '</button>' +
+      '<span class="a-sub">' + esc(t('about_sub2')) + '</span>' +
+      '<span class="a-sublinks">' +
+        '<button type="button" class="a-sublink" id="gl-from-about">' + esc(t('gl_link')) + ' ▸</button>' +
+        '<button type="button" class="a-sublink" id="gal-from-about">' + esc(t('about_gallery_link')) + ' ▸</button>' +
+      '</span>' +
+    '</div>' +
+    '<p class="a-note">' + esc(t('about_note')) + '</p>';
   $('about-go').addEventListener('click', closeAbout);
-  const glBtn = $('gl-from-about');
-  if (glBtn) glBtn.addEventListener('click', () => { closeAbout(); openGuidelines(1); });
+  $('gl-from-about').addEventListener('click', () => { closeAbout(); openGuidelines(1); });
+  $('gal-from-about').addEventListener('click', () => { closeAbout(); openGallery(); });
 }
 function openAbout() { buildAbout(); $('about').classList.add('show'); }
 function closeAbout() {
@@ -4868,13 +5135,16 @@ function fitGalleryThumbs(root) {
 }
 /* v7: ads posted by the viewer (store.user, id starts with 'u') get their save count called out */
 function galCardMeta(p) {
+  // v14: two-line hierarchy — row 1 is slot tag + save count (glanceable), row 2 is the author (dim)
   const meta = document.createElement('div');
   meta.className = 'gal-meta';
+  const row1 = document.createElement('div');
+  row1.className = 'gal-meta-row1';
   const tag = document.createElement('span'); tag.className = 'gal-tag'; tag.textContent = p.pixel ? t('px_board') : SLOT_TAG[p.slot];
+  const saves = document.createElement('span'); saves.className = 'gal-savesn'; saves.textContent = t('gal_saves_n', p.saves || 0);
+  row1.appendChild(tag); row1.appendChild(saves);
   const author = document.createElement('span'); author.className = 'gal-author'; author.textContent = p.author || t('anon_prefix');
-  meta.appendChild(tag); meta.appendChild(author);
-  const saves = document.createElement('span'); saves.className = 'gal-savesn'; saves.textContent = '+' + (p.saves || 0);
-  meta.appendChild(saves);
+  meta.appendChild(row1); meta.appendChild(author);
   return meta;
 }
 function galMineBadge(p) {
@@ -4892,12 +5162,17 @@ function galAttachChips(card, p) {
     b.className = 'sl-chip' + (cls ? ' ' + cls : '');
     b.textContent = txt;
     if (title) { b.title = title; b.setAttribute('aria-label', title); }
-    b.addEventListener('click', e => { e.stopPropagation(); fn(); });
+    b.addEventListener('click', e => { e.stopPropagation(); fn(e); });
     return b;
   };
   if (p.pixel) chips.appendChild(mk(t('place_pixels'), 'place', () => startPaint()));
   const isSaved = (store.savedIds || []).includes(p.id);
-  chips.appendChild(mk(isSaved ? t('saved_chip') : t('save_chip', p.saves || 0), isSaved ? 'saved' : '', () => { saveAd(p); renderGallery(); }));
+  chips.appendChild(mk(isSaved ? t('saved_chip') : t('save_chip', p.saves || 0), isSaved ? 'saved' : '', e => {
+    const rect = isSaved ? null : e.currentTarget.getBoundingClientRect();
+    saveAd(p);
+    if (rect) saveBump(rect);
+    renderGallery();
+  }));
   const isReported = !!(store.reports && store.reports[p.id]);
   chips.appendChild(mk('⚑', 'flag' + (isReported ? ' reported' : ''), () => reportReasonPopover(chips, p, () => renderGallery()), t('report')));
   chips.appendChild(mk(t('png_save'), 'png', () => exportAdPng(p)));
