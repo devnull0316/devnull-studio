@@ -134,6 +134,28 @@ nav a:hover { color: var(--ink); border-color: var(--shu); }
 }
 .btn.fill:hover { background: #266a43; border-color: #266a43; transform: translateY(-2px); }
 
+/* ===== ヒーローの排水口(/dev/null) ===== */
+.hero-void {
+  position: absolute;
+  right: clamp(0px, 4vw, 48px);
+  top: 50%;
+  transform: translateY(-53%);
+  width: clamp(250px, 29vw, 400px);
+  aspect-ratio: 1 / 1;
+  display: block;
+}
+.hero-void canvas { width: 100%; height: 100%; display: block; }
+.hero-void .tag {
+  position: absolute; bottom: 2%; left: 50%; transform: translateX(-50%);
+  font-size: 11.5px; color: var(--ink-faint); letter-spacing: 0.08em;
+  white-space: nowrap; opacity: 0; transition: opacity .25s;
+}
+.hero-void:hover .tag, .hero-void:focus-visible .tag { opacity: 1; }
+@media (max-width: 960px) {
+  .hero-void { position: static; transform: none; margin: 40px auto 0; width: min(300px, 74vw); }
+  .hero-void .tag { position: static; display: block; text-align: center; transform: none; margin-top: 2px; opacity: 1; }
+}
+
 /* ===== セクション共通 ===== */
 section { max-width: 1060px; margin: 0 auto; padding: clamp(48px, 8vh, 84px) clamp(20px, 4vw, 56px); }
 .sec-head { display: flex; align-items: baseline; gap: 18px; margin-bottom: 38px; flex-wrap: wrap; }
@@ -335,6 +357,10 @@ footer a:hover { color: var(--ink); }
     <a class="btn fill" href="/sumi.html">墨蛍 を遊ぶ</a>
     <a class="btn" href="#works">作品を見る</a>
   </div>
+  <a class="hero-void" href="/null-demo.html" aria-label="社名の由来 /dev/null — 3Dデモを開く">
+    <canvas id="voidc" aria-hidden="true"></canvas>
+    <span class="tag">社名の由来。さわれます</span>
+  </a>
 </div>
 
 <section id="works">
@@ -566,6 +592,342 @@ console.log(
   '%c DevNull Studio %c\n\nようこそ、モニターの裏側へ。\nここに気付く人は、だいたい同業者です。',
   'background:#17181a;color:#fafafa;font-weight:bold;padding:4px 10px;border-radius:4px;', ''
 );
+})();
+</script>
+
+<script>
+/* ヒーローの排水口 — /dev/null の縮小版。紙の上を流れる墨の文字が、
+   小さな黒い点に吸い込まれていく。null-demo.html のエンジンの翻案。 */
+'use strict';
+(() => {
+const canvas = document.getElementById('voidc');
+if (!canvas) return;
+const gl = canvas.getContext('webgl2', { antialias: false, alpha: true });
+if (!gl) { canvas.parentElement.style.display = 'none'; return; } // 非対応なら静かに消える
+
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarse = matchMedia('(pointer: coarse)').matches;
+
+/* --- グリフアトラス(1024px / 16x16セル) --- */
+const CELLS = 16, CELL = 64, ATLAS = CELLS * CELL;
+const ac = document.createElement('canvas');
+ac.width = ac.height = ATLAS;
+const actx = ac.getContext('2d', { willReadFrequently: true });
+const gidx = new Map();
+let nextCell = 0, atlasTex = null;
+function cellFor(ch) {
+  if (gidx.has(ch)) return gidx.get(ch);
+  if (nextCell >= CELLS * CELLS) return gidx.get('?') ?? 0;
+  const i = nextCell++;
+  const x = (i % CELLS) * CELL, y = ((i / CELLS) | 0) * CELL;
+  actx.save();
+  actx.clearRect(x, y, CELL, CELL);
+  actx.translate(x + CELL / 2, y + CELL / 2);
+  actx.fillStyle = '#fff';
+  actx.font = '600 46px ui-monospace, Menlo, "Hiragino Sans", sans-serif';
+  actx.textAlign = 'center';
+  actx.textBaseline = 'middle';
+  actx.fillText(ch, 0, 2);
+  actx.restore();
+  gidx.set(ch, i);
+  if (atlasTex) {
+    gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, gl.RGBA, gl.UNSIGNED_BYTE, actx.getImageData(x, y, CELL, CELL));
+  }
+  return i;
+}
+const AMB = '0123456789abcdef<>/{}();=+-*#$&?' + 'あかさたなはまやらわいきしちにひみりうくすつぬふむゆる';
+for (const ch of AMB) cellFor(ch);
+atlasTex = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ac);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+/* --- 行列 --- */
+const proj = new Float32Array(16), view = new Float32Array(16), vp = new Float32Array(16);
+function persp(o, fov, asp, n, f) {
+  const t = 1 / Math.tan(fov / 2); o.fill(0);
+  o[0] = t / asp; o[5] = t; o[10] = (f + n) / (n - f); o[11] = -1; o[14] = 2 * f * n / (n - f);
+}
+function lookAt(o, e) {
+  let zx = e[0], zy = e[1], zz = e[2], l = Math.hypot(zx, zy, zz);
+  zx /= l; zy /= l; zz /= l;
+  let xx = zz, xz = -zx; l = Math.hypot(xx, xz) || 1; xx /= l; xz /= l;
+  const yx = zy * xz, yy = zz * xx - zx * xz, yz = -zy * xx;
+  o[0]=xx; o[1]=yx; o[2]=zx; o[3]=0; o[4]=0; o[5]=yy; o[6]=zy; o[7]=0;
+  o[8]=xz; o[9]=yz; o[10]=zz; o[11]=0;
+  o[12]=-(xx*e[0]+xz*e[2]); o[13]=-(yx*e[0]+yy*e[1]+yz*e[2]); o[14]=-(zx*e[0]+zy*e[1]+zz*e[2]); o[15]=1;
+}
+function mul(o, a, b) {
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++)
+    o[c*4+r] = a[r]*b[c*4] + a[4+r]*b[c*4+1] + a[8+r]*b[c*4+2] + a[12+r]*b[c*4+3];
+}
+
+/* --- シェーダー --- */
+function sh(t, s) { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x);
+  if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(x)); return x; }
+function prog(v, f) { const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, v));
+  gl.attachShader(p, sh(gl.FRAGMENT_SHADER, f)); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p)); return p; }
+
+const pp = prog(`#version 300 es
+precision highp float;
+layout(location=0) in vec3 aPos; layout(location=1) in float aSize;
+layout(location=2) in float aStretch; layout(location=3) in float aGlyph;
+layout(location=4) in float aMix; layout(location=5) in float aAlpha;
+uniform mat4 uVP; uniform float uScale; uniform float uAspect;
+out float vG; out float vM; out float vA; out float vAng; out float vS;
+void main() {
+  vec4 c = uVP * vec4(aPos, 1.0);
+  gl_Position = c;
+  gl_PointSize = clamp(aSize * aStretch * uScale / max(c.w, 0.1), 1.0, 120.0);
+  vec3 t = normalize(vec3(-aPos.z, 0.0, aPos.x) + vec3(0.0001));
+  vec4 c2 = uVP * vec4(aPos + t * 0.05, 1.0);
+  vec2 d = c2.xy / max(c2.w, 0.1) - c.xy / max(c.w, 0.1);
+  d.x *= uAspect;
+  vAng = atan(d.y, d.x);
+  vG = aGlyph; vM = aMix; vA = aAlpha; vS = aStretch;
+}`, `#version 300 es
+precision highp float;
+uniform sampler2D uAtlas;
+in float vG; in float vM; in float vA; in float vAng; in float vS;
+out vec4 frag;
+const vec3 INK = vec3(0.090, 0.094, 0.102);
+const vec3 GRAY = vec3(0.42, 0.43, 0.45);
+const vec3 SHU = vec3(0.180, 0.490, 0.310);
+void main() {
+  vec2 c = gl_PointCoord - 0.5;
+  float s = sin(-vAng), co = cos(-vAng);
+  c = vec2(c.x * co - c.y * s, c.x * s + c.y * co);
+  c.y *= vS;
+  if (abs(c.x) > 0.5 || abs(c.y) > 0.5) discard;
+  float cell = floor(vG + 0.5);
+  vec2 uv = (vec2(mod(cell, 16.0), floor(cell / 16.0)) + (c + 0.5)) / 16.0;
+  float a = texture(uAtlas, uv).a * vA;
+  float burn = clamp(vM, 0.0, 1.0);
+  vec3 base = vM < 0.0 ? GRAY : INK;
+  vec3 col = mix(base, SHU, smoothstep(0.15, 0.8, burn));
+  frag = vec4(col, a);
+}`);
+
+const hp = prog(`#version 300 es
+precision highp float;
+layout(location=0) in vec2 aC;
+uniform mat4 uVP; uniform vec3 uR, uU; uniform float uRad;
+out vec2 vC;
+void main() { gl_Position = uVP * vec4((uR * aC.x + uU * aC.y) * uRad, 1.0); vC = aC; }`,
+`#version 300 es
+precision highp float;
+in vec2 vC; uniform int uMode; out vec4 frag;
+void main() {
+  float r = length(vC);
+  if (uMode == 0) {
+    float edge = 1.0 - smoothstep(0.435, 0.46, r);
+    if (edge < 0.004) discard;
+    frag = vec4(vec3(0.090, 0.094, 0.102), edge);
+  } else {
+    float ring = exp(-pow((r - 0.472) * 38.0, 2.0)) * 0.3;
+    if (ring < 0.01) discard;
+    frag = vec4(vec3(0.180, 0.490, 0.310), ring);
+  }
+}`);
+
+/* --- 粒子 --- */
+const N = coarse ? 1200 : 2000, RH = 1.0, RMAX = 6.0, F = 8;
+const r = new Float32Array(N), th = new Float32Array(N), y0 = new Float32Array(N),
+      r0 = new Float32Array(N), vk = new Float32Array(N), sz = new Float32Array(N),
+      gy = new Float32Array(N), bn = new Float32Array(N), hue = new Float32Array(N),
+      md = new Uint8Array(N);
+const buf = new Float32Array(N * F), pool = [];
+function spawn(i, rim) {
+  md[i] = 1;
+  r[i] = rim ? RMAX * (0.94 + Math.random() * 0.06) : 1.15 + Math.pow(Math.random(), 1.5) * (RMAX - 1.15);
+  th[i] = Math.random() * Math.PI * 2;
+  r0[i] = Math.max(r[i], 2);
+  y0[i] = (Math.random() - 0.5) * 0.8 * (r[i] / RMAX);
+  vk[i] = 0.8 + Math.random() * 0.5;
+  sz[i] = 0.10 + Math.random() * 0.10;
+  bn[i] = 0;
+  hue[i] = Math.random() < 0.35 ? -1 : 0;
+  gy[i] = cellFor(AMB[(Math.random() * AMB.length) | 0]);
+}
+for (let i = 0; i < N; i++) { if (i < N * 0.8) spawn(i, false); else { md[i] = 0; pool.push(i); } }
+
+// ボツになったものが、ときどき流れてくる
+const WORDS = ['ボツ案', '黒歴史', 'TODO', '旧デザイン', 'バグ', '仮タイトル', 'v0.1', '締切'];
+const queue = [];
+function feed(word) {
+  const now = performance.now();
+  let k = 0;
+  for (const ch of word) queue.push({ ch, t: now + (k++) * 90 });
+}
+function drain(now, az) {
+  while (queue.length && queue[0].t <= now) {
+    const { ch } = queue.shift();
+    const i = pool.pop();
+    if (i === undefined) return;
+    md[i] = 2; r[i] = 4.0 + Math.random() * 0.2; th[i] = az + 0.5;
+    r0[i] = r[i]; y0[i] = -0.7; vk[i] = 2.2; sz[i] = 0.26; bn[i] = 0; hue[i] = 0;
+    gy[i] = cellFor(ch);
+  }
+}
+function step(dt) {
+  for (let i = 0; i < N; i++) {
+    if (!md[i]) continue;
+    const ri = r[i];
+    th[i] += (1.35 / Math.pow(ri, 1.5)) * vk[i] * dt;
+    r[i] -= (0.11 + Math.max(0, 1.3 - ri) * 0.5) * vk[i] * (md[i] === 2 ? 2.0 : 1) * dt;
+    if (r[i] < RH) {
+      bn[i] += dt / 0.5;
+      if (bn[i] >= 1) { if (md[i] === 2) { md[i] = 0; pool.push(i); } else spawn(i, true); }
+    }
+  }
+}
+function fill() {
+  let n = 0;
+  for (let i = 0; i < N; i++) {
+    if (!md[i]) continue;
+    const ri = Math.max(r[i], RH * 0.6), b = bn[i], o = n * F, dec = Math.min(ri / r0[i], 1);
+    buf[o] = Math.cos(th[i]) * ri;
+    buf[o + 1] = y0[i] * dec;
+    buf[o + 2] = Math.sin(th[i]) * ri;
+    buf[o + 3] = sz[i];
+    buf[o + 4] = Math.min(1 + 1.0 / ri + b * 2.2, 4.5);
+    buf[o + 5] = gy[i];
+    buf[o + 6] = hue[i] < 0 ? -1 : b;
+    const base = md[i] === 2 ? 0.85 : (hue[i] < 0 ? 0.34 : 0.62);
+    buf[o + 7] = base * Math.min((r0[i] - ri) / 0.25 + 0.15, 1) * (1 - b * b);
+    n++;
+  }
+  return n;
+}
+
+/* --- GPUバッファ --- */
+const vao = gl.createVertexArray();
+gl.bindVertexArray(vao);
+const vbo = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+gl.bufferData(gl.ARRAY_BUFFER, buf, gl.DYNAMIC_DRAW);
+for (let i = 0, off = 0; i < 6; i++) {
+  const sizes = [3, 1, 1, 1, 1, 1];
+  gl.enableVertexAttribArray(i);
+  gl.vertexAttribPointer(i, sizes[i], gl.FLOAT, false, F * 4, off);
+  off += sizes[i] * 4;
+}
+const qv = gl.createVertexArray();
+gl.bindVertexArray(qv);
+const qb = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, qb);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0);
+gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+gl.bindVertexArray(null);
+
+const U = (p, n) => gl.getUniformLocation(p, n);
+const uvp = U(pp,'uVP'), usc = U(pp,'uScale'), uas = U(pp,'uAspect'), uat = U(pp,'uAtlas');
+const hvp = U(hp,'uVP'), hr = U(hp,'uR'), hu2 = U(hp,'uU'), hrad = U(hp,'uRad'), hmode = U(hp,'uMode');
+
+/* --- カメラ・描画 --- */
+const FOV = 50 * Math.PI / 180;
+let W = 0, H = 0;
+function resize() {
+  const d = Math.min(devicePixelRatio || 1, 2);
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  if (!W || !H) return;
+  canvas.width = Math.round(W * d); canvas.height = Math.round(H * d);
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  persp(proj, FOV, W / H, 0.1, 60);
+}
+resize();
+addEventListener('resize', resize);
+
+let pax = 0, pay = 0, tax = 0, tay = 0;
+document.querySelector('.hero').addEventListener('pointermove', (e) => {
+  const b = canvas.getBoundingClientRect();
+  tax = ((e.clientX - b.left) / b.width - 0.5) * 0.3;
+  tay = ((e.clientY - b.top) / b.height - 0.5) * 0.18;
+});
+
+gl.enable(gl.DEPTH_TEST);
+gl.clearColor(0, 0, 0, 0);
+
+let visible = true, last = performance.now(), wordTimer = 4;
+if ('IntersectionObserver' in window) {
+  new IntersectionObserver((es) => { visible = es[0].isIntersecting; last = performance.now(); }).observe(canvas);
+}
+document.addEventListener('visibilitychange', () => { last = performance.now(); });
+
+function draw(t) {
+  const az = (calm ? 0.6 : t * 0.045) + pax;
+  const el = 0.5 + pay, D = 8.6;
+  const eye = [Math.cos(az) * Math.cos(el) * D, Math.sin(el) * D, Math.sin(az) * Math.cos(el) * D];
+  lookAt(view, eye);
+  mul(vp, proj, view);
+  const fwd = [-eye[0]/D, -eye[1]/D, -eye[2]/D];
+  let right = [fwd[2], 0, -fwd[0]];
+  const l = Math.hypot(right[0], right[2]) || 1; right = [right[0]/l, 0, right[2]/l];
+  const up = [right[1]*fwd[2] - right[2]*fwd[1], right[2]*fwd[0] - right[0]*fwd[2], right[0]*fwd[1] - right[1]*fwd[0]];
+
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+  // 黒い点(墨だまり)
+  gl.useProgram(hp);
+  gl.uniformMatrix4fv(hvp, false, vp);
+  gl.uniform3fv(hr, right); gl.uniform3fv(hu2, up);
+  gl.uniform1f(hrad, 2.2); gl.uniform1i(hmode, 0);
+  gl.depthMask(true);
+  gl.bindVertexArray(qv);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  // 墨の文字たち
+  gl.depthMask(false);
+  gl.useProgram(pp);
+  gl.uniformMatrix4fv(uvp, false, vp);
+  gl.uniform1f(usc, (canvas.height / 2) / Math.tan(FOV / 2));
+  gl.uniform1f(uas, W / H);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+  gl.uniform1i(uat, 0);
+  const live = fill();
+  gl.bindVertexArray(vao);
+  gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+  gl.bufferSubData(gl.ARRAY_BUFFER, 0, buf, 0, live * F);
+  gl.drawArrays(gl.POINTS, 0, live);
+
+  // 縁のわずかな緑
+  gl.useProgram(hp);
+  gl.uniform1i(hmode, 1);
+  gl.bindVertexArray(qv);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  gl.depthMask(true);
+  gl.bindVertexArray(null);
+  return az;
+}
+
+if (calm) {
+  // 動きを控える設定なら、静止画を一枚だけ
+  step(0.4); draw(0.6);
+} else {
+  function loop(now) {
+    requestAnimationFrame(loop);
+    if (document.hidden || !visible) return;
+    if (!canvas.width) resize();
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    pax += (tax - pax) * 0.05; pay += (tay - pay) * 0.05;
+    wordTimer -= dt;
+    if (wordTimer <= 0) { wordTimer = 6 + Math.random() * 4; feed(WORDS[(Math.random() * WORDS.length) | 0]); }
+    const az = draw(now / 1000);
+    drain(now, az);
+    step(dt);
+  }
+  requestAnimationFrame(loop);
+}
 })();
 </script>
 
