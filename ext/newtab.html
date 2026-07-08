@@ -279,6 +279,14 @@ input, textarea, select { font-family: inherit; }
 }
 .sl-wall-credit:hover .sl-wall-byline, .sl-wall-credit.chips-on .sl-wall-byline, .sl-wall-credit:focus-within .sl-wall-byline { opacity: 0; }
 .sl-wall-credit .sl-chips { left: 0; bottom: 0; transform: none; justify-content: flex-start; }
+/* v16: 壁紙は「景色」に徹する — スクリムで一段沈め、文字主体の広告でもUIと喧嘩しない。
+   クレジットにホバー(タップ)すると暗幕が晴れて広告そのものが見える */
+#sl-full::after {
+  content: ''; position: absolute; inset: 0; z-index: 1;
+  background: rgba(15, 17, 22, 0.40);
+  transition: opacity .3s ease; pointer-events: none;
+}
+#sl-full:has(.sl-wall-credit:hover)::after, #sl-full:has(.sl-wall-credit.chips-on)::after { opacity: 0.06; }
 
 #nt-corner-wrap { position: absolute; left: var(--nt-gap); bottom: var(--nt-gap); z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; max-width: min(360px, 68vw); }
 /* 壁紙のクレジット行と左下で衝突しないよう、壁紙時はフィードを1段上へ積む */
@@ -2813,6 +2821,10 @@ function rotateSlot(slotId) {
   if (surface !== 'newtab' || isRotationPaused(slotId)) return;
   // v15 C2: only the currently visible half slot rotates — the dormant side stays null.
   if ((slotId === 'halfL' || slotId === 'halfR') && slotId !== halfSide) return;
+  // v16: ヒーロー排他はビュー内で固定 — 壁紙が出ている間は半面が湧かず、
+  // 半面の日に壁紙が途中から出てくることもない(次のタブで入れ替わる)
+  if ((slotId === 'halfL' || slotId === 'halfR') && slotCurrent.full) return;
+  if (slotId === 'full' && !slotCurrent.full) return;
   const cur = slotCurrent[slotId];
   const pool = poolFor(slotId).filter(p => !cur || p.id !== cur.id);
   if (!pool.length) return; // nothing else to rotate to
@@ -3438,7 +3450,9 @@ function mountSlot(slotId, opts = {}) {
     slotSeenMark[slotId] = null;
     // v15 C2: the dormant half slot (not this tab's halfSide) shows nothing at all, not even
     // the "open slot" invite — only the currently visible side gets that CTA.
-    const isDormantHalf = (slotId === 'halfL' || slotId === 'halfR') && slotId !== halfSide;
+    // v16: 壁紙モード中は半面そのものが休みなので、空き枠誘導も出さない
+    const isDormantHalf = (slotId === 'halfL' || slotId === 'halfR') &&
+      (slotId !== halfSide || !!slotCurrent.full);
     if (!isDormantHalf) {
       const empty = renderEmptySlot(slotId);
       if (empty) container.appendChild(empty);
@@ -3464,11 +3478,13 @@ function mountSlot(slotId, opts = {}) {
   container.appendChild(wrap);
 }
 function mountAllSlots() {
-  // v15 C1: mountAllSlots is "open a new tab" — flip which half is live and pick only for that
-  // side; the other side mounts null (nothing rendered, see mountSlot's isDormantHalf check).
+  // v16: ヒーローは1枚だけ — 壁紙(full)が出る日は半面を休ませ、壁紙が休みの日に半面が出る。
+  // 1画面の広告は最大3面(ヒーロー+line+card)に抑える。
+  const wallMode = poolFor('full').length > 0 && Math.random() < 0.62;
+  if (!wallMode) slotCurrent.full = null;
   halfSide = halfSide === 'halfL' ? 'halfR' : 'halfL';
   const dormant = halfSide === 'halfL' ? 'halfR' : 'halfL';
-  slotCurrent[halfSide] = pickForSlot(halfSide);
+  slotCurrent[halfSide] = wallMode ? null : pickForSlot(halfSide);
   slotCurrent[dormant] = null;
   for (const s of SLOT_ORDER) mountSlot(s);
   const page = $('nt-page');
