@@ -67,6 +67,7 @@ a { color: inherit; text-decoration: none; }
 .lab-item[href="/garden-demo.html"] { --aura: rgba(140,200,120,0.25); }
 .lab-item[href="/race-demo.html"] { --aura: rgba(255,210,77,0.25); }
 .lab-item[href="/devad.html"] { --aura: rgba(124,227,139,0.22); }
+.lab-item[href="/null-demo.html"] { --aura: rgba(140,160,220,0.28); }
 
 /* ===== ヘッダー ===== */
 header {
@@ -390,6 +391,12 @@ footer a:hover { color: var(--ink); }
         <p>コメントで「1」と打つと、その選択肢が走り出すアンケート。投票者の名前が刻まれ、接戦がそのまま配信の見せ場になる。</p>
         <div class="stat">▶ ブラウザで実証デモを触れます</div>
       </a>
+      <a class="lab-item" href="/null-demo.html">
+        <div class="icon"><svg viewBox="0 0 38 38"><path d="M31 12 C27 7 20 5 14.5 8 C8 11.5 6 20 10 26 C13.5 31 21 32.5 26 29 C30 26.2 31 19.5 27.5 16 C24.5 13 19 13.5 17 17 C15.3 20 16.5 24 20 25 C22.5 25.7 25 24 25 21.5"/></svg></div>
+        <h3>/dev/null</h3>
+        <p>サイト名の由来になった、何を書き込んでも消える場所。外部ライブラリなしの手書きWebGLで3Dにしました。文字を打つと、あなたの言葉が渦を巻いて事象の地平へ落ちていきます。消したい黒歴史をどうぞ。</p>
+        <div class="stat">▶ ブラウザで虚無に触れます</div>
+      </a>
       <div class="lab-item soon">
         <div class="icon"><svg viewBox="0 0 38 38"><path d="M10 7 H28 C29 7 30 8 30 9 V32 C30 33 29 34 28 34 H10 C9 34 8 33 8 32 V9 C8 8 9 7 10 7 M14 5 H24 V10 H14 Z M13 17 H25 M13 22 H25 M13 27 H20"/></svg></div>
         <h3>配信カルテ(構想中)</h3>
@@ -407,6 +414,7 @@ footer a:hover { color: var(--ink); }
     <span class="memo">開発の記録。正直に書いています</span>
   </div>
   <div class="news-list">
+    <div class="news-item"><span class="d">2026.07</span><span class="tag-n">実験室</span><span class="t"><b>「/dev/null」を公開。</b>サイト名の由来を3Dにしました。外部ライブラリなしの手書きWebGLで、打った文字が渦に呑まれて消えます。ついでに、この下の「これより古い記録は…」が本当になりました。</span></div>
     <div class="news-item"><span class="d">2026.07</span><span class="tag-n">実験室</span><span class="t"><b>「/dev/ad」の試作を公開。</b>誰でも無料で出稿できる共有広告枠の実験です。まだブラウザ内だけですが、出稿・人力審査・保存・通報まで一通り動き、wplace式チャージ制の世界地図ピクセルボードが1本の広告として流れてきます。新規タブ・壁紙・タスクバーなど6つの画面に差して試せます。</span></div>
     <div class="news-item"><span class="d">2026.07</span><span class="tag-n">サイト</span><span class="t"><b>サイトを掃除しました。</b>実績システムや墨がこぼれる演出など、にぎやかしを一式おかたづけ。作品はそのままです。</span></div>
     <div class="news-item"><span class="d">2026.06</span><span class="tag-n">実験室</span><span class="t"><b>「コメントの庭」「レース投票」の実証デモを公開。</b>配信を楽しくする道具を作りはじめました。チャット欄つきでその場で試せます。</span></div>
@@ -415,7 +423,7 @@ footer a:hover { color: var(--ink); }
     <div class="news-item"><span class="d">2026.06</span><span class="tag-n">墨蛍</span><span class="t"><b>ステージモード「夜巡り」・難易度3段階・ギャラリーを追加。</b>星の位置が毎回変わるバグも直しました(ステージの意味がなかった)。</span></div>
     <div class="news-item"><span class="d">2026.06</span><span class="tag-n">墨蛍</span><span class="t"><b>公開しました。</b>筆で描いて、蛍を星へ導くゲームです。</span></div>
   </div>
-  <div class="news-foot">これより古い記録は /dev/null にあります(つまり、ありません)。</div>
+  <div class="news-foot">これより古い記録は <a href="/null-demo.html" style="border-bottom: 1px dotted var(--ink-faint)">/dev/null</a> にあります(つまり、ありません)。</div>
 </section>
 
 <section id="faq">

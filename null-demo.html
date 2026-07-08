@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>/dev/null — DevNull Studio 実験室</title>
+<meta name="description" content="サイト名の由来、/dev/null の中身。何を書き込んでも消える場所を、手書きWebGLの3Dにしました。あなたの言葉が渦に呑まれて消えます。">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="theme-color" content="#07080c">
+<meta property="og:type" content="website">
+<meta property="og:title" content="/dev/null — DevNull Studio 実験室">
+<meta property="og:description" content="何を書いても、きれいに消えます。コメントも、黒歴史も。">
+<meta property="og:url" content="https://devnull-studio.com/null-demo.html">
+<meta property="og:image" content="https://devnull-studio.com/og.png">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --void: #07080c;
+  --ink: #e8ecff;
+  --ink-dim: #8b90a3;
+  --ink-faint: #5c6070;
+  --green: #7ce38b;
+  --gold: #ffd24d;
+  --line: rgba(232,236,255,0.14);
+  --mono: ui-monospace, Menlo, 'SF Mono', Consolas, monospace;
+}
+
+html, body { height: 100%; }
+
+body {
+  font-family: 'Hiragino Sans', 'Noto Sans JP', -apple-system, sans-serif;
+  background: var(--void);
+  color: var(--ink);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: rgba(124,227,139,0.25); }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; border-radius: 4px; }
+
+#gl {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  background: radial-gradient(ellipse 90% 70% at 50% 46%, #0d0f18 0%, var(--void) 55%, #030308 100%);
+}
+
+/* ===== 上部バー ===== */
+.top {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px clamp(16px, 3vw, 32px);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  pointer-events: none;
+}
+.top a, .top .bytes { pointer-events: auto; }
+.top .back {
+  color: var(--ink-dim);
+  transition: color .2s;
+  padding: 4px 0;
+}
+.top .back:hover { color: var(--ink); }
+.bytes {
+  color: var(--ink-faint);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  transition: color .3s;
+}
+.bytes b { color: var(--ink-dim); font-weight: 400; transition: color .3s; }
+.bytes.flash, .bytes.flash b { color: var(--green); }
+
+/* ===== プロンプト ===== */
+.prompt-wrap {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 0 16px calc(26px + env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
+}
+.flushed {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--gold);
+  opacity: 0;
+  transition: opacity .5s;
+  min-height: 1.2em;
+}
+.flushed.show { opacity: 0.9; }
+form.prompt {
+  pointer-events: auto;
+  display: flex; align-items: center; gap: 0;
+  font-family: var(--mono);
+  font-size: 15px;
+  background: rgba(10,12,19,0.72);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 13px 18px;
+  width: min(620px, 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: border-color .25s, box-shadow .25s;
+}
+form.prompt:focus-within {
+  border-color: rgba(124,227,139,0.5);
+  box-shadow: 0 0 34px rgba(124,227,139,0.12);
+}
+.prompt .ps1 { color: var(--green); user-select: none; white-space: pre; }
+.prompt .q { color: var(--ink-faint); user-select: none; }
+.prompt input {
+  flex: 1; min-width: 40px;
+  background: none; border: none; outline: none;
+  font: inherit; color: var(--ink);
+  padding: 0 2px;
+  caret-color: var(--green);
+}
+.prompt input::placeholder { color: var(--ink-faint); opacity: 0.7; }
+.prompt .redir { color: var(--ink-dim); user-select: none; white-space: pre; }
+.caption {
+  font-size: 12px;
+  color: var(--ink-dim);
+  letter-spacing: 0.05em;
+  text-align: center;
+  line-height: 1.9;
+}
+.caption small { display: block; font-size: 10.5px; color: var(--ink-faint); letter-spacing: 0.03em; }
+
+@media (max-width: 560px) {
+  form.prompt { font-size: 16px; padding: 12px 14px; } /* 16px以上でiOSのズームを防ぐ */
+  .prompt .redir { display: none; }
+  .prompt .q:last-of-type { display: none; }
+}
+
+/* ===== 非対応環境 ===== */
+.nogl {
+  position: fixed; inset: 0; z-index: 4;
+  display: none;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 24px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 2.2;
+}
+.nogl.show { display: flex; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="gl" aria-hidden="true"></canvas>
+
+<div class="top">
+  <a class="back" href="/index.html#lab">&larr; cd /lab</a>
+  <span class="bytes" id="bytes" title="このブラウザで消した累計">discarded: <b id="bytesN">0 bytes</b></span>
+</div>
+
+<div class="nogl" id="nogl">
+  <p>この端末では WebGL2 が使えないため、虚無を描画できません。<br>
+  でも安心してください。何も表示されていない今のこの画面が、<br>
+  ある意味いちばん正確な /dev/null です。</p>
+</div>
+
+<div class="prompt-wrap">
+  <div class="flushed" id="flushed" role="status" aria-live="polite"></div>
+  <form class="prompt" id="prompt" autocomplete="off">
+    <span class="ps1">$ echo&nbsp;</span><span class="q">"</span><input
+      id="inp" type="text" maxlength="120" enterkeyhint="send"
+      placeholder="消したい言葉をどうぞ"
+      aria-label="消したい言葉。Enterで /dev/null に書き込みます"
+    ><span class="q">"</span><span class="redir">&nbsp;&gt; /dev/null</span>
+  </form>
+  <p class="caption">何を書いても、きれいに消えます。コメントも、黒歴史も。
+    <small>すべてローカル処理。どこにも送信されません(そもそも保存先が /dev/null です)。</small>
+  </p>
+</div>
+
+<script>
+'use strict';
+(() => {
+
+const canvas = document.getElementById('gl');
+const gl = canvas.getContext('webgl2', { antialias: false, alpha: true, powerPreference: 'high-performance' });
+if (!gl) {
+  document.getElementById('nogl').classList.add('show');
+  document.getElementById('prompt').style.display = 'none';
+  return;
+}
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isMobile = matchMedia('(pointer: coarse)').matches;
+
+/* ================= グリフアトラス =================
+   1024px / 16x16セル(64px)。文字は必要になった時に描き足す。
+   日本語もIME経由でそのまま入る。セル0は丸ドット(星・ノイズ用)。 */
+const CELLS = 16, CELL = 64, ATLAS = CELLS * CELL;
+const atlasCanvas = document.createElement('canvas');
+atlasCanvas.width = atlasCanvas.height = ATLAS;
+const actx = atlasCanvas.getContext('2d', { willReadFrequently: true });
+const glyphIndex = new Map();
+let nextCell = 0;
+let atlasTex = null;
+
+function drawCell(i, fn) {
+  const x = (i % CELLS) * CELL, y = Math.floor(i / CELLS) * CELL;
+  actx.save();
+  actx.clearRect(x, y, CELL, CELL);
+  actx.translate(x + CELL / 2, y + CELL / 2);
+  fn(actx);
+  actx.restore();
+  return { x, y };
+}
+
+function cellForChar(ch) {
+  if (glyphIndex.has(ch)) return glyphIndex.get(ch);
+  if (nextCell >= CELLS * CELLS) return glyphIndex.get('?') ?? 0; // 満杯なら ? で代用
+  const i = nextCell++;
+  const { x, y } = drawCell(i, (c) => {
+    c.fillStyle = '#fff';
+    c.font = '600 46px ' + 'ui-monospace, Menlo, "Hiragino Sans", sans-serif';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText(ch, 0, 2);
+  });
+  glyphIndex.set(ch, i);
+  if (atlasTex) { // 追加分だけGPUへ
+    gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, gl.RGBA, gl.UNSIGNED_BYTE,
+      actx.getImageData(x, y, CELL, CELL));
+  }
+  return i;
+}
+
+// セル0: ソフトな丸ドット
+drawCell(nextCell++, (c) => {
+  const g = c.createRadialGradient(0, 0, 2, 0, 0, 26);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.55, 'rgba(255,255,255,0.5)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = g;
+  c.fillRect(-32, -32, 64, 64);
+});
+const DOT = 0;
+
+const AMBIENT_CHARS = '0123456789abcdef' +
+  'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン' +
+  '/dev/null>|:$#*+-?';
+for (const ch of AMBIENT_CHARS) cellForChar(ch);
+
+function uploadAtlas() {
+  atlasTex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+}
+uploadAtlas();
+
+/* ================= 小さな行列ライブラリ ================= */
+function mat4Perspective(out, fovY, aspect, near, far) {
+  const f = 1 / Math.tan(fovY / 2);
+  out.fill(0);
+  out[0] = f / aspect; out[5] = f;
+  out[10] = (far + near) / (near - far); out[11] = -1;
+  out[14] = (2 * far * near) / (near - far);
+  return out;
+}
+function mat4LookAt(out, eye, center, up) {
+  let zx = eye[0]-center[0], zy = eye[1]-center[1], zz = eye[2]-center[2];
+  let l = Math.hypot(zx, zy, zz); zx/=l; zy/=l; zz/=l;
+  let xx = up[1]*zz - up[2]*zy, xy = up[2]*zx - up[0]*zz, xz = up[0]*zy - up[1]*zx;
+  l = Math.hypot(xx, xy, xz); xx/=l; xy/=l; xz/=l;
+  const yx = zy*xz - zz*xy, yy = zz*xx - zx*xz, yz = zx*xy - zy*xx;
+  out[0]=xx; out[1]=yx; out[2]=zx; out[3]=0;
+  out[4]=xy; out[5]=yy; out[6]=zy; out[7]=0;
+  out[8]=xz; out[9]=yz; out[10]=zz; out[11]=0;
+  out[12]=-(xx*eye[0]+xy*eye[1]+xz*eye[2]);
+  out[13]=-(yx*eye[0]+yy*eye[1]+yz*eye[2]);
+  out[14]=-(zx*eye[0]+zy*eye[1]+zz*eye[2]);
+  out[15]=1;
+  return out;
+}
+function mat4Mul(out, a, b) {
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
+    out[c*4+r] = a[r]*b[c*4] + a[4+r]*b[c*4+1] + a[8+r]*b[c*4+2] + a[12+r]*b[c*4+3];
+  }
+  return out;
+}
+
+/* ================= シェーダー ================= */
+function compile(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+function program(vs, fs) {
+  const p = gl.createProgram();
+  gl.attachShader(p, compile(gl.VERTEX_SHADER, vs));
+  gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  return p;
+}
+
+// --- グリフ粒子。軌道の接線方向にグリフを向け、地平近くで引き伸ばす ---
+const particleProg = program(`#version 300 es
+precision highp float;
+layout(location=0) in vec3 aPos;
+layout(location=1) in float aSize;    // ワールド単位
+layout(location=2) in float aStretch; // 接線方向の伸び 1..5
+layout(location=3) in float aGlyph;
+layout(location=4) in float aMix;     // 0緑 →1金→白
+layout(location=5) in float aAlpha;
+uniform mat4 uVP;
+uniform float uPointScale; // px = worldSize * uPointScale / w
+uniform float uAspect;
+out float vGlyph; out float vMix; out float vAlpha; out float vAngle; out float vStretch;
+void main() {
+  vec4 clip = uVP * vec4(aPos, 1.0);
+  gl_Position = clip;
+  gl_PointSize = clamp(aSize * aStretch * uPointScale / max(clip.w, 0.1), 1.0, 160.0);
+  // 円軌道の接線を画面座標に射影してグリフの向きを決める
+  vec3 tang = normalize(vec3(-aPos.z, 0.0, aPos.x) + vec3(0.0001));
+  vec4 c2 = uVP * vec4(aPos + tang * 0.05, 1.0);
+  vec2 d = c2.xy / max(c2.w, 0.1) - clip.xy / max(clip.w, 0.1);
+  d.x *= uAspect;
+  vAngle = atan(d.y, d.x);
+  vGlyph = aGlyph; vMix = aMix; vAlpha = aAlpha; vStretch = aStretch;
+}`, `#version 300 es
+precision highp float;
+uniform sampler2D uAtlas;
+in float vGlyph; in float vMix; in float vAlpha; in float vAngle; in float vStretch;
+out vec4 frag;
+const vec3 GREEN = vec3(0.486, 0.890, 0.545);
+const vec3 BLUE  = vec3(0.62, 0.71, 1.0);
+const vec3 GOLD  = vec3(1.0, 0.824, 0.302);
+const vec3 WHITE = vec3(1.0, 0.98, 0.92);
+void main() {
+  vec2 c = gl_PointCoord - 0.5;
+  float s = sin(-vAngle), co = cos(-vAngle);
+  c = vec2(c.x * co - c.y * s, c.x * s + c.y * co);
+  c.y *= vStretch; // 点は伸びた分だけ大きい → yを圧縮すると接線方向に伸びて見える
+  if (abs(c.x) > 0.5 || abs(c.y) > 0.5) { discard; }
+  float cell = floor(vGlyph + 0.5);
+  vec2 uv = (vec2(mod(cell, 16.0), floor(cell / 16.0)) + (c + 0.5)) / 16.0;
+  float a = texture(uAtlas, uv).a * vAlpha;
+  float burn = clamp(vMix, 0.0, 1.0);
+  vec3 base = vMix < 0.0 ? BLUE : GREEN; // 負のmixは青系の遠景
+  vec3 col = mix(mix(base, GOLD, burn), WHITE, smoothstep(0.72, 1.0, burn));
+  frag = vec4(col * a, a); // 加算合成
+}`);
+
+// --- 中心の黒盤+光子リング(カメラ正対ビルボード) ---
+const holeProg = program(`#version 300 es
+precision highp float;
+layout(location=0) in vec2 aCorner;
+uniform mat4 uVP;
+uniform vec3 uRight, uUp;
+uniform float uRadius;
+out vec2 vC;
+void main() {
+  vec3 p = (uRight * aCorner.x + uUp * aCorner.y) * uRadius;
+  gl_Position = uVP * vec4(p, 1.0);
+  vC = aCorner;
+}`, `#version 300 es
+precision highp float;
+in vec2 vC;
+uniform float uTime;
+uniform int uMode; // 0=黒盤(深度書き込み) 1=リング発光(加算)
+out vec4 frag;
+void main() {
+  float r = length(vC);
+  if (uMode == 0) {
+    if (r > 0.46) discard;
+    frag = vec4(0.0, 0.0, 0.0, 1.0);
+  } else {
+    float pulse = 0.96 + 0.04 * sin(uTime * 1.7);
+    // ドップラービーミング: 近づいてくる側(左)がわずかに明るい
+    float beam = 0.88 + 0.30 * cos(atan(vC.y, vC.x) - 2.8);
+    float ring = exp(-pow((r - 0.47 * pulse) * 26.0, 2.0)) * beam * 1.25; // 鋭い光子リング
+    float glow = exp(-pow((r - 0.47) * 5.5, 2.0)) * 0.28 * beam;    // 淡いにじみ
+    float halo = exp(-r * 2.1) * 0.10;
+    vec3 col = vec3(1.0, 0.86, 0.42) * ring + vec3(0.55, 0.75, 0.62) * glow + vec3(0.45, 0.55, 0.8) * halo;
+    float a = ring + glow + halo;
+    if (a < 0.004) discard;
+    frag = vec4(col, a);
+  }
+}`);
+
+/* ================= 粒子シミュレーション =================
+   円筒座標。角速度はケプラー風(内側ほど速い)。地平 r<RH で燃えて消える。 */
+const N = isMobile ? 4500 : 10000;
+const RH = 1.06;          // 事象の地平
+const R_MAX = 7.2;
+const FLOATS = 8;
+const P = {
+  r: new Float32Array(N), th: new Float32Array(N), y0: new Float32Array(N),
+  r0: new Float32Array(N), vk: new Float32Array(N), size: new Float32Array(N),
+  glyph: new Float32Array(N), burn: new Float32Array(N),
+  mode: new Uint8Array(N),  // 0=空き 1=環境 2=打った文字
+  hue: new Float32Array(N), // <0 は青系
+};
+const buf = new Float32Array(N * FLOATS);
+const freeList = [];
+
+function spawnAmbient(i, atRim) {
+  P.mode[i] = 1;
+  P.r[i] = atRim ? R_MAX * (0.94 + Math.random() * 0.06)
+                 : 1.3 + Math.pow(Math.random(), 1.5) * (R_MAX - 1.3);
+  P.th[i] = Math.random() * Math.PI * 2;
+  P.r0[i] = Math.max(P.r[i], 2);
+  P.y0[i] = (Math.random() - 0.5) * 0.9 * (P.r[i] / R_MAX);
+  P.vk[i] = 0.8 + Math.random() * 0.5;
+  P.size[i] = 0.065 + Math.random() * 0.085;
+  P.burn[i] = 0;
+  P.hue[i] = Math.random() < 0.18 ? -1 : 0;
+  const ch = AMBIENT_CHARS[(Math.random() * AMBIENT_CHARS.length) | 0];
+  P.glyph[i] = Math.random() < 0.25 ? DOT : cellForChar(ch);
+}
+
+for (let i = 0; i < N; i++) {
+  if (i < N * 0.82) spawnAmbient(i, false);
+  else { P.mode[i] = 0; freeList.push(i); }
+}
+
+// 打たれた文字列は、画面手前の入り口から順番に流れ込む
+const feedQueue = [];
+function feed(text) {
+  const now = performance.now();
+  let k = 0;
+  for (const ch of text) {
+    if (ch !== ' ') feedQueue.push({ ch, t: now + k * 55 });
+    k++;
+  }
+}
+function processQueue(now, camAz) {
+  while (feedQueue.length && feedQueue[0].t <= now) {
+    const { ch } = feedQueue.shift();
+    const i = freeList.pop();
+    if (i === undefined) return;
+    P.mode[i] = 2;
+    P.r[i] = 4.4 + Math.random() * 0.3;
+    P.th[i] = camAz + 0.5 + (Math.random() - 0.5) * 0.15; // カメラ手前側から
+    P.r0[i] = P.r[i];
+    P.y0[i] = -0.9 + Math.random() * 0.1;                 // プロンプトのある下から昇る
+    P.vk[i] = 2.4 + Math.random() * 0.3;
+    P.size[i] = 0.23;
+    P.burn[i] = 0;
+    P.hue[i] = 0;
+    P.glyph[i] = cellForChar(ch);
+  }
+}
+
+function simulate(dt) {
+  for (let i = 0; i < N; i++) {
+    if (P.mode[i] === 0) continue;
+    const r = P.r[i];
+    P.th[i] += (1.35 / Math.pow(r, 1.5)) * P.vk[i] * dt;
+    // 一定の降下率だと密度は内側ほど濃くなる。ISCOの内側だけ一気に落ちる
+    const plunge = Math.max(0, 1.35 - r) * 0.5;
+    const rush = P.mode[i] === 2 ? 2.2 : 1;
+    P.r[i] -= (0.11 + plunge) * P.vk[i] * rush * dt;
+    if (P.r[i] < RH) {
+      P.burn[i] += dt / 0.55;
+      if (P.burn[i] >= 1) {
+        if (P.mode[i] === 2) { P.mode[i] = 0; freeList.push(i); }
+        else spawnAmbient(i, true);
+      }
+    }
+  }
+}
+
+function fillBuffer() {
+  let n = 0;
+  for (let i = 0; i < N; i++) {
+    if (P.mode[i] === 0) continue;
+    const r = Math.max(P.r[i], RH * 0.62), th = P.th[i], burn = P.burn[i];
+    const o = n * FLOATS;
+    const decay = Math.min(r / P.r0[i], 1);
+    buf[o]     = Math.cos(th) * r;
+    buf[o + 1] = P.y0[i] * decay + (P.mode[i] === 2 ? (1 - decay) * 0.05 : 0);
+    buf[o + 2] = Math.sin(th) * r;
+    buf[o + 3] = P.size[i] * (1 + burn * 0.7);
+    buf[o + 4] = Math.min(1 + 1.15 / r + burn * 2.6, 5.0);
+    buf[o + 5] = P.glyph[i];
+    buf[o + 6] = P.hue[i] < 0 ? -1 : burn;
+    const base = P.mode[i] === 2 ? 1.0 : (P.hue[i] < 0 ? 0.35 : 0.6);
+    const fadeIn = Math.min((P.r0[i] - r) / 0.25 + 0.15, 1);
+    const innerGlow = Math.min(0.55 + 0.75 / r, 1.25); // 地平に近いほど明るく
+    buf[o + 7] = base * fadeIn * innerGlow * (1 - burn * burn);
+    n++;
+  }
+  return n;
+}
+
+/* ================= 遠景の星 ================= */
+const STARS = isMobile ? 220 : 420;
+const starBuf = new Float32Array(STARS * FLOATS);
+for (let i = 0; i < STARS; i++) {
+  const o = i * FLOATS;
+  const az = Math.random() * Math.PI * 2, el = (Math.random() - 0.35) * 1.6, R = 26;
+  starBuf[o]     = Math.cos(az) * Math.cos(el) * R;
+  starBuf[o + 1] = Math.sin(el) * R;
+  starBuf[o + 2] = Math.sin(az) * Math.cos(el) * R;
+  starBuf[o + 3] = 0.05 + Math.random() * 0.1;
+  starBuf[o + 4] = 1;
+  starBuf[o + 5] = DOT;
+  starBuf[o + 6] = Math.random() < 0.5 ? -1 : 0;
+  starBuf[o + 7] = 0.12 + Math.random() * 0.3;
+}
+
+/* ================= GPUバッファ ================= */
+function makeParticleVAO(data, dynamic) {
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  const vbo = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+  gl.bufferData(gl.ARRAY_BUFFER, data, dynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+  const stride = FLOATS * 4;
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, stride, 0);
+  gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 1, gl.FLOAT, false, stride, 12);
+  gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, stride, 16);
+  gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 1, gl.FLOAT, false, stride, 20);
+  gl.enableVertexAttribArray(4); gl.vertexAttribPointer(4, 1, gl.FLOAT, false, stride, 24);
+  gl.enableVertexAttribArray(5); gl.vertexAttribPointer(5, 1, gl.FLOAT, false, stride, 28);
+  gl.bindVertexArray(null);
+  return { vao, vbo };
+}
+const pMesh = makeParticleVAO(buf, true);
+const sMesh = makeParticleVAO(starBuf, false);
+
+const quadVAO = gl.createVertexArray();
+gl.bindVertexArray(quadVAO);
+const quadVBO = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, quadVBO);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0);
+gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+gl.bindVertexArray(null);
+
+/* ================= uniforms ================= */
+const U = (p, n) => gl.getUniformLocation(p, n);
+const pu = { vp: U(particleProg,'uVP'), scale: U(particleProg,'uPointScale'), aspect: U(particleProg,'uAspect'), atlas: U(particleProg,'uAtlas') };
+const hu = { vp: U(holeProg,'uVP'), right: U(holeProg,'uRight'), up: U(holeProg,'uUp'), radius: U(holeProg,'uRadius'), time: U(holeProg,'uTime'), mode: U(holeProg,'uMode') };
+
+/* ================= カメラ・リサイズ ================= */
+const proj = new Float32Array(16), view = new Float32Array(16), vp = new Float32Array(16);
+let W = 0, H = 0, DPR = 1;
+const FOV = 58 * Math.PI / 180;
+
+function resize() {
+  DPR = Math.min(devicePixelRatio || 1, 2);
+  W = canvas.clientWidth; H = canvas.clientHeight;
+  canvas.width = Math.round(W * DPR);
+  canvas.height = Math.round(H * DPR);
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  mat4Perspective(proj, FOV, W / H, 0.1, 80);
+}
+addEventListener('resize', resize);
+resize();
+
+// マウス/タッチで少し覗き込める
+let targetAzOff = 0, targetElOff = 0, azOff = 0, elOff = 0;
+let dragging = false, lastX = 0, lastY = 0;
+canvas.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
+addEventListener('pointerup', () => { dragging = false; });
+addEventListener('pointermove', (e) => {
+  if (dragging) {
+    targetAzOff += (e.clientX - lastX) * 0.004;
+    targetElOff = Math.max(-0.3, Math.min(0.45, targetElOff + (e.clientY - lastY) * 0.003));
+    lastX = e.clientX; lastY = e.clientY;
+  } else if (!isMobile) {
+    targetAzOff = (e.clientX / W - 0.5) * 0.22;
+    targetElOff = (e.clientY / H - 0.5) * 0.14;
+  }
+});
+
+/* ================= HUD: 消したバイト数 ================= */
+const bytesEl = document.getElementById('bytesN');
+const bytesWrap = document.getElementById('bytes');
+const enc = new TextEncoder();
+let totalBytes = 0;
+try { totalBytes = parseInt(localStorage.getItem('devnull-bytes') || '0', 10) || 0; } catch (_) {}
+function fmtBytes(b) {
+  if (b < 10240) return b.toLocaleString('en-US') + ' bytes';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(2) + ' MB';
+}
+function renderBytes() { bytesEl.textContent = fmtBytes(totalBytes); }
+renderBytes();
+
+const flushedEl = document.getElementById('flushed');
+let flushedTimer = 0;
+const FLUSH_MSGS = ['無事に消えました', '書き込みに成功しました(何も残っていません)', '受理しました。二度と戻りません', '虚無が受け取りました'];
+
+const form = document.getElementById('prompt');
+const inp = document.getElementById('inp');
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const text = inp.value;
+  if (!text.trim()) return;
+  feed(text);
+  const n = enc.encode(text).length;
+  totalBytes += n;
+  try { localStorage.setItem('devnull-bytes', String(totalBytes)); } catch (_) {}
+  renderBytes();
+  bytesWrap.classList.add('flash');
+  setTimeout(() => bytesWrap.classList.remove('flash'), 600);
+  flushedEl.textContent = FLUSH_MSGS[(Math.random() * FLUSH_MSGS.length) | 0] + ' (' + n + ' bytes)';
+  flushedEl.classList.add('show');
+  clearTimeout(flushedTimer);
+  flushedTimer = setTimeout(() => flushedEl.classList.remove('show'), 2600);
+  inp.value = '';
+});
+
+/* ================= メインループ ================= */
+gl.enable(gl.DEPTH_TEST);
+gl.clearColor(0, 0, 0, 0);
+
+const timeScale = reduceMotion ? 0.22 : 1;
+let last = performance.now();
+let idleTimer = 0;
+let hidden = false;
+document.addEventListener('visibilitychange', () => {
+  hidden = document.hidden;
+  last = performance.now();
+});
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (hidden) return;
+  const dt = Math.min((now - last) / 1000, 0.05) * timeScale;
+  last = now;
+  const t = now / 1000;
+
+  // 環境ノイズ: 虚無は暇でも仕事をしている
+  if (!reduceMotion) {
+    idleTimer -= dt;
+    if (idleTimer <= 0) {
+      idleTimer = 0.4 + Math.random() * 0.5;
+      const i = freeList.pop();
+      if (i !== undefined) spawnAmbient(i, true);
+    }
+  }
+
+  const camAz = (reduceMotion ? 0.6 : t * 0.05) + azOff;
+  azOff += (targetAzOff - azOff) * 0.05;
+  elOff += (targetElOff - elOff) * 0.05;
+  processQueue(now, camAz);
+  simulate(dt);
+
+  const el = 0.42 + elOff, dist = 9.2;
+  const eye = [
+    Math.cos(camAz) * Math.cos(el) * dist,
+    Math.sin(el) * dist,
+    Math.sin(camAz) * Math.cos(el) * dist,
+  ];
+  mat4LookAt(view, eye, [0, 0, 0], [0, 1, 0]);
+  mat4Mul(vp, proj, view);
+
+  // ビルボード用のカメラ基底
+  const fwd = [-eye[0], -eye[1], -eye[2]];
+  let l = Math.hypot(...fwd); fwd[0]/=l; fwd[1]/=l; fwd[2]/=l;
+  const right = [fwd[2] * 1, 0, -fwd[0]]; // fwd × up(0,1,0) 正規化
+  l = Math.hypot(...right) || 1; right[0]/=l; right[2]/=l;
+  const up = [
+    right[1]*fwd[2] - right[2]*fwd[1],
+    right[2]*fwd[0] - right[0]*fwd[2],
+    right[0]*fwd[1] - right[1]*fwd[0],
+  ];
+
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  // 1) 黒盤: 奥の粒子を呑み込む(深度書き込みON)
+  gl.useProgram(holeProg);
+  gl.uniformMatrix4fv(hu.vp, false, vp);
+  gl.uniform3fv(hu.right, right);
+  gl.uniform3fv(hu.up, up);
+  gl.uniform1f(hu.radius, 2.3);
+  gl.uniform1f(hu.time, t);
+  gl.uniform1i(hu.mode, 0);
+  gl.depthMask(true);
+  gl.disable(gl.BLEND);
+  gl.bindVertexArray(quadVAO);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  // 2) 星と粒子(加算・深度書き込みOFF)
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+  gl.depthMask(false);
+  gl.useProgram(particleProg);
+  gl.uniformMatrix4fv(pu.vp, false, vp);
+  gl.uniform1f(pu.scale, (canvas.height / 2) / Math.tan(FOV / 2));
+  gl.uniform1f(pu.aspect, W / H);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+  gl.uniform1i(pu.atlas, 0);
+
+  gl.bindVertexArray(sMesh.vao);
+  gl.drawArrays(gl.POINTS, 0, STARS);
+
+  const live = fillBuffer();
+  gl.bindVertexArray(pMesh.vao);
+  gl.bindBuffer(gl.ARRAY_BUFFER, pMesh.vbo);
+  gl.bufferSubData(gl.ARRAY_BUFFER, 0, buf, 0, live * FLOATS);
+  gl.drawArrays(gl.POINTS, 0, live);
+
+  // 3) 光子リング
+  gl.useProgram(holeProg);
+  gl.uniform1i(hu.mode, 1);
+  gl.bindVertexArray(quadVAO);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  gl.depthMask(true);
+  gl.bindVertexArray(null);
+}
+requestAnimationFrame(frame);
+
+console.log('%c/dev/null%c このconsoleに出たログは消えません。本物との違いです。',
+  'color:#7ce38b;font-weight:bold', 'color:#8b90a3');
+
+})();
+</script>
+</body>
+</html>
