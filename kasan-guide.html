@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>調剤報酬 加算実務ガイド 2026 | 資料まとめ</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --paper: #fafafa;
+  --paper-2: #f1f2f0;
+  --ink: #17181a;
+  --ink-dim: #55575b;
+  --ink-faint: #797c81;
+  --line: #e3e5e2;
+  --ok: #2e7d4f;
+  --ok-bg: #eaf5ee;
+  --ng: #b4544a;
+  --ng-bg: #fbebe9;
+  --p1: #2f6fb0;
+  --p1-bg: #eaf1f9;
+  --p2: #b0722f;
+  --p2-bg: #f8f0e6;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Hiragino Sans', 'Noto Sans JP', -apple-system, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: rgba(46,125,79,0.16); }
+:focus-visible { outline: 2px solid var(--ok); outline-offset: 3px; border-radius: 4px; }
+
+/* ===== progress bar ===== */
+#progress {
+  position: fixed; top: 0; left: 0; height: 3px; background: var(--ok);
+  width: 0%; z-index: 50; transition: width .25s ease;
+}
+
+/* ===== dot nav ===== */
+#dots {
+  position: fixed; right: 14px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 7px; z-index: 50;
+}
+#dots button {
+  width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--ink-faint);
+  background: transparent; padding: 0; cursor: pointer; transition: all .2s;
+}
+#dots button.active { background: var(--ink); border-color: var(--ink); transform: scale(1.3); }
+@media (max-width: 720px) { #dots { display: none; } }
+
+/* ===== hint ===== */
+#hint {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  font-size: 11px; letter-spacing: .15em; color: var(--ink-faint); z-index: 50;
+  display: flex; align-items: center; gap: 6px; pointer-events: none;
+  animation: fade-hint 6s ease forwards;
+}
+@keyframes fade-hint { 0%,70% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ===== deck ===== */
+#deck {
+  height: 100vh; overflow-y: scroll; scroll-snap-type: y mandatory;
+}
+.slide {
+  height: 100vh; scroll-snap-align: start; scroll-snap-stop: always;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 64px 24px; position: relative; overflow: hidden;
+}
+.slide-inner { max-width: 760px; width: 100%; }
+.eyebrow {
+  font-size: 12px; letter-spacing: .25em; color: var(--ink-faint); font-weight: 700;
+  margin-bottom: 14px; text-transform: uppercase;
+}
+h1 { font-size: clamp(28px, 5vw, 44px); font-weight: 800; letter-spacing: -0.01em; line-height: 1.4; }
+h2 { font-size: clamp(22px, 3.6vw, 32px); font-weight: 800; margin-bottom: 22px; letter-spacing: -0.01em; }
+h3 { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+p.lead { font-size: clamp(15px, 2vw, 18px); color: var(--ink-dim); margin-top: 16px; }
+.slide-index { position: absolute; bottom: 22px; right: 26px; font-size: 12px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+
+/* ===== title slide ===== */
+.slide.title { background: linear-gradient(160deg, var(--paper) 40%, var(--paper-2)); text-align: left; }
+.slide.title .badge-row { display: flex; gap: 8px; margin-top: 26px; flex-wrap: wrap; }
+.badge { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
+.badge.p1 { background: var(--p1-bg); color: var(--p1); }
+.badge.p2 { background: var(--p2-bg); color: var(--p2); }
+.slide.title .meta { margin-top: 34px; font-size: 13px; color: var(--ink-faint); border-top: 1px solid var(--line); padding-top: 16px; }
+
+/* ===== part cover ===== */
+.slide.cover { color: #fff; text-align: left; }
+.slide.cover.p1 { background: linear-gradient(155deg, #163a5c, var(--p1)); }
+.slide.cover.p2 { background: linear-gradient(155deg, #5c3d16, var(--p2)); }
+.slide.cover .num { font-size: 13px; letter-spacing: .3em; opacity: .75; margin-bottom: 10px; }
+.slide.cover h1 { color: #fff; }
+.slide.cover p.lead { color: rgba(255,255,255,0.82); }
+
+/* ===== lists ===== */
+ol.steps { list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 14px; }
+ol.steps li {
+  counter-increment: step; display: flex; gap: 14px; align-items: flex-start;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px;
+}
+ol.steps li::before {
+  content: counter(step); flex: none; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--ink); color: #fff; font-size: 12px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+ol.steps li .t { font-size: 14.5px; }
+ol.steps li b { display: block; font-size: 15px; margin-bottom: 2px; }
+
+/* ===== card grid ===== */
+.grid { display: grid; gap: 14px; }
+.grid.cols-2 { grid-template-columns: 1fr 1fr; }
+@media (max-width: 640px) { .grid.cols-2 { grid-template-columns: 1fr; } }
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
+  font-size: 14px; color: var(--ink-dim);
+}
+.card b { color: var(--ink); }
+
+/* ===== ok / ng blocks ===== */
+.verdict { border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; font-size: 14px; }
+.verdict.ok { background: var(--ok-bg); border: 1px solid rgba(46,125,79,0.25); }
+.verdict.ng { background: var(--ng-bg); border: 1px solid rgba(180,84,74,0.25); }
+.verdict .tag { font-size: 11px; font-weight: 800; letter-spacing: .1em; margin-bottom: 6px; display: inline-block; padding: 2px 8px; border-radius: 6px; }
+.verdict.ok .tag { color: #fff; background: var(--ok); }
+.verdict.ng .tag { color: #fff; background: var(--ng); }
+.verdict b { display: block; margin-bottom: 3px; }
+.verdict span.sub { color: var(--ink-dim); }
+
+/* ===== points table ===== */
+.points { display: flex; flex-direction: column; gap: 10px; }
+.points .row { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px 18px; }
+.points .row .label { font-size: 14.5px; }
+.points .row .label small { display: block; color: var(--ink-faint); font-size: 12px; }
+.points .row .val { font-size: 22px; font-weight: 800; color: var(--ok); }
+.points .row .val small { font-size: 12px; font-weight: 600; color: var(--ink-faint); margin-left: 2px; }
+
+/* ===== checklist ===== */
+.checklist { display: flex; flex-direction: column; gap: 10px; }
+.checklist .item { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; }
+.checklist .item .box { flex: none; width: 20px; height: 20px; border-radius: 5px; background: var(--ok); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-top: 2px; }
+
+/* ===== timeline ===== */
+.timeline { position: relative; padding-left: 22px; }
+.timeline::before { content: ""; position: absolute; left: 5px; top: 4px; bottom: 4px; width: 2px; background: var(--line); }
+.timeline .tl-item { position: relative; padding-bottom: 20px; }
+.timeline .tl-item::before { content: ""; position: absolute; left: -22px; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--p2); }
+.timeline .tl-item b { display: block; font-size: 14.5px; }
+.timeline .tl-item span { font-size: 13px; color: var(--ink-dim); }
+
+/* ===== two-col compare ===== */
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 640px) { .compare { grid-template-columns: 1fr; } }
+.compare .col { border-radius: 12px; padding: 16px 18px; }
+.compare .col.ok { background: var(--ok-bg); }
+.compare .col.ng { background: var(--ng-bg); }
+.compare .col h4 { font-size: 13px; font-weight: 800; margin-bottom: 10px; }
+.compare .col.ok h4 { color: var(--ok); }
+.compare .col.ng h4 { color: var(--ng); }
+.compare ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.compare li { font-size: 13.5px; padding-left: 18px; position: relative; }
+.compare .col.ok li::before { content: "○"; position: absolute; left: 0; color: var(--ok); font-weight: 800; }
+.compare .col.ng li::before { content: "✕"; position: absolute; left: 0; color: var(--ng); font-weight: 800; }
+
+/* ===== closing ===== */
+.slide.closing { background: var(--ink); color: #fafafa; text-align: left; }
+.slide.closing h1 { color: #fff; }
+.slide.closing p.lead { color: rgba(255,255,255,0.7); }
+.slide.closing .note {
+  margin-top: 28px; font-size: 12.5px; color: rgba(255,255,255,0.5);
+  border-top: 1px solid rgba(255,255,255,0.15); padding-top: 16px; line-height: 1.9;
+}
+
+.tag-inline { font-size: 11px; font-weight: 800; color: var(--ink-faint); letter-spacing: .1em; }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<nav id="dots" aria-label="スライド一覧"></nav>
+<div id="hint">↓ scroll ／ ↑↓キー で移動</div>
+
+<main id="deck">
+
+<!-- 0: Title -->
+<section class="slide title">
+  <div class="slide-inner">
+    <div class="eyebrow">薬局実務 資料まとめ ・ 2026年版</div>
+    <h1>調剤報酬 加算実務ガイド</h1>
+    <p class="lead">「残薬調整」と「かかりつけ薬剤師フォローアップ」— 算定要件を現場目線で整理</p>
+    <div class="badge-row">
+      <span class="badge p1">調剤時残薬調整加算</span>
+      <span class="badge p2">かかりつけ薬剤師フォローアップ加算（50点）</span>
+    </div>
+    <div class="meta">社内共有用の要点整理資料です。算定判断の最終根拠は必ず告示・通知の原文および疑義解釈をご確認ください。</div>
+  </div>
+</section>
+
+<!-- 1: Agenda -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="eyebrow">Agenda</div>
+    <h2>本資料の構成</h2>
+    <ol class="steps">
+      <li><span class="t"><b>Part 1 — 調剤時残薬調整加算</b>算定要件／施設基準／点数、そして「6日分以下」でも算定できる例外ケースの境界線</span></li>
+      <li><span class="t"><b>Part 2 — かかりつけ薬剤師フォローアップ加算（50点）</b>対象患者の条件と、双方向コミュニケーションを軸にした実施要件</span></li>
+    </ol>
+  </div>
+</section>
+
+<!-- 2: Part1 cover -->
+<section class="slide cover p1">
+  <div class="slide-inner">
+    <div class="num">PART 1</div>
+    <h1>調剤時残薬調整加算</h1>
+    <p class="lead">残薬に応じて調剤日数を変更した場合に算定できる加算。原則は「7日分以上相当」だが、認められた例外がある。</p>
+  </div>
+</section>
+
+<!-- 3: 算定要件の全体像 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="eyebrow tag-inline">算定要件・全体像</div>
+    <h2>算定できる条件（原則）</h2>
+    <ol class="steps">
+      <li><span class="t"><b>① 残薬が確認された患者であること</b>患者または家族からの情報に基づき、残薬が確認された患者が対象</span></li>
+      <li><span class="t"><b>② 7日分以上相当の調剤日数変更</b>処方医の指示、または疑義照会の結果に基づく変更（内服薬7日分以上／頓服薬7回分以上／外用薬7回分以上）</span></li>
+      <li><span class="t"><b>③ 例外として6日分以下でも算定できるケースがある</b>詳細はPart 1後半で整理</span></li>
+    </ol>
+  </div>
+</section>
+
+<!-- 4: 必要性の検討 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="eyebrow tag-inline">算定要件</div>
+    <h2>④ 調剤日数変更は「必要性」を検討して行う</h2>
+    <div class="verdict ng">
+      <span class="tag">NG</span>
+      <b>単に残薬が7日分以上あるという理由だけでの機械的な算定</b>
+      <span class="sub">残薬が生じた理由を把握し、必要性を検討した上での調整が必須</span>
+    </div>
+    <div class="card">調剤日数の変更は、患者または家族等に確認し、残薬調整の必要性を十分に検討したうえで行う。</div>
+  </div>
+</section>
+
+<!-- 5: 情報提供・記録 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="eyebrow tag-inline">算定要件</div>
+    <h2>⑤⑥ 処方医への情報提供と記録</h2>
+    <div class="grid cols-2">
+      <div class="card">
+        <b>⑤ 処方医への情報提供（原則翌営業日まで）</b><br>
+        ・残薬の状況<br>・残薬が生じた理由<br>・実際に交付した投与量<br>・患者への説明内容<br>
+        <span style="color:var(--ink-faint)">※電子処方箋のコメント機能で代替可</span>
+      </div>
+      <div class="card">
+        <b>⑥ 薬歴・手帳への記録</b><br>
+        ・手帳への記載（手帳を用いる場合）<br>・処方医に連絡した内容<br>・変更した薬剤名・数量を薬歴に記録
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6: 施設基準 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="eyebrow tag-inline">施設基準</div>
+    <h2>手帳提示率 50％超が条件</h2>
+    <div class="card" style="font-size:15px;">
+      「手帳の活用実績が相当程度ある」＝<b>手帳提示率50％超</b>であることが必要。<br><br>
+      判定期間：<b>前年5月1日〜当年4月30日</b>の実績<br>
+      適用期間：<b>当年6月1日〜翌年5月31日</b>
+    </div>
+    <div class="grid cols-2" style="margin-top:14px;">
+      <div class="verdict ok"><span class="tag">50％超</span>算定可能</div>
+      <div class="verdict ng"><span class="tag">50％以下</span>算定不可</div>
+    </div>
+  </div>
+</section>
+
+<!-- 7: 点数 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="eyebrow tag-inline">点数</div>
+    <h2>対象患者区分に応じた点数</h2>
+    <div class="points">
+      <div class="row"><div class="label">在宅患者<small>イ・ロ</small></div><div class="val">50<small>点</small></div></div>
+      <div class="row"><div class="label">かかりつけ薬剤師が実施<small>ハ</small></div><div class="val">50<small>点</small></div></div>
+      <div class="row"><div class="label">その他<small>ニ</small></div><div class="val">30<small>点</small></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 8: 6日以下でも算定できるケース -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="eyebrow tag-inline">例外</div>
+    <h2>6日分以下でも算定できる5ケース</h2>
+    <div class="grid cols-2">
+      <div class="card"><b>① 高額薬（抗がん剤等）</b>患者負担軽減の必要性が特に高い場合。1日分でも数千〜数万円になり得るため。</div>
+      <div class="card"><b>② 添付文書の服用期間上限</b>残薬を加えると通算で上限超過が見込まれる薬（抗菌薬・ステロイド・向精神薬等）</div>
+      <div class="card"><b>③ 次回検査結果で処方変更見込み</b>HbA1c／腎機能／PT-INR等の結果により、変更が見込まれる場合</div>
+      <div class="card"><b>④ 隔日投与など実服用日数が特殊</b>隔日投与「6日分＝実質3回分」、週2回投与「6日分＝1回分」など</div>
+      <div class="card" style="grid-column:1/-1"><b>⑤ 処方箋備考欄「薬局判断で減数調剤可」</b>該当欄にチェックがある場合、薬局判断での減数調剤が可能</div>
+    </div>
+  </div>
+</section>
+
+<!-- 9: 必須条件 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="eyebrow tag-inline">例外を使う条件</div>
+    <h2>6日以下で算定するための必須条件（全て必要）</h2>
+    <div class="checklist">
+      <div class="item"><span class="box">✓</span>薬剤師が必要性を判断したこと</div>
+      <div class="item"><span class="box">✓</span>処方医へ照会し、その結果に基づく変更であること</div>
+      <div class="item"><span class="box">✓</span>残薬が7日未満でも調整が必要な理由をレセプト摘要欄に記載</div>
+      <div class="item"><span class="box">✓</span>患者へ理由を説明し、薬歴に記録</div>
+    </div>
+  </div>
+</section>
+
+<!-- 10: 算定できないケース -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="eyebrow tag-inline">禁止例</div>
+    <h2>6日分以下では算定できないケース</h2>
+    <div class="verdict ng"><span class="tag">NG</span><b>7日分を超えるまで待つのが合理的な場合</b><span class="sub">認知機能に問題がなく、待機が合理的な状況</span></div>
+    <div class="verdict ng"><span class="tag">NG</span><b>医師が同意しているだけで薬学的必要性がない場合</b><span class="sub">処方医の同意のみを理由にした変更</span></div>
+    <div class="verdict ng"><span class="tag">NG</span><b>地域の簡素化プロトコルに従っただけの場合</b><span class="sub">プロトコル策定のみを理由にすることは不可</span></div>
+  </div>
+</section>
+
+<!-- 11: Part1 まとめ -->
+<section class="slide" style="background:var(--p1-bg);">
+  <div class="slide-inner">
+    <div class="eyebrow tag-inline" style="color:var(--p1)">Part 1 まとめ</div>
+    <h2 style="color:var(--p1)">「例外」ではなく“正規の算定ルール”</h2>
+    <p class="lead" style="color:var(--ink-dim)">6日以下で算定できるのは、厚労省が明確に認めた正式なルート。ただし理由の記載・記録・情報提供という手続きが揃って初めて成立する。</p>
+  </div>
+</section>
+
+<!-- 12: Part2 cover -->
+<section class="slide cover p2">
+  <div class="slide-inner">
+    <div class="num">PART 2</div>
+    <h1>かかりつけ薬剤師<br>フォローアップ加算（50点）</h1>
+    <p class="lead">対象患者は限定的。実施も「双方向コミュニケーション」が絶対条件。</p>
+  </div>
+</section>
+
+<!-- 13: 対象患者 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="eyebrow tag-inline">対象患者</div>
+    <h2>算定できる患者（2条件を両方満たす）</h2>
+    <ol class="steps">
+      <li><span class="t"><b>① かかりつけ薬剤師の患者である</b>服薬管理指導料「1のイ」または「2のイ」を算定している患者（同意を得て登録済み）</span></li>
+      <li><span class="t"><b>② 直近6か月以内に以下いずれかを算定</b>外来服薬支援料1／服用薬剤調整支援料1・2／調剤時残薬調整加算／薬学的有害事象等防止加算</span></li>
+    </ol>
+    <div class="card" style="margin-top:14px;">※フォローアップにより問題（残薬等）がすでに解消している場合は対象外</div>
+  </div>
+</section>
+
+<!-- 14: 実施の契機・時期 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="eyebrow tag-inline">実施要件</div>
+    <h2>実施の契機と時期</h2>
+    <div class="timeline">
+      <div class="tl-item"><b>契機</b><span>患者・家族の求め、またはかかりつけ薬剤師が必要性を認めた場合</span></div>
+      <div class="tl-item"><b>実施期間</b><span>「前回調剤日の翌日」〜「次回来局（処方箋持参）前日」まで</span></div>
+      <div class="tl-item"><b>対象外の日</b><span>調剤当日・処方箋持参当日は含まれない／契機と別医療機関の処方箋持参は期間に含まれない</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 15: 実施方法 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="eyebrow tag-inline">実施方法</div>
+    <h2>双方向性が必須</h2>
+    <div class="compare">
+      <div class="col ok">
+        <h4>OK — 認められる手段</h4>
+        <ul><li>電話</li><li>ビデオ通話</li><li>個別チャット（患者が返信できる形式）</li></ul>
+      </div>
+      <div class="col ng">
+        <h4>NG — 認められない手段</h4>
+        <ul><li>一斉メール送信</li><li>定型チェックリスト入力のみ</li><li>一方的な通知</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 16: 同意・記録・情報提供 -->
+<section class="slide">
+  <div class="slide-inner">
+    <div class="eyebrow tag-inline">実施要件</div>
+    <h2>事前説明・記録・情報提供</h2>
+    <div class="grid cols-2">
+      <div class="card"><b>④ 事前説明と同意</b>実施前に「聞き取り・指導内容」「自己負担額」を説明し、了承を得る</div>
+      <div class="card"><b>⑥ 医療機関への情報提供</b>体調変化など速やかに伝えるべき情報があれば提供</div>
+      <div class="card" style="grid-column:1/-1">
+        <b>⑤ 記録義務（薬歴）</b><br>
+        ・フォローアップ実施日時<br>・聞き取り内容（服薬状況・残薬・副作用・体調変化等）<br>
+        ・実施した指導内容<br>・問題が解消しない場合は理由・改善策<br>・必要に応じ医療機関へ情報提供した旨
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 17: Closing -->
+<section class="slide closing">
+  <div class="slide-inner">
+    <div class="eyebrow" style="color:rgba(255,255,255,0.6)">Closing</div>
+    <h1>2つの加算に共通するのは<br>「必要性の検討」と「記録の徹底」</h1>
+    <p class="lead">日数調整もフォローアップも、単発の作業ではなく、判断根拠を残し、医療機関と情報を共有するプロセスとして評価される。</p>
+    <div class="note">
+      本資料は共有された抜粋資料（会員限定ページの一部を含む）をもとに要点を整理したものです。一部は全文が確認できていないため、実際の算定判断は必ず告示・通知原文および直近の疑義解釈をご確認ください。
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+(function () {
+  var deck = document.getElementById('deck');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var dotsNav = document.getElementById('dots');
+  var progress = document.getElementById('progress');
+
+  slides.forEach(function (s, i) {
+    var idx = document.createElement('div');
+    idx.className = 'slide-index';
+    idx.textContent = (i + 1) + ' / ' + slides.length;
+    s.appendChild(idx);
+
+    var btn = document.createElement('button');
+    btn.setAttribute('aria-label', 'スライド ' + (i + 1));
+    btn.addEventListener('click', function () {
+      s.scrollIntoView({ behavior: 'smooth' });
+    });
+    dotsNav.appendChild(btn);
+  });
+  var dotEls = Array.prototype.slice.call(dotsNav.children);
+
+  function setActive(i) {
+    dotEls.forEach(function (d, j) { d.classList.toggle('active', j === i); });
+    progress.style.width = (((i + 1) / slides.length) * 100) + '%';
+  }
+
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) {
+        setActive(slides.indexOf(e.target));
+      }
+    });
+  }, { root: deck, threshold: 0.6 });
+  slides.forEach(function (s) { io.observe(s); });
+
+  document.addEventListener('keydown', function (e) {
+    var current = dotEls.findIndex(function (d) { return d.classList.contains('active'); });
+    if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+      e.preventDefault();
+      var next = slides[Math.min(current + 1, slides.length - 1)];
+      next.scrollIntoView({ behavior: 'smooth' });
+    } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+      e.preventDefault();
+      var prev = slides[Math.max(current - 1, 0)];
+      prev.scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+
+  setActive(0);
+})();
+</script>
+
+</body>
+</html>
