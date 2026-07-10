@@ -2054,11 +2054,11 @@ function getWorld() {
       : Object.keys(meta).filter(k => meta[k] !== '@you').map(Number),
   };
 }
+let _worldSaveTimer = null; // v16fix: saveWorld()より前に宣言(旧データ移行でsaveWorld()を呼ぶ際のTDZ回避)
 let world = getWorld();
 if (store.ovr.world && (store.ovr.world.grid || (store.ovr.world.px && (store.ovr.world.res || 1600) !== WORLD_COLS)))
   saveWorld(); // 旧形式(グリッド文字列/旧解像度px)は移行結果を即永続化して以後は新形式のみ
 buildMaster(); // C2: composite the live master once at boot, from world.px
-let _worldSaveTimer = null;
 function saveWorld() { // merge: setOvr経由のsaves/statusを消さない(監査で発見したバグの修正)
   if (_worldSaveTimer) { clearTimeout(_worldSaveTimer); _worldSaveTimer = null; }
   store.ovr.world = Object.assign(store.ovr.world || {}, { px: world.px, placed: world.placed, people: world.people, meta: world.meta, lastIdx: world.lastIdx, ambient: world.ambient, res: WORLD_COLS });
@@ -2071,6 +2071,10 @@ function saveWorldSoon() {
   if (_worldSaveTimer) return;
   _worldSaveTimer = setTimeout(() => { _worldSaveTimer = null; saveWorld(); }, 30000);
 }
+// v16fix: デバウンス保存中のページ離脱で更新(evict結果含む)を取りこぼさないようflush
+function flushWorldSave() { if (_worldSaveTimer) saveWorld(); } // saveWorld()内でタイマー解除
+window.addEventListener('pagehide', flushWorldSave);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushWorldSave(); });
 
 /* ================= seed content ================= */
 const SEED = [
