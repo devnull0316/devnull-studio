@@ -1998,7 +1998,8 @@ function save() {
   catch (e) {
     // v17: 保存失敗(quota超過等)を握りつぶさず利用者に通知(サイレントなデータ喪失の防止)。連続時はスロットル。
     const now = Date.now();
-    if (now - _saveFailAt > 3000) { _saveFailAt = now; try { toast(t('toast_save_failed')); } catch (_) {} }
+    // トースト表示に成功した時だけ抑制タイマーを更新(早期初期化で#toast/toastT未準備なら次回に持ち越す)
+    if (now - _saveFailAt > 3000) { try { toast(t('toast_save_failed')); _saveFailAt = now; } catch (_) {} }
     return false;
   }
 }
@@ -4956,10 +4957,10 @@ $('ed-post').addEventListener('click', () => {
       postedAt: T(), saves: 0, status: 'pending',
     };
     store.user.push(p);
-    if (!save()) { store.user.pop(); save(); return; } // v17: 保存失敗なら投稿を巻き戻し(save内でトースト表示)
-    rateConsume();
+    const rt = rateState(); const prevN = rt.n || 0; rt.n = prevN + 1; // レート消費(保存は下の権威的saveで一括)
     logEvent('post', { id: p.id, slot: p.slot });
-    save();
+    // v17: 投稿+レート+ログを1回の保存でコミット。失敗なら全て巻き戻し(save内でトースト、レート制限バイパスも防ぐ)
+    if (!save()) { store.user.pop(); rt.n = prevN; store.log.pop(); save(); return; }
     closeComposer();
     toast(t('toast_posted'));
     renderConsole();
@@ -4988,10 +4989,10 @@ $('ed-post').addEventListener('click', () => {
     postedAt: T(), saves: 0, status: 'pending',
   };
   store.user.push(p);
-  if (!save()) { store.user.pop(); save(); return; } // v17: 保存失敗なら投稿を巻き戻し(save内でトースト表示)
-  rateConsume();
+  const rt = rateState(); const prevN = rt.n || 0; rt.n = prevN + 1; // レート消費(保存は下の権威的saveで一括)
   logEvent('post', { id: p.id, slot: p.slot });
-  save();
+  // v17: 投稿+レート+ログを1回の保存でコミット。失敗なら全て巻き戻し(save内でトースト、レート制限バイパスも防ぐ)
+  if (!save()) { store.user.pop(); rt.n = prevN; store.log.pop(); save(); return; }
   closeComposer();
   toast(t('toast_posted'));
   renderConsole();
