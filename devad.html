@@ -199,11 +199,14 @@ input, textarea, select { font-family: inherit; }
 #nt-search svg { width: 16px; height: 16px; color: #9aa0a6; flex: none; }
 #nt-search input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-size: 13.5px; color: #202124; }
 #nt-search input::placeholder { color: #9aa0a6; }
-#sl-line { min-height: 24px; width: 100%; display: flex; align-items: flex-start; justify-content: center; }
+/* v17: 行広告は検索窓の付属物ではなく従属コンテンツ — 上に余白を足し、幅を絞り、
+   色を一段沈めて主従を明確にする(空き枠側の #sl-line .sl-empty { max-width:420px } と揃える) */
+#sl-line { min-height: 24px; width: 100%; display: flex; align-items: flex-start; justify-content: center; margin-top: 10px; }
 .sl-line-ad {
   position: relative; display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; justify-content: center;
-  color: #3c4043;
-  font-size: 12.5px; padding: 4px 12px 28px;
+  max-width: 420px;
+  color: #5f6368;
+  font-size: 12px; padding: 7px 14px 28px;
 }
 .sl-line-lnk { color: #1a73e8; text-decoration: underline; text-underline-offset: 2px; }
 .sl-line-by { opacity: 0.6; font-size: 10.5px; }
@@ -279,14 +282,21 @@ input, textarea, select { font-family: inherit; }
 }
 .sl-wall-credit:hover .sl-wall-byline, .sl-wall-credit.chips-on .sl-wall-byline, .sl-wall-credit:focus-within .sl-wall-byline { opacity: 0; }
 .sl-wall-credit .sl-chips { left: 0; bottom: 0; transform: none; justify-content: flex-start; }
-/* v16: 壁紙は「景色」に徹する — スクリムで一段沈め、文字主体の広告でもUIと喧嘩しない。
-   クレジットにホバー(タップ)すると暗幕が晴れて広告そのものが見える */
-#sl-full::after {
+/* v17: 壁紙は「景色」に徹する — スクリムで一段沈め、文字主体の広告でもUIと喧嘩しない。
+   クレジットにホバー(タップ)すると暗幕が晴れて広告そのものが見える。
+   ::after は has-wall(実際に壁紙広告が乗っている時)だけに限定 — 広告が無い日の
+   無地グラデ背景まで常時暗く濁っていたのを修正。加えて #nt-col(時計/検索/ショート
+   カット)の真後ろだけセーフゾーンとして濃く落とし、壁紙側の巨大な文字がそこで
+   機能UIと衝突して見えないようにする(縁ほど元の景色が見える通常のスクリムに戻る)。 */
+#nt-page.has-wall #sl-full::after {
   content: ''; position: absolute; inset: 0; z-index: 1;
-  background: rgba(15, 17, 22, 0.40);
+  background:
+    radial-gradient(ellipse 36% 34% at 50% 30%, rgba(8, 9, 13, 0.6), rgba(8, 9, 13, 0.6) 58%, rgba(8, 9, 13, 0) 100%),
+    rgba(15, 17, 22, 0.34);
   transition: opacity .3s ease; pointer-events: none;
 }
-#sl-full:has(.sl-wall-credit:hover)::after, #sl-full:has(.sl-wall-credit.chips-on)::after { opacity: 0.06; }
+#nt-page.has-wall #sl-full:has(.sl-wall-credit:hover)::after,
+#nt-page.has-wall #sl-full:has(.sl-wall-credit.chips-on)::after { opacity: 0.06; }
 
 #nt-corner-wrap { position: absolute; left: var(--nt-gap); bottom: var(--nt-gap); z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; max-width: min(360px, 68vw); }
 /* 壁紙のクレジット行と左下で衝突しないよう、壁紙時はフィードを1段上へ積む */
