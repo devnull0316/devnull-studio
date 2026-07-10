@@ -1513,6 +1513,7 @@ ja: {
   toast_blank: 'まだ空です — なにか書いてください',
   toast_blank_line: 'テキストを入力してください',
   toast_posted: '審査に送りました。承認され次第、掲載されます。',
+  toast_save_failed: '保存できませんでした（容量オーバーの可能性）。不要な広告を削除するか、データを書き出してください。',
   toast_max_text: 'テキストは5つまで', toast_max_sticker: 'ステッカーは12個まで',
   toast_max_image: '画像は3枚まで', toast_image_error: '画像を読み込めませんでした',
   review_note: '画像を含むすべての広告は、掲載前に人の目で審査されます。',
@@ -1648,6 +1649,7 @@ en: {
   toast_blank: 'It is still blank — say something',
   toast_blank_line: 'Text is required',
   toast_posted: 'Sent for review. It goes live once approved.',
+  toast_save_failed: "Couldn't save (storage may be full). Delete some ads or export your data.",
   toast_max_text: 'Up to 5 text blocks', toast_max_sticker: 'Up to 12 stickers',
   toast_max_image: 'Up to 3 images', toast_image_error: 'Could not load the image',
   review_note: 'Every ad — images included — is reviewed by a human before it goes live.',
@@ -1990,7 +1992,16 @@ store.savedSnaps = store.savedSnaps || {}; // v7: id -> snapshot at time of save
 store.seen = store.seen || {};         // v7: id -> {d, today, total} view counters for the fatigue weight
 store.log = store.log || [];           // C: event log — timelapse/future-sync groundwork, no UI yet
 if (!store.lang) store.lang = (navigator.language || 'en').toLowerCase().startsWith('ja') ? 'ja' : 'en';
-function save() { try { localStorage.setItem(LS, JSON.stringify(store)); } catch (e) {} }
+let _saveFailAt = 0;
+function save() {
+  try { localStorage.setItem(LS, JSON.stringify(store)); return true; }
+  catch (e) {
+    // v17: 保存失敗(quota超過等)を握りつぶさず利用者に通知(サイレントなデータ喪失の防止)。連続時はスロットル。
+    const now = Date.now();
+    if (now - _saveFailAt > 3000) { _saveFailAt = now; try { toast(t('toast_save_failed')); } catch (_) {} }
+    return false;
+  }
+}
 /* C: logEvent never saves by itself — it rides along with whatever save() the caller already
    does, so it never becomes a reason to write to localStorage on its own. */
 function logEvent(k, data) {
@@ -4945,6 +4956,7 @@ $('ed-post').addEventListener('click', () => {
       postedAt: T(), saves: 0, status: 'pending',
     };
     store.user.push(p);
+    if (!save()) { store.user.pop(); save(); return; } // v17: 保存失敗なら投稿を巻き戻し(save内でトースト表示)
     rateConsume();
     logEvent('post', { id: p.id, slot: p.slot });
     save();
@@ -4976,6 +4988,7 @@ $('ed-post').addEventListener('click', () => {
     postedAt: T(), saves: 0, status: 'pending',
   };
   store.user.push(p);
+  if (!save()) { store.user.pop(); save(); return; } // v17: 保存失敗なら投稿を巻き戻し(save内でトースト表示)
   rateConsume();
   logEvent('post', { id: p.id, slot: p.slot });
   save();
