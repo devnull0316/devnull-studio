@@ -2047,16 +2047,29 @@ function getWorld() {
   return {
     px: px || seedWorldPx(), placed: o.placed != null ? o.placed : 1462, people: o.people != null ? o.people : 208,
     meta, lastIdx,
+    // v16: 環境シム(simulatePaintEvent)が置いたセルのidxリング。無制限肥大の歯止め。
+    // 既存データにambientが無ければ、@you以外のmeta付きセル(=過去のシム跡)から復元して
+    // 以後の上限管理対象に含める(seedやユーザーpxはmeta無し/@youなので巻き込まない)。
+    ambient: Array.isArray(o.ambient) ? o.ambient
+      : Object.keys(meta).filter(k => meta[k] !== '@you').map(Number),
   };
 }
 let world = getWorld();
 if (store.ovr.world && (store.ovr.world.grid || (store.ovr.world.px && (store.ovr.world.res || 1600) !== WORLD_COLS)))
   saveWorld(); // 旧形式(グリッド文字列/旧解像度px)は移行結果を即永続化して以後は新形式のみ
 buildMaster(); // C2: composite the live master once at boot, from world.px
+let _worldSaveTimer = null;
 function saveWorld() { // merge: setOvr経由のsaves/statusを消さない(監査で発見したバグの修正)
-  store.ovr.world = Object.assign(store.ovr.world || {}, { px: world.px, placed: world.placed, people: world.people, meta: world.meta, lastIdx: world.lastIdx, res: WORLD_COLS });
+  if (_worldSaveTimer) { clearTimeout(_worldSaveTimer); _worldSaveTimer = null; }
+  store.ovr.world = Object.assign(store.ovr.world || {}, { px: world.px, placed: world.placed, people: world.people, meta: world.meta, lastIdx: world.lastIdx, ambient: world.ambient, res: WORLD_COLS });
   delete store.ovr.world.grid; // v11: px is now the only persisted format
   save();
+}
+/* v16: 環境シムのようにユーザ操作に紐づかない更新は即localStorage書き込みせず、
+   ~30秒間隔に間引いて集約する(ユーザのpx設置は従来どおりsaveWorldで即時保存) */
+function saveWorldSoon() {
+  if (_worldSaveTimer) return;
+  _worldSaveTimer = setTimeout(() => { _worldSaveTimer = null; saveWorld(); }, 30000);
 }
 
 /* ================= seed content ================= */
@@ -2947,9 +2960,28 @@ function updateCharges() {
 }
 
 let paintView = null;
+/* ズーム/パンの共通クランプ。zoomはfitSに対する倍率で、fitS*zoom = 1セルあたりの画面px。
+   ホイール・ピンチ・リセットで同じ上下限を使い、モード間で挙動が食い違わないようにする */
+const WM_MAX_PPC = 40; // ズーム上限: 1セル=最大40px(これ以上は寄れない)
+const WM_MIN_ZOOM = 0.9; // ズーム下限: ほぼ全体表示(zoom=1)より少しだけ引ける程度
+function clampPaintZoom(z) {
+  if (!paintView) return z;
+  return Math.max(WM_MIN_ZOOM, Math.min(WM_MAX_PPC / paintView.fitS, z));
+}
+/* 端で止める: 地図がビューより大きい軸はビュー内に隙間(黒帯)を作らない範囲でパン、
+   小さい軸は中央寄せ。これで地図を画面外へ完全に逃がせなくなる */
+function clampPaintPan() {
+  const wrap = $('wall-wrap'); if (!wrap || !paintView) return;
+  const vw = Math.max(1, wrap.clientWidth), vh = Math.max(1, wrap.clientHeight);
+  const s = paintView.fitS * paintView.zoom;
+  const mw = WORLD_COLS * s, mh = WORLD_ROWS * s;
+  paintView.ox = mw <= vw ? (vw - mw) / 2 : Math.min(0, Math.max(vw - mw, paintView.ox));
+  paintView.oy = mh <= vh ? (vh - mh) / 2 : Math.min(0, Math.max(vh - mh, paintView.oy));
+}
 function applyPaintTransform() {
   const cv = $('wall');
   if (!cv || !paintView) return;
+  clampPaintPan(); // 全パン/ズーム経路の合流点でクランプ(端止め)を一括適用
   cv.style.width = WORLD_COLS + 'px'; cv.style.height = WORLD_ROWS + 'px';
   cv.style.left = '0'; cv.style.top = '0'; cv.style.transformOrigin = '0 0';
   cv.style.transform = 'translate(' + paintView.ox + 'px,' + paintView.oy + 'px) scale(' + (paintView.fitS * paintView.zoom) + ')';
@@ -3006,9 +3038,10 @@ function ensureMinimap() {
 function renderMinimap() {
   const mini = ensureMinimap();
   const cv = $('wm-mini-cv');
+  const dpr = Math.min(2, window.devicePixelRatio || 1); // 高DPIでもミニマップをくっきり(描画バッファをDPR倍)
   const miniH = Math.round(WM_MINI_W * WORLD_ROWS / WORLD_COLS);
-  blitMasterFull(cv, WM_MINI_W, miniH); // C4: minimap is a scaled-down drawImage of the live master
-  mini.style.width = cv.style.width = WM_MINI_W + 'px';
+  blitMasterFull(cv, WM_MINI_W * dpr, miniH * dpr); // C4: minimap is a scaled-down drawImage of the live master
+  mini.style.width = cv.style.width = WM_MINI_W + 'px'; // 表示は等倍(CSS px)
   mini.style.height = cv.style.height = miniH + 'px';
   updateMinimapViewport();
 }
@@ -3243,7 +3276,7 @@ function bindWallInteract() {
     if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size >= 2 && pinch) {
       const m = pinchMid();
-      const nz = Math.max(0.6, Math.min(28 / paintView.fitS, pinch.startZoom * (m.d / pinch.startD)));
+      const nz = clampPaintZoom(pinch.startZoom * (m.d / pinch.startD));
       const oldS = paintView.fitS * pinch.startZoom, neuS = paintView.fitS * nz;
       const wx = (pinch.cx - pinch.ox) / oldS, wy = (pinch.cy - pinch.oy) / oldS;
       paintView.zoom = nz;
@@ -3284,7 +3317,7 @@ function bindWallInteract() {
     const box = $('wall-wrap').getBoundingClientRect();
     const bx = e.clientX - box.left, by = e.clientY - box.top;
     const old = paintView.fitS * paintView.zoom;
-    const nz = Math.max(0.6, Math.min(12, paintView.zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+    const nz = clampPaintZoom(paintView.zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
     const neu = paintView.fitS * nz;
     const wx = (bx - paintView.ox) / old, wy = (by - paintView.oy) / old;
     paintView.zoom = nz;
@@ -3339,6 +3372,21 @@ function pickClusterCell() {
 /* D2: one ambient event now lays down a small run of 1-3 adjacent cells (a lone dot reads as too
    sparse at this scale) instead of a single pixel; each cell is still an incremental master
    update, never a full rebuild. */
+/* v16: 環境シムが置いたセルはambientリングで追跡し、上限を超えたら古いものから消す。
+   これでworld.px/world.metaが際限なく増え続けてlocalStorage/メモリを圧迫するのを止める。
+   ユーザが後から同じマスを塗り直した(@you)場合はリングから外すだけで消さない。 */
+const WM_AMBIENT_CAP = 6000;
+function evictAmbient() {
+  const amb = world.ambient;
+  while (amb.length > WM_AMBIENT_CAP) {
+    const idx = amb.shift();
+    if (world.meta[idx] === '@you') continue; // ユーザが上書き済み — 消さない
+    const x = idx % WORLD_COLS, y = Math.floor(idx / WORLD_COLS);
+    delete world.px[idx];
+    delete world.meta[idx];
+    updateMasterCell(x, y); // ベース色+リムに戻す(5x5局所再描画)
+  }
+}
 function simulatePaintEvent() {
   const { x, y } = pickClusterCell();
   const ci = Math.floor(Math.random() * PX_PAL.length);
@@ -3353,15 +3401,18 @@ function simulatePaintEvent() {
     const cy = Math.max(0, Math.min(WORLD_ROWS - 1, y + dy * i));
     const idx = cy * WORLD_COLS + cx;
     if (world.px[idx] === ch) continue;
+    const fresh = world.px[idx] === undefined; // 既存セルの色替えではリングに二重登録しない
     world.px[idx] = ch;
     world.meta[idx] = handle;
     world.placed = (world.placed || 0) + 1;
+    if (fresh) world.ambient.push(idx);
     updateMasterCell(cx, cy, ch);
     lastX = cx; lastY = cy; placedAny = true;
   }
   if (placedAny) {
+    evictAmbient(); // 上限超過分を間引く
     world.lastIdx = lastY * WORLD_COLS + lastX; // A8: remember the most recently painted cell for the card-slot crop
-    saveWorld();
+    saveWorldSoon(); // v16: 環境シムの書き込みは~30秒に集約(即localStorage書き込みしない)
     if (paintMode && $('wall')) { syncWallFromMaster(); refreshMinimapCanvas(); spawnRipple(lastX, lastY); }
     else refreshWorldSlots();
     pushFeedEvent(t('feed_paint_body', handle, t('region_' + regionOf(lastX, lastY))));
